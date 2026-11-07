@@ -29,15 +29,15 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val Forest = Color(0xFF123D2B)
-private val Emerald = Color(0xFF176B45)
-private val Leaf = Color(0xFF2C8A5A)
-private val Cream = Color(0xFFF6F1E6)
-private val Ivory = Color(0xFFFFFCF5)
-private val Gold = Color(0xFFC49A45)
-private val Ink = Color(0xFF202D25)
-private val Muted = Color(0xFF7D887F)
-private val Line = Color(0xFFE9E2D4)
+private val Forest = Color(0xFF526B55)
+private val Emerald = Color(0xFF526B55)
+private val Leaf = Color(0xFF526B55)
+private val Cream = Color(0xFFF7F3EA)
+private val Ivory = Color(0xFFFFFFFF)
+private val Gold = Color(0xFF526B55)
+private val Ink = Color(0xFF27332A)
+private val Muted = Color(0xFF778078)
+private val Line = Color(0xFFE8E4DA)
 
 private data class Section(
     val title: String,
@@ -50,9 +50,9 @@ private data class Section(
 
 private val sections = listOf(
     Section("القطيع", "الحيوانات والمواليد", Icons.Outlined.Pets, Emerald, "48", "رأساً"),
-    Section("الأدوية والتطعيمات", "العلاجات ومواعيد التحصين", Icons.Outlined.Vaccines, Color(0xFFB88936), "3", "مواعيد قادمة"),
-    Section("مخزون العلف", "الكميات والاستهلاك", Icons.Outlined.Inventory2, Color(0xFF8B7048), "850", "كغ في المخزون"),
-    Section("المالية", "الإيرادات والمصاريف", Icons.Outlined.AccountBalanceWallet, Color(0xFF397A70), "152,750", "دج الرصيد")
+    Section("الأدوية والتطعيمات", "العلاجات ومواعيد التحصين", Icons.Outlined.Vaccines, Color(0xFF526B55), "3", "مواعيد قادمة"),
+    Section("مخزون العلف", "الكميات والاستهلاك", Icons.Outlined.Inventory2, Color(0xFF526B55), "850", "كغ في المخزون"),
+    Section("المالية", "الإيرادات والمصاريف", Icons.Outlined.AccountBalanceWallet, Color(0xFF526B55), "152,750", "دج الرصيد")
 )
 
 class MainActivity : ComponentActivity() {
@@ -101,7 +101,7 @@ private fun MawashiApp() {
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = Forest,
                                     selectedTextColor = Forest,
-                                    indicatorColor = Color(0xFFE7EEDC),
+                                    indicatorColor = Color(0xFFE8EDE5),
                                     unselectedIconColor = Muted,
                                     unselectedTextColor = Muted
                                 )
@@ -144,7 +144,7 @@ private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
                 Spacer(Modifier.width(9.dp))
                 Surface(shape = CircleShape, color = Forest) {
                     Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Outlined.Pets, contentDescription = "شعار مواشي", tint = Color(0xFFF5E8C8), modifier = Modifier.size(25.dp))
+                        Icon(Icons.Outlined.Pets, contentDescription = "شعار مواشي", tint = Color(0xFFF7F3EA), modifier = Modifier.size(25.dp))
                     }
                 }
             }
@@ -152,11 +152,11 @@ private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
         item {
             Box(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
-                    .background(Brush.linearGradient(listOf(Forest, Emerald, Color(0xFF39865A))))
+                    .background(Brush.linearGradient(listOf(Forest, Emerald, Color(0xFF526B55))))
             ) {
                 Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("إدارة أذكى، قطيع أقوى", color = Color(0xFFEAD7A8), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("إدارة أذكى، قطيع أقوى", color = Color(0xFFF7F3EA), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(7.dp))
                         Text("كل تفاصيل مزرعتك
 في مكان واحد", color = Color.White, fontSize = 21.sp, lineHeight = 29.sp, fontWeight = FontWeight.Bold)
@@ -170,7 +170,7 @@ private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
                         }
                     }
                     Box(Modifier.size(88.dp).clip(CircleShape).background(Color.White.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Outlined.Pets, null, tint = Color(0xFFF1DCA8), modifier = Modifier.size(58.dp))
+                        Icon(Icons.Outlined.Pets, null, tint = Color(0xFFF7F3EA), modifier = Modifier.size(58.dp))
                     }
                 }
             }
@@ -213,7 +213,7 @@ private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
         item {
             Surface(color = Ivory, shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Line)) {
                 Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = Color(0xFFEAF1E7), shape = RoundedCornerShape(13.dp)) {
+                    Surface(color = Color(0xFFE8EDE5), shape = RoundedCornerShape(13.dp)) {
                         Icon(Icons.Outlined.Security, null, tint = Emerald, modifier = Modifier.padding(10.dp).size(22.dp))
                     }
                     Spacer(Modifier.width(11.dp))
