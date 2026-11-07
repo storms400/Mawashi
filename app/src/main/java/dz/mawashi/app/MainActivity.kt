@@ -5,8 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -15,63 +18,301 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-private val Cream = Color(0xFFF7F3EA)
-private val Green = Color(0xFF526B55)
-private val Ink = Color(0xFF27332A)
-private val Muted = Color(0xFF7C8279)
+private val Forest = Color(0xFF123D2B)
+private val Emerald = Color(0xFF176B45)
+private val Leaf = Color(0xFF2C8A5A)
+private val Cream = Color(0xFFF6F1E6)
+private val Ivory = Color(0xFFFFFCF5)
+private val Gold = Color(0xFFC49A45)
+private val Ink = Color(0xFF202D25)
+private val Muted = Color(0xFF7D887F)
+private val Line = Color(0xFFE9E2D4)
+
+private data class Section(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val tint: Color,
+    val metric: String,
+    val metricLabel: String
+)
+
+private val sections = listOf(
+    Section("القطيع", "الحيوانات والمواليد", Icons.Outlined.Pets, Emerald, "48", "رأساً"),
+    Section("الأدوية والتطعيمات", "العلاجات ومواعيد التحصين", Icons.Outlined.Vaccines, Color(0xFFB88936), "3", "مواعيد قادمة"),
+    Section("مخزون العلف", "الكميات والاستهلاك", Icons.Outlined.Inventory2, Color(0xFF8B7048), "850", "كغ في المخزون"),
+    Section("المالية", "الإيرادات والمصاريف", Icons.Outlined.AccountBalanceWallet, Color(0xFF397A70), "152,750", "دج الرصيد")
+)
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContent { MawashiApp() } }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent { MawashiApp() }
+    }
 }
-private data class Section(val title:String,val subtitle:String,val icon:ImageVector)
-private val sections = listOf(
-    Section("القطيع","إدارة الحيوانات والمواليد",Icons.Outlined.Pets),
-    Section("الأدوية والتطعيمات","العلاجات ومواعيد التحصين",Icons.Outlined.Vaccines),
-    Section("مخزون العلف","الكميات والاستهلاك والتنبيهات",Icons.Outlined.Inventory2),
-    Section("المالية","المداخيل والمصاريف والأرباح",Icons.Outlined.AccountBalanceWallet)
-)
-@Composable private fun MawashiApp() {
-    var selected by rememberSaveable { mutableIntStateOf(-1) }
-    MaterialTheme {
+
+@Composable
+private fun MawashiApp() {
+    var selected by rememberSaveable { mutableIntStateOf(0) }
+    MaterialTheme(
+        colorScheme = lightColorScheme(
+            primary = Emerald,
+            onPrimary = Color.White,
+            secondary = Gold,
+            background = Cream,
+            surface = Ivory,
+            onSurface = Ink
+        )
+    ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Scaffold(containerColor= Cream, bottomBar={ NavigationBar(containerColor=Color.White) {
-                sections.forEachIndexed { i,s -> NavigationBarItem(selected==i,{selected=i},{Icon(s.icon,null)},label={Text(s.title)}) }
-            } }) { padding ->
-                Column(Modifier.fillMaxSize().padding(padding).padding(horizontal=20.dp, vertical=18.dp)) {
-                    Text("مواشي",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold,color=Ink)
-                    Text("إدارة مزرعتك بكل سهولة",color=Muted)
-                    Spacer(Modifier.height(22.dp))
-                    if(selected<0) {
-                        Surface(color=Green,shape=RoundedCornerShape(24.dp),modifier=Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(20.dp)) { Text("مرحباً بك في مواشي",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleLarge); Spacer(Modifier.height(6.dp)); Text("كل ما تحتاجه لمتابعة قطيعك ومزرعتك في مكان واحد.",color=Color(0xFFE7EDE5)) }
+            Scaffold(
+                containerColor = Cream,
+                bottomBar = {
+                    NavigationBar(
+                        containerColor = Ivory,
+                        contentColor = Forest,
+                        tonalElevation = 8.dp,
+                        windowInsets = NavigationBarDefaults.windowInsets
+                    ) {
+                        val navItems = listOf(
+                            Triple("الرئيسية", Icons.Outlined.Home, 0),
+                            Triple("القطيع", Icons.Outlined.Pets, 1),
+                            Triple("الأدوية", Icons.Outlined.MedicalServices, 2),
+                            Triple("العلف", Icons.Outlined.Inventory2, 3),
+                            Triple("المالية", Icons.Outlined.AccountBalanceWallet, 4)
+                        )
+                        navItems.forEach { (label, icon, index) ->
+                            NavigationBarItem(
+                                selected = selected == index,
+                                onClick = { selected = index },
+                                icon = { Icon(icon, contentDescription = label) },
+                                label = { Text(label, fontSize = 10.sp, maxLines = 1) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Forest,
+                                    selectedTextColor = Forest,
+                                    indicatorColor = Color(0xFFE7EEDC),
+                                    unselectedIconColor = Muted,
+                                    unselectedTextColor = Muted
+                                )
+                            )
                         }
-                        Spacer(Modifier.height(20.dp)); Text("أقسام المزرعة",fontWeight=FontWeight.Bold,color=Ink); Spacer(Modifier.height(12.dp))
-                        LazyVerticalGrid(columns=GridCells.Fixed(2),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                            items(sections.size) { i -> SectionCard(sections[i]) }
+                    }
+                }
+            ) { padding ->
+                when (selected) {
+                    0 -> Dashboard(Modifier.padding(padding), onSection = { selected = it })
+                    1 -> SectionScreen(Modifier.padding(padding), sections[0])
+                    2 -> SectionScreen(Modifier.padding(padding), sections[1])
+                    3 -> SectionScreen(Modifier.padding(padding), sections[2])
+                    else -> SectionScreen(Modifier.padding(padding), sections[3])
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("مَرْحَباً بك في", color = Muted, fontSize = 13.sp)
+                    Text("مواشي", color = Forest, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("رفيقك الذكي لإدارة المزرعة", color = Muted, fontSize = 12.sp)
+                }
+                Surface(shape = CircleShape, color = Ivory, shadowElevation = 3.dp) {
+                    IconButton(onClick = { }) {
+                        Icon(Icons.Outlined.NotificationsNone, contentDescription = "التنبيهات", tint = Forest)
+                    }
+                }
+                Spacer(Modifier.width(9.dp))
+                Surface(shape = CircleShape, color = Forest) {
+                    Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.Pets, contentDescription = "شعار مواشي", tint = Color(0xFFF5E8C8), modifier = Modifier.size(25.dp))
+                    }
+                }
+            }
+        }
+        item {
+            Box(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
+                    .background(Brush.linearGradient(listOf(Forest, Emerald, Color(0xFF39865A))))
+            ) {
+                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("إدارة أذكى، قطيع أقوى", color = Color(0xFFEAD7A8), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(7.dp))
+                        Text("كل تفاصيل مزرعتك
+في مكان واحد", color = Color.White, fontSize = 21.sp, lineHeight = 29.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(13.dp))
+                        Surface(color = Color(0xFFFFFCF5).copy(alpha = .15f), shape = RoundedCornerShape(50)) {
+                            Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("ابدأ بتنظيم مزرعتك", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.width(5.dp))
+                                Icon(Icons.Outlined.ArrowBack, null, tint = Color(0xFFEAD7A8), modifier = Modifier.size(14.dp))
+                            }
                         }
-                    } else {
-                        val s=sections[selected]; Text(s.title,style=MaterialTheme.typography.titleLarge,color=Ink); Spacer(Modifier.height(12.dp))
-                        Card(colors=CardDefaults.cardColors(containerColor=Color.White),shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(20.dp)) { Icon(s.icon,null,tint=Green,modifier=Modifier.size(32.dp)); Spacer(Modifier.height(10.dp)); Text(s.title,fontWeight=FontWeight.Bold,color=Ink); Text(s.subtitle,color=Muted); Spacer(Modifier.height(12.dp)); Text("سيتم تجهيز أدوات هذا القسم في مراحل التطوير التالية.",color=Muted) }
-                        }
+                    }
+                    Box(Modifier.size(88.dp).clip(CircleShape).background(Color.White.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.Pets, null, tint = Color(0xFFF1DCA8), modifier = Modifier.size(58.dp))
+                    }
+                }
+            }
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("نظرة عامة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                Text("ملخص المزرعة", color = Muted, fontSize = 11.sp)
+            }
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SummaryCard("إجمالي القطيع", "48", "رأساً", Icons.Outlined.Pets, Modifier.weight(1f))
+                SummaryCard("مواعيد قادمة", "03", "هذا الأسبوع", Icons.Outlined.EventAvailable, Modifier.weight(1f))
+            }
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SummaryCard("مخزون العلف", "850", "كغ", Icons.Outlined.Inventory2, Modifier.weight(1f))
+                SummaryCard("الرصيد الحالي", "152,750", "دج", Icons.Outlined.AccountBalanceWallet, Modifier.weight(1f))
+            }
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("أقسام المزرعة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                Text("4 أقسام", color = Muted, fontSize = 11.sp)
+            }
+        }
+        itemsIndexed(sections.chunked(2)) { rowIndex, pair ->
+            Row(horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                pair.forEachIndexed { colIndex, section ->
+                    val index = rowIndex * 2 + colIndex
+                    SectionTile(section, Modifier.weight(1f)) { onSection(index + 1) }
+                }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+        item {
+            Surface(color = Ivory, shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Line)) {
+                Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = Color(0xFFEAF1E7), shape = RoundedCornerShape(13.dp)) {
+                        Icon(Icons.Outlined.Security, null, tint = Emerald, modifier = Modifier.padding(10.dp).size(22.dp))
+                    }
+                    Spacer(Modifier.width(11.dp))
+                    Column {
+                        Text("بياناتك في أمان", color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("نجهّز أدوات الحفظ والنسخ الاحتياطي ضمن المراحل القادمة", color = Muted, fontSize = 10.sp)
                     }
                 }
             }
         }
     }
 }
-@Composable private fun SectionCard(s:Section) {
-    Card(colors=CardDefaults.cardColors(containerColor=Color.White),shape=RoundedCornerShape(20.dp),modifier=Modifier.height(142.dp).fillMaxWidth()) {
-        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.SpaceBetween) {
-            Surface(color=Cream,shape=RoundedCornerShape(12.dp)) { Icon(s.icon,null,tint=Green,modifier=Modifier.padding(9.dp).size(24.dp)) }
-            Column { Text(s.title,color=Ink,fontWeight=FontWeight.Bold); Text(s.subtitle,color=Muted,style=MaterialTheme.typography.bodySmall) }
+
+@Composable
+private fun SummaryCard(title: String, value: String, unit: String, icon: ImageVector, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = Ivory,
+        shape = RoundedCornerShape(20.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Line),
+        shadowElevation = 1.dp
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = Emerald, modifier = Modifier.size(19.dp))
+                Spacer(Modifier.weight(1f))
+                Box(Modifier.size(6.dp).clip(CircleShape).background(Gold))
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(value, color = Forest, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(unit, color = Muted, fontSize = 10.sp)
+            Spacer(Modifier.height(5.dp))
+            Text(title, color = Ink, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
+private fun SectionTile(section: Section, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.height(145.dp),
+        shape = RoundedCornerShape(21.dp),
+        colors = CardDefaults.cardColors(containerColor = Ivory),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Line),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = section.tint.copy(alpha = .10f), shape = RoundedCornerShape(13.dp)) {
+                    Icon(section.icon, null, tint = section.tint, modifier = Modifier.padding(9.dp).size(23.dp))
+                }
+                Spacer(Modifier.weight(1f))
+                Icon(Icons.Outlined.ArrowOutward, null, tint = Gold, modifier = Modifier.size(17.dp))
+            }
+            Column {
+                Text(section.title, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(section.subtitle, color = Muted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(5.dp))
+                Text(section.metric + " " + section.metricLabel, color = section.tint, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionScreen(modifier: Modifier = Modifier, section: Section) {
+    Column(
+        modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 22.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = section.tint.copy(alpha = .10f), shape = RoundedCornerShape(16.dp)) {
+                Icon(section.icon, null, tint = section.tint, modifier = Modifier.padding(13.dp).size(28.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(section.title, color = Forest, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                Text(section.subtitle, color = Muted, fontSize = 12.sp)
+            }
+        }
+        Surface(
+            color = Forest,
+            shape = RoundedCornerShape(23.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Text("ملخص القسم", color = Color(0xFFEAD7A8), fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(section.metric, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                Text(section.metricLabel, color = Color.White.copy(alpha = .8f), fontSize = 12.sp)
+            }
+        }
+        Surface(color = Ivory, shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Line)) {
+            Column(Modifier.padding(18.dp)) {
+                Text("مساحة العمل", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(Modifier.height(7.dp))
+                Text("تم تجهيز التصميم الأساسي لهذا القسم. ستضاف أدوات الإدارة والسجلات والحفظ الفعلي في مراحل التطوير التالية.", color = Muted, fontSize = 12.sp, lineHeight = 20.sp)
+            }
         }
     }
 }
