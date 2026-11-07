@@ -158,8 +158,7 @@ private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text("إدارة أذكى، قطيع أقوى", color = Color(0xFFF7F3EA), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(7.dp))
-                        Text("كل تفاصيل مزرعتك
-في مكان واحد", color = Color.White, fontSize = 21.sp, lineHeight = 29.sp, fontWeight = FontWeight.Bold)
+                        Text("كل تفاصيل مزرعتك\nفي مكان واحد", color = Color.White, fontSize = 21.sp, lineHeight = 29.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(13.dp))
                         Surface(color = Color(0xFFFFFCF5).copy(alpha = .15f), shape = RoundedCornerShape(50)) {
                             Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
