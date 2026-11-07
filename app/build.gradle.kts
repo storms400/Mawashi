@@ -6,8 +6,22 @@ plugins {
 android {
     namespace = "dz.mawashi.app"
     compileSdk = 35
-    defaultConfig { applicationId = "dz.mawashi.app.independent"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = "1.0.0"; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" }
-    buildTypes { debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }; release { isMinifyEnabled = false; proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro") } }
+    defaultConfig {
+        // Every delivered iteration gets its own Android identity and private app data.
+        applicationId = "dz.mawashi.app.independent.v13"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 13
+        versionName = "1.0.13"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
+        release {
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
