@@ -82,12 +82,16 @@ private fun dinar(v:Double)=String.format(Locale.US,"%,.0f دج",v)
 private fun invoiceTime(s:String)=runCatching{LocalDateTime.parse(s).format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm"))}.getOrDefault(s)
 
 private val medicineGroups=linkedMapOf(
- "اللقاحات والتطعيمات" to listOf("لقاح التسمم المعوي","لقاح الجدري","لقاح الحمى القلاعية","لقاح طاعون المجترات الصغيرة PPR","لقاح الكلوستريديا","لقاح البروسيلا"),
+ "اللقاحات والتطعيمات الأساسية" to listOf("لقاح طاعون المجترات الصغيرة PPR","لقاح جدري الأغنام","لقاح التسمم المعوي","لقاح الكلوستريديا","لقاح الحمى القلاعية"),
+ "لقاحات خاصة حسب الخطر والبرنامج الرسمي" to listOf("لقاح البروسيلا Rev.1","لقاح الإكثيما المعدية (Orf)"),
  "مضادات الطفيليات الداخلية" to listOf("ألبيندازول (Albendazole)","فينبندازول (Fenbendazole)","إيفرمكتين (Ivermectin)","ليفاميزول (Levamisole)","تريكلابندازول"),
- "الجروح والعناية" to listOf("بخاخات الجروح","مطهرات الحوافر","مستحضرات التهابات الضرع"),
+ "مكافحة الطفيليات الخارجية" to listOf("مستحضرات الرش والغمس","مستحضرات السكب الموضعي","مستحضرات الجرب والقمل"),
+ "الجروح والعناية" to listOf("بخاخات الجروح","مطهرات الحوافر","مطهرات الجلد والجروح","مستحضرات التهابات الضرع"),
  "الجهاز الهضمي والجفاف" to listOf("محاليل الأملاح والسوائل","التولترازوريل (Toltrazuril)","مستحضرات علاج النفاخ","محاليل علاج الإسهال"),
+ "الفيتامينات والمعادن" to listOf("فيتامينات A وD وE","مكملات الأملاح المعدنية","مكملات العناصر النادرة"),
  "التكاثر والولادة" to listOf("أوكسيتوسين (Oxytocin)","البروستاغلاندين","مستحضرات الكالسيوم","البروبيلين غليكول"),
- "رعاية الحملان" to listOf("العناية بسرة الحملان","بدائل اللبأ")
+ "رعاية الحملان والمواليد" to listOf("مطهر سرة الحملان","بدائل اللبأ","بدائل حليب الحملان","زجاجة رضاعة الحملان"),
+ "أدوية لا تصرف إلا بوصفة بيطرية" to listOf("مضادات حيوية بيطرية بوصفة","مضادات التهاب ومسكنات بوصفة")
 )
 private enum class FinancePage{HOME,INVOICES,REPORTS,PURCHASES}
 private enum class PurchaseType(val title:String){ANIMAL("شراء القطيع"),FEED("شراء الأعلاف"),MEDICINE("شراء الأدوية")}
@@ -270,13 +274,26 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
   "لقاح الحمى القلاعية"->Triple("لقاح الحمى القلاعية","مستضدات فيروس الحمى القلاعية للأنماط المصلية المحددة على العبوة","الوقاية وفق النمط المصلي المتداول والبرنامج البيطري الرسمي")
   "لقاح طاعون المجترات الصغيرة PPR"->Triple("لقاح طاعون المجترات الصغيرة","مستضد فيروس PPR؛ غالباً لقاح حي مضعّف بحسب المنتج","الوقاية من طاعون المجترات الصغيرة وفق البرنامج البيطري")
   "لقاح الكلوستريديا"->Triple("لقاح الكلوستريديا","ذوفانات/مستضدات كلوستريدية متعددة بحسب التركيبة","الوقاية من أمراض كلوستريدية محددة وفق تركيب اللقاح")
-  "لقاح البروسيلا"->Triple("لقاح البروسيلا","سلالة لقاحية معتمدة حسب البرنامج الرسمي والمنتج","لا يستخدم إلا وفق تعليمات السلطات البيطرية والطبيب؛ توجد احتياطات خاصة")
+  "لقاح البروسيلا Rev.1"->Triple("لقاح البروسيلا Rev.1","سلالة لقاحية حية Rev.1","مقيد ضمن برنامج المكافحة الرسمي وتحت إشراف المصالح البيطرية فقط"),
+  "لقاح الإكثيما المعدية (Orf)"->Triple("لقاح الإكثيما المعدية","لقاح حي موضعي بحسب المنتج","يُبحث فقط عند وجود خطر محلي وبقرار بيطري")
   "ألبيندازول (Albendazole)"->Triple("Albendazole","ألبيندازول","مضاد لبعض الديدان الداخلية؛ لا يغطي كل الطفيليات")
   "فينبندازول (Fenbendazole)"->Triple("Fenbendazole","فينبندازول","مضاد لبعض الديدان المعوية والرئوية بحسب الطفيلي والمنتج")
   "إيفرمكتين (Ivermectin)"->Triple("Ivermectin","إيفرمكتين","مضاد لبعض الطفيليات الداخلية والخارجية؛ لا يعالج جميع أنواع الديدان")
   "ليفاميزول (Levamisole)"->Triple("Levamisole","ليفاميزول","مضاد لبعض الديدان الأسطوانية؛ هامش الأمان يتطلب دقة بيطرية")
   "تريكلابندازول"->Triple("Triclabendazole","تريكلابندازول","مضاد للفاشيولا (ديدان الكبد) في مراحل محددة حسب المنتج")
-  "بخاخات الجروح"->Triple("مستحضرات موضعية للجروح","تختلف المواد المطهرة أو المضادة للعدوى حسب العلامة","تنظيف/حماية موضعية للجروح السطحية وفق النشرة؛ لا تغني عن فحص الجروح العميقة")
+  "بخاخات الجروح"->Triple("مستحضرات موضعية للجروح","مطهرات أو مواد حماية تختلف حسب المنتج","تنظيف وحماية الجروح السطحية وفق النشرة؛ الجروح العميقة تحتاج فحصاً بيطرياً"),
+  "مستحضرات الرش والغمس"->Triple("مستحضرات مكافحة الطفيليات الخارجية","مواد فعالة وتركيزات تختلف حسب المنتج","مكافحة القراد والقمل والطفيليات الخارجية بعد التشخيص"),
+  "مستحضرات السكب الموضعي"->Triple("مستحضرات سكب موضعي","مواد جلدية تختلف حسب المنتج","مكافحة بعض الطفيليات الخارجية؛ لا تستخدم مستحضرات أنواع أخرى دون اعتماد للأغنام"),
+  "مستحضرات الجرب والقمل"->Triple("مستحضرات علاج الجرب والقمل","مواد مضادة للطفيليات الخارجية","تستخدم بعد تحديد الطفيلي ومعالجة المخالطين والبيئة"),
+  "مطهرات الجلد والجروح"->Triple("مطهرات جلدية بيطرية","يود أو كلورهيكسيدين بتراكيز مخصصة","تنظيف الجلد والجروح السطحية وفق نشرة المنتج"),
+  "فيتامينات A وD وE"->Triple("مكملات الفيتامينات","فيتامينات ذائبة في الدهون","تستخدم عند الحاجة؛ الإفراط قد يسبب سمية"),
+  "مكملات الأملاح المعدنية"->Triple("مكملات أملاح معدنية للأغنام","خليط معدني متوازن مخصص للأغنام","دعم العليقة؛ اختر خلطة خاصة بالأغنام"),
+  "مكملات العناصر النادرة"->Triple("مكملات العناصر النادرة","قد تشمل السيلينيوم والنحاس والزنك واليود","تُستخدم بعد تقييم العليقة؛ الزيادة قد تسبب تسمماً"),
+  "مطهر سرة الحملان"->Triple("مطهر سرة المواليد","مطهر موضعي بتركيز مناسب","تطهير السرة بعد الولادة والحد من العدوى"),
+  "بدائل حليب الحملان"->Triple("بديل حليب الحملان","مسحوق حليب مخصص للحملان","تغذية الحملان عند الحاجة بعد تأمين اللبأ أولاً"),
+  "زجاجة رضاعة الحملان"->Triple("زجاجة رضاعة الحملان","أداة تغذية وليست دواءً","إرضاع اللبأ أو الحليب مع تنظيف الأداة بعد كل استعمال"),
+  "مضادات حيوية بيطرية بوصفة"->Triple("مضادات حيوية بيطرية","مواد مضادة للبكتيريا تختلف حسب التشخيص","لا تستخدم إلا بوصفة؛ احترم الجرعة وفترة السحب"),
+  "مضادات التهاب ومسكنات بوصفة"->Triple("مضادات التهاب ومسكنات","مواد دوائية مختلفة ذات موانع استعمال","تستخدم بوصفة بعد تقييم الجفاف والحمل وفترة السحب")
   "مطهرات الحوافر"->Triple("مطهرات بيطرية للحوافر","مواد مطهرة مختلفة بحسب التركيبة","العناية بنظافة الحافر والحد من التلوث؛ العرج يحتاج تشخيصاً")
   "مستحضرات التهابات الضرع"->Triple("مستحضرات بيطرية للضرع","تختلف؛ قد تتضمن مضاداً حيوياً أو مطهراً بحسب المنتج","لا تستخدم لعلاج التهاب الضرع دون تشخيص وخطة طبيب بيطري")
   "محاليل الأملاح والسوائل"->Triple("محاليل تعويض السوائل والأملاح","إلكتروليتات وأملاح وسكريات بنسب تختلف حسب المنتج","دعم تعويض السوائل في حالات محددة؛ الجفاف الشديد حالة طارئة")
@@ -500,68 +517,41 @@ private fun herdAgeLabel(a:HerdAnimal):String{
 }
 
 @Composable private fun MedicinePackArt(name:String,group:String,modifier:Modifier=Modifier){
- val isVaccine=group=="اللقاحات والتطعيمات"
- val vaccineMark=when{
-  name.contains("التسمم المعوي")->"ET"
-  name.contains("الجدري")->"POX"
-  name.contains("الحمى القلاعية")->"FMD"
-  name.contains("PPR")->"PPR"
-  name.contains("الكلوستريديا")->"CLO"
-  name.contains("البروسيلا")->"BRU"
-  else->"VAX"
- }
- val isSpray=name.contains("بخاخ")
- val isPowder=name.contains("بدائل اللبأ")||name.contains("الأملاح")||name.contains("الإسهال")
- val isTube=name.contains("مطهرات")||name.contains("التهابات الضرع")||name.contains("سرة")
- val isSyringe=name.contains("أوكسيتوسين")||name.contains("البروستاغلاندين")
+ val vaccine=group.startsWith("اللقاحات")
+ val spray=name.contains("رش")||name.contains("بخاخ")
+ val tube=name.contains("مطهر")||name.contains("التهابات الضرع")||name.contains("الحوافر")
+ val powder=name.contains("أملاح")||name.contains("الإسهال")||name.contains("اللبأ")||name.contains("فيتامينات")||name.contains("العناصر النادرة")
+ val milk=name.contains("حليب الحملان")||name.contains("رضاعة الحملان")
+ val pour=name.contains("السكب الموضعي")||name.contains("الجرب والقمل")
+ val syringe=name.contains("أوكسيتوسين")||name.contains("البروستاغلاندين")
  val accent=when{
-  name.contains("الجدري")->Color(0xFF9A7652)
-  name.contains("الحمى القلاعية")->Color(0xFF56899A)
-  name.contains("PPR")->Color(0xFF9276A6)
-  name.contains("البروسيلا")->Color(0xFFB36A55)
-  isVaccine->Color(0xFF4F806B)
-  group=="مضادات الطفيليات الداخلية"->Color(0xFFB18443)
-  group=="الجروح والعناية"->Color(0xFF56899A)
-  group=="الجهاز الهضمي والجفاف"->Color(0xFF4D8F88)
-  group=="التكاثر والولادة"->Color(0xFF9276A6)
-  else->Color(0xFF66836A)
+  name.contains("PPR")->Color(0xFF287D78);name.contains("الجدري")->Color(0xFF9A654A)
+  name.contains("الكلوستريديا")||name.contains("التسمم")->Color(0xFF477B58)
+  name.contains("الحمى القلاعية")->Color(0xFF477C9B);name.contains("البروسيلا")->Color(0xFF9B5B70)
+  group.contains("الطفيليات")->Color(0xFFB18443);group.contains("الفيتامينات")->Color(0xFFB58A43)
+  group.contains("الحملان")->Color(0xFF5C8B78);group.contains("الجروح")->Color(0xFF56899A)
+  group.contains("الجفاف")->Color(0xFF4D8F88);group.contains("الولادة")->Color(0xFF9276A6)
+  group.contains("بوصفة")->Color(0xFF9B6262);else->Color(0xFF66836A)
  }
- val label=when{isVaccine->"VACCINE";isSpray->"SPRAY";isPowder->"ORAL";isTube->"CARE";isSyringe->"INJECT";else->"VET"}
+ val mark=when{
+  name.contains("PPR")->"PPR";name.contains("الجدري")->"POX"
+  name.contains("الكلوستريديا")||name.contains("التسمم")->"CDT"
+  name.contains("الحمى القلاعية")->"FMD";name.contains("البروسيلا")->"REV.1"
+  name.contains("Orf")||name.contains("الإكثيما")->"ORF"
+  spray->"SPRAY";powder->"ORAL";milk->"MILK";pour->"POUR-ON";tube->"CARE";syringe->"INJECT";else->"VET"
+ }
  Box(modifier.background(Color(0xFFF4F1E8),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){
   when{
-   isSyringe->Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
-    Box(Modifier.width(8.dp).height(38.dp).background(Color(0xFFCBD4D0),RoundedCornerShape(3.dp)))
-    Box(Modifier.width(43.dp).height(13.dp).background(Color.White,RoundedCornerShape(3.dp)),contentAlignment=Alignment.Center){Box(Modifier.fillMaxWidth(.72f).height(5.dp).background(accent.copy(alpha=.35f)))}
-    Box(Modifier.width(13.dp).height(3.dp).background(accent))
-   }
-   isTube->Row(verticalAlignment=Alignment.CenterVertically){
-    Column(horizontalAlignment=Alignment.CenterHorizontally){
-     Box(Modifier.width(20.dp).height(8.dp).background(accent,RoundedCornerShape(topStart=4.dp,topEnd=4.dp)))
-     Box(Modifier.width(35.dp).height(45.dp).background(Color.White,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Outlined.Healing,null,tint=accent,modifier=Modifier.size(19.dp));Box(Modifier.width(23.dp).height(4.dp).background(accent.copy(alpha=.3f),RoundedCornerShape(2.dp)))}}
-    }
-   }
-   isPowder->Column(horizontalAlignment=Alignment.CenterHorizontally){
-    Box(Modifier.width(37.dp).height(9.dp).background(accent,RoundedCornerShape(topStart=4.dp,topEnd=4.dp)))
-    Box(Modifier.width(54.dp).height(42.dp).background(Color.White,RoundedCornerShape(bottomStart=8.dp,bottomEnd=8.dp)),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Outlined.Science,null,tint=accent,modifier=Modifier.size(19.dp));Text("POWDER",fontSize=6.sp,color=accent,fontWeight=FontWeight.ExtraBold)}}
-   }
-   isSpray->Column(horizontalAlignment=Alignment.CenterHorizontally){
-    Box(Modifier.width(18.dp).height(11.dp).background(accent,RoundedCornerShape(topStart=3.dp,topEnd=3.dp)))
-    Box(Modifier.width(12.dp).height(8.dp).background(accent.copy(alpha=.65f)))
-    Box(Modifier.width(35.dp).height(47.dp).background(Color.White,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center){Icon(Icons.Outlined.Healing,null,tint=accent,modifier=Modifier.size(23.dp))}
-   }
-   else->Column(horizontalAlignment=Alignment.CenterHorizontally){
-    Box(Modifier.width(if(isVaccine)27.dp else 34.dp).height(9.dp).background(accent,RoundedCornerShape(topStart=3.dp,topEnd=3.dp)))
-    Box(Modifier.width(if(isVaccine)39.dp else 53.dp).height(if(isVaccine)49.dp else 55.dp).background(Color.White,RoundedCornerShape(bottomStart=8.dp,bottomEnd=8.dp)),contentAlignment=Alignment.Center){
-     Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-      Icon(if(isVaccine)Icons.Outlined.Vaccines else Icons.Outlined.Medication,null,tint=accent,modifier=Modifier.size(if(isVaccine)23.dp else 27.dp))
-      Spacer(Modifier.height(3.dp))
-      Box(Modifier.fillMaxWidth(.8f).height(4.dp).background(accent.copy(alpha=.28f),RoundedCornerShape(3.dp)))
-      Text(if(isVaccine)vaccineMark else label,fontSize=6.sp,color=accent,fontWeight=FontWeight.ExtraBold)
-     }
-    }
-   }
+   vaccine->Column(horizontalAlignment=Alignment.CenterHorizontally){Box(Modifier.width(25.dp).height(8.dp).background(accent,RoundedCornerShape(3.dp)));Box(Modifier.width(40.dp).height(49.dp).background(Color.White,RoundedCornerShape(8.dp)),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Outlined.Vaccines,null,tint=accent,modifier=Modifier.size(22.dp));Text(mark,fontSize=6.sp,color=accent,fontWeight=FontWeight.ExtraBold)}}}
+   syringe->Row(verticalAlignment=Alignment.CenterVertically){Box(Modifier.width(7.dp).height(35.dp).background(Color.LightGray,RoundedCornerShape(3.dp)));Box(Modifier.width(43.dp).height(13.dp).background(Color.White,RoundedCornerShape(3.dp)),contentAlignment=Alignment.Center){Box(Modifier.fillMaxWidth(.7f).height(5.dp).background(accent.copy(alpha=.4f)))};Box(Modifier.width(13.dp).height(3.dp).background(accent))}
+   milk->Column(horizontalAlignment=Alignment.CenterHorizontally){Box(Modifier.width(29.dp).height(8.dp).background(accent,RoundedCornerShape(3.dp)));Box(Modifier.width(48.dp).height(51.dp).background(Color.White,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Outlined.LocalDrink,null,tint=accent,modifier=Modifier.size(22.dp));Text("LAMB",fontSize=6.sp,color=accent,fontWeight=FontWeight.Bold)}}}
+   pour->Column(horizontalAlignment=Alignment.CenterHorizontally){Box(Modifier.width(17.dp).height(8.dp).background(accent));Box(Modifier.width(43.dp).height(47.dp).background(Color.White,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center){Icon(Icons.Outlined.WaterDrop,null,tint=accent,modifier=Modifier.size(22.dp))}}
+   tube->Column(horizontalAlignment=Alignment.CenterHorizontally){Box(Modifier.width(19.dp).height(7.dp).background(accent));Box(Modifier.width(35.dp).height(46.dp).background(Color.White,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center){Icon(Icons.Outlined.Healing,null,tint=accent,modifier=Modifier.size(20.dp))}}
+   spray->Column(horizontalAlignment=Alignment.CenterHorizontally){Box(Modifier.width(17.dp).height(8.dp).background(accent));Box(Modifier.width(11.dp).height(7.dp).background(accent.copy(alpha=.7f)));Box(Modifier.width(34.dp).height(47.dp).background(Color.White,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center){Icon(Icons.Outlined.Air,null,tint=accent,modifier=Modifier.size(22.dp))}}
+   powder->Column(horizontalAlignment=Alignment.CenterHorizontally){Box(Modifier.width(39.dp).height(8.dp).background(accent));Box(Modifier.width(53.dp).height(43.dp).background(Color.White,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Outlined.Science,null,tint=accent,modifier=Modifier.size(19.dp));Text(mark,fontSize=6.sp,color=accent,fontWeight=FontWeight.Bold)}}}
+   else->Column(horizontalAlignment=Alignment.CenterHorizontally){Box(Modifier.width(18.dp).height(8.dp).background(accent));Box(Modifier.width(43.dp).height(52.dp).background(Color.White,RoundedCornerShape(8.dp)),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Outlined.Medication,null,tint=accent,modifier=Modifier.size(22.dp));Text(mark,fontSize=6.sp,color=accent,fontWeight=FontWeight.Bold)}}}
   }
-  Text(if(isVaccine)"VACCINE" else "VETERINARY",fontSize=6.sp,color=accent.copy(alpha=.8f),fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.BottomCenter).padding(bottom=3.dp))
+  Text(mark,fontSize=6.sp,color=accent,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.BottomCenter).padding(bottom=3.dp))
  }
 }
 
