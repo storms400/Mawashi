@@ -113,7 +113,7 @@ private fun MawashiApp() {
                     0 -> Dashboard(Modifier.padding(padding), onSection = { selected = it })
                     1 -> HerdScreen(Modifier.padding(padding))
                     2 -> SectionScreen(Modifier.padding(padding), sections[1])
-                    3 -> SectionScreen(Modifier.padding(padding), sections[2])
+                    3 -> FeedScreen(Modifier.padding(padding))
                     else -> SectionScreen(Modifier.padding(padding), sections[3])
                 }
             }
