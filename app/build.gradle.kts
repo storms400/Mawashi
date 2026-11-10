@@ -8,11 +8,11 @@ android {
     compileSdk = 35
     defaultConfig {
         // Independent package and isolated local data for iteration 25.
-        applicationId = "dz.mawashi.app.independent.v28"
+        applicationId = "dz.mawashi.app.independent.v29"
         minSdk = 26
         targetSdk = 35
-        versionCode = 28
-        versionName = "1.0.28"
+        versionCode = 29
+        versionName = "1.0.29"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
