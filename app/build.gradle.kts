@@ -7,12 +7,12 @@ android {
     namespace = "dz.mawashi.app"
     compileSdk = 35
     defaultConfig {
-        // Independent package and isolated local data for iteration 25.
-        applicationId = "dz.mawashi.app.independent.v29"
+        // Independent package and isolated local data for herd lifecycle archive v30.
+        applicationId = "dz.mawashi.app.independent.v30"
         minSdk = 26
         targetSdk = 35
-        versionCode = 29
-        versionName = "1.0.29"
+        versionCode = 30
+        versionName = "1.0.30"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
