@@ -8,11 +8,11 @@ android {
     compileSdk = 35
     defaultConfig {
         // Independent package and isolated local data for herd lifecycle archive v30.
-        applicationId = "dz.mawashi.app.independent.v30"
+        applicationId = "dz.mawashi.app.independent.v31"
         minSdk = 26
         targetSdk = 35
-        versionCode = 30
-        versionName = "1.0.30"
+        versionCode = 31
+        versionName = "1.0.31"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
