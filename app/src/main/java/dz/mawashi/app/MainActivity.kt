@@ -88,14 +88,14 @@ private fun MawashiApp() {
                             Triple("الرئيسية", Icons.Outlined.Home, 0),
                             Triple("القطيع", Icons.Outlined.Pets, 1),
                             Triple("الأدوية", Icons.Outlined.MedicalServices, 2),
-                            Triple("العلف", Icons.Outlined.Inventory2, 3),
+                            Triple("مخزون العلف", Icons.Outlined.Inventory2, 3),
                             Triple("المالية", Icons.Outlined.AccountBalanceWallet, 4)
                         )
                         navItems.forEach { (label, icon, index) ->
                             NavigationBarItem(
                                 selected = selected == index,
                                 onClick = { selected = index },
-                                icon = { Icon(icon, contentDescription = label) },
+                                icon = { Icon(icon, contentDescription = label, tint = if (index == 3) Forest else if (selected == index) Forest else Muted) },
                                 label = { Text(label, fontSize = 10.sp, maxLines = 1) },
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = Forest,
