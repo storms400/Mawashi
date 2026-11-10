@@ -146,7 +146,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("متجر المزرعة","تسوّق احتياجات المزرعة",Icons.Outlined.Storefront,Modifier.weight(1f)){page=FinancePage.PURCHASES};FinAction("المبيعات","القطيع والصوف والمخزون",Icons.Outlined.PointOfSale,Modifier.weight(1f)){sale=true}}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("الفواتير",list.size.toString()+" فاتورة",Icons.Outlined.ReceiptLong,Modifier.weight(1f)){page=FinancePage.INVOICES};FinAction("التقارير","تحليل النشاط",Icons.Outlined.BarChart,Modifier.weight(1f)){page=FinancePage.REPORTS}}}
     item{Text("المخزون المرتبط تلقائياً",fontSize=15.sp,fontWeight=FontWeight.Bold,color=FinInk)}
-    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("رؤوس القطيع",herd.size.toString()+" رأس",Icons.Outlined.Pets,Modifier.weight(1f));FinMetric("مخزون العلف",String.format(Locale.US,"%.1f كغ",feeds.values.sum()),Icons.Outlined.Inventory2,Modifier.weight(1f))}}
+    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("رؤوس القطيع",activeHerdAnimals(herd).size.toString()+" رأس",Icons.Outlined.Pets,Modifier.weight(1f));FinMetric("مخزون العلف",String.format(Locale.US,"%.1f كغ",feeds.values.sum()),Icons.Outlined.Inventory2,Modifier.weight(1f))}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("أصناف الأدوية",meds.size.toString(),Icons.Outlined.MedicalServices,Modifier.weight(1f));FinMetric("الصوف",String.format(Locale.US,"%.1f كغ",wool),Icons.Outlined.Spa,Modifier.weight(1f))}}
     item{Text("عمليات مالية أخرى",fontSize=14.sp,fontWeight=FontWeight.Bold,color=FinInk)}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={otherType="income"},modifier=Modifier.weight(1f)){Text("إضافة إيراد")};OutlinedButton(onClick={otherType="expense"},modifier=Modifier.weight(1f)){Text("إضافة مصروف")}}}
@@ -187,7 +187,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   item{Surface(color=FinGreen,shape=RoundedCornerShape(22.dp)){Row(Modifier.fillMaxWidth().padding(17.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("متجر مزرعتك في مكان واحد",fontSize=19.sp,fontWeight=FontWeight.ExtraBold,color=Color.White);Text("اختر القسم ثم أضف مشترياتك إلى سجل المزرعة",fontSize=10.sp,color=Color.White.copy(alpha=.88f))};Icon(Icons.Outlined.ShoppingBasket,null,tint=Color.White,modifier=Modifier.size(38.dp))}}}
   item{Text(if(type==null)"تصفح أقسام المتجر" else "تفاصيل الشراء",fontSize=16.sp,fontWeight=FontWeight.Bold,color=FinInk)}
   if(type==null){
-   item{PurchaseCategoryCard("القطيع","شراء رؤوس الأغنام","نعاج • كباش • حملان",Icons.Outlined.Pets,herd.size.toString()+" رأس"){type=PurchaseType.ANIMAL;item="نعجة"}}
+   item{PurchaseCategoryCard("القطيع","شراء رؤوس الأغنام","نعاج • كباش • حملان",Icons.Outlined.Pets,activeHerdAnimals(herd).size.toString()+" رأس"){type=PurchaseType.ANIMAL;item="نعجة"}}
    item{PurchaseCategoryCard("الأعلاف","شراء الأعلاف","تُضاف الكمية مباشرة إلى مخزون العلف",Icons.Outlined.Inventory2,String.format(Locale.US,"%.1f كغ",feeds.values.sum())){type=PurchaseType.FEED;item=feedNames.first()}}
    item{PurchaseCategoryCard("الأدوية واللقاحات","المستلزمات البيطرية","تسجيل التشغيلة وتاريخ الصلاحية",Icons.Outlined.Vaccines,meds.size.toString()+" صنف"){type=PurchaseType.MEDICINE;item=drugs.first()}}
    item{Surface(color=Color.White,shape=RoundedCornerShape(17.dp),border=BorderStroke(1.dp,FinLine)){Column(Modifier.padding(14.dp)){Text("سلة المشتريات",fontWeight=FontWeight.Bold,color=FinInk);Text("بعد اختيار القسم، أدخل المورد والكمية والسعر. سيظهر الإجمالي قبل تأكيد الفاتورة.",fontSize=11.sp,color=FinMuted,lineHeight=17.sp)}}}
@@ -229,10 +229,11 @@ fun FinanceScreen(modifier:Modifier=Modifier){
  }
 }
 @Composable private fun SaleDialog(c:Context,herd:List<HerdAnimal>,feed:Map<FeedKind,Double>,medicine:Map<String,Double>,wool:Double,dismiss:()->Unit,done:(String)->Unit){
- var type by remember{mutableStateOf(SaleType.ANIMAL)};var buyer by rememberSaveable{mutableStateOf("")};var item by rememberSaveable{mutableStateOf(herd.firstOrNull()?.tag?:"")};var qty by rememberSaveable{mutableStateOf("1")};var price by rememberSaveable{mutableStateOf("")};var error by remember{mutableStateOf("")}
- val options=when(type){SaleType.ANIMAL->herd.map{it.tag};SaleType.WOOL->listOf("الصوف");SaleType.FEED->feed.filterValues{it>0}.keys.map{it.label};SaleType.MEDICINE->medicine.filterValues{it>0}.keys.toList()}
+ val activeHerd=activeHerdAnimals(herd)
+ var type by remember{mutableStateOf(SaleType.ANIMAL)};var buyer by rememberSaveable{mutableStateOf("")};var item by rememberSaveable{mutableStateOf(activeHerd.firstOrNull()?.tag?:"")};var qty by rememberSaveable{mutableStateOf("1")};var price by rememberSaveable{mutableStateOf("")};var error by remember{mutableStateOf("")}
+ val options=when(type){SaleType.ANIMAL->activeHerd.map{it.tag};SaleType.WOOL->listOf("الصوف");SaleType.FEED->feed.filterValues{it>0}.keys.map{it.label};SaleType.MEDICINE->medicine.filterValues{it>0}.keys.toList()}
  AlertDialog(onDismissRequest=dismiss,title={Text("فاتورة بيع")},text={LazyColumn(Modifier.heightIn(max=440.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-  item{Row(horizontalArrangement=Arrangement.spacedBy(2.dp)){SaleType.values().forEach{t->FilterChip(type==t,{type=t;item=when(t){SaleType.ANIMAL->herd.firstOrNull()?.tag?:"";SaleType.WOOL->"الصوف";SaleType.FEED->feed.keys.firstOrNull()?.label?:"";SaleType.MEDICINE->medicine.keys.firstOrNull()?:""};qty="1"},label={Text(t.title,fontSize=8.sp)})}}}
+  item{Row(horizontalArrangement=Arrangement.spacedBy(2.dp)){SaleType.values().forEach{t->FilterChip(type==t,{type=t;item=when(t){SaleType.ANIMAL->activeHerd.firstOrNull()?.tag?:"";SaleType.WOOL->"الصوف";SaleType.FEED->feed.keys.firstOrNull()?.label?:"";SaleType.MEDICINE->medicine.keys.firstOrNull()?:""};qty="1"},label={Text(t.title,fontSize=8.sp)})}}}
   item{OutlinedTextField(buyer,{buyer=it},label={Text("اسم المشتري")},modifier=Modifier.fillMaxWidth())}
   item{var open by remember{mutableStateOf(false)};Box{OutlinedButton(onClick={open=true},enabled=options.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text(item.ifBlank{"لا توجد أصناف متاحة"});Spacer(Modifier.weight(1f));Icon(Icons.Outlined.ArrowDropDown,null)};DropdownMenu(open,{open=false}){options.forEach{o->DropdownMenuItem(text={Text(o)},onClick={item=o;open=false})}}}}
   if(type!=SaleType.ANIMAL)item{OutlinedTextField(qty,{qty=it},label={Text("الكمية المراد بيعها")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())}
@@ -245,7 +246,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   else{
    var available=0.0;var costUnit=0.0;var detail=""
    when(type){
-    SaleType.ANIMAL->{val a=herd.firstOrNull{it.tag==item};available=if(a==null)0.0 else 1.0;val bought=readInvoices(c).filter{it.type=="purchase"&&it.category==PurchaseType.ANIMAL.title&&it.item==a?.kind};costUnit=if(bought.isEmpty())0.0 else bought.sumOf{it.total}/bought.sumOf{it.quantity}}
+    SaleType.ANIMAL->{val a=activeHerd.firstOrNull{it.tag==item};available=if(a==null)0.0 else 1.0;val bought=readInvoices(c).filter{it.type=="purchase"&&it.category==PurchaseType.ANIMAL.title&&it.item==a?.kind};costUnit=if(bought.isEmpty())0.0 else bought.sumOf{it.total}/bought.sumOf{it.quantity}}
     SaleType.WOOL->available=wool
     SaleType.FEED->{val k=FeedKind.values().firstOrNull{it.label==item};available=feed[k]?:0.0;costUnit=averagePurchaseCost(c,item,PurchaseType.FEED.title)}
     SaleType.MEDICINE->{
@@ -258,7 +259,12 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    if(q>available+1e-8)error="الرصيد غير كافٍ. المتاح: "+available
    else{
     when(type){
-     SaleType.ANIMAL->{val animal=herd.first{it.tag==item};val archiveId="SOLD-"+UUID.randomUUID().toString();archiveSoldAnimal(c,animal,archiveId);saveHerd(c,herd.filterNot{it.tag==item});detail="بيع الحيوان "+item+" وأُرشف ملفه التاريخي برقم "+archiveId+"."}
+     SaleType.ANIMAL->{
+      val animal=activeHerd.first{it.tag==item}
+      val archived=archiveHerdAnimal(animal,LocalDate.now().toString(),"بيع")
+      saveHerd(c,herd.map{if(it.id==animal.id)archived else it})
+      detail="بيع الحيوان "+item+" وأُرشف ملفه مع الاحتفاظ ببياناته. تاريخ البيع: "+archived.exitDate+"."
+     }
      SaleType.WOOL->writeWool(c,wool-q)
      SaleType.FEED->{val k=FeedKind.values().first{it.label==item};val s=loadFeedStocks(c);s[k]=(s[k]?:0.0)-q;saveFeedStocks(c,s)}
      SaleType.MEDICINE->{consumeMedicineLots(c,item,q);val s=readMedicineStock(c);s[item]=(s[item]?:0.0)-q;writeMedicineStock(c,s)}
@@ -269,21 +275,6 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    }
   }
  }){Text("تأكيد البيع")}},dismissButton={TextButton(onClick=dismiss){Text("إلغاء")}})
-}
-
-private const val SOLD_ANIMALS_KEY = "sold_animals_history"
-private fun archiveSoldAnimal(c:Context, animal:HerdAnimal, invoiceId:String){
- val p=c.getSharedPreferences(FIN_PREFS,0);val a=JSONArray(p.getString(SOLD_ANIMALS_KEY,"[]")?:"[]")
- a.put(JSONObject().apply{
-  put("invoiceId",invoiceId);put("id",animal.id);put("tag",animal.tag);put("kind",animal.kind)
-  put("ageMonths",animal.ageMonths);put("health",animal.health);put("notes",animal.notes)
-  if(animal.weightKg==null)put("weightKg",JSONObject.NULL) else put("weightKg",animal.weightKg)
-  put("birthDate",animal.birthDate);put("birthWeightKg",animal.birthWeightKg?:JSONObject.NULL)
-  put("motherTag",animal.motherTag);put("productionState",animal.productionState)
-  put("pregnancyStage",animal.pregnancyStage);put("fetusCount",animal.fetusCount);put("nursingLambs",animal.nursingLambs)
-  put("soldAt",LocalDateTime.now().toString())
- })
- check(p.edit().putString(SOLD_ANIMALS_KEY,a.toString()).commit())
 }
 
 private fun averagePurchaseCost(c:Context,item:String,category:String):Double{val a=readInvoices(c).filter{it.type=="purchase"&&it.category==category&&it.item==item&&it.quantity>0};val q=a.sumOf{it.quantity};return if(q<=0)0.0 else a.sumOf{it.total}/q}
@@ -380,7 +371,7 @@ private fun herdAgeLabel(a:HerdAnimal):String{
 }
 @Composable private fun HerdHealthMonitor(onBack:()->Unit){
  val context=LocalContext.current
- var animals by remember{mutableStateOf(loadHerd(context))}
+ var animals by remember{mutableStateOf(activeHerdAnimals(loadHerd(context)))}
  var reminders by remember{mutableStateOf(readHerdCare(context))}
  var selectedTag by rememberSaveable{mutableStateOf<String?>(null)}
  var dialog by remember{mutableStateOf(false)}
