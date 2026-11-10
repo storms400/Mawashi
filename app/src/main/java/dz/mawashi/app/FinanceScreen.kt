@@ -81,9 +81,10 @@ private fun saveMedicineLots(c:Context,lots:List<MedicineLot>){
 private fun consumeMedicineLots(c:Context,item:String,quantity:Double){
  var remaining=quantity
  val lots=readMedicineLots(c).toMutableList()
- val indices=lots.indices.filter{lots[it].item==item&&lots[it].quantity>0.0}.sortedBy{lots[it].expiry}
+ val today=LocalDate.now().toString()
+ val indices=lots.indices.filter{lots[it].item==item&&lots[it].quantity>0.0&&lots[it].expiry>=today}.sortedBy{lots[it].expiry}
  for(i in indices){if(remaining<=1e-8)break;val old=lots[i];val used=minOf(old.quantity,remaining);lots[i]=old.copy(quantity=old.quantity-used);remaining-=used}
- if(remaining<=1e-8)saveMedicineLots(c,lots)
+ saveMedicineLots(c,lots)
 }
 private fun readMedicineStock(c:Context):MutableMap<String,Double>{
  val a=JSONArray(c.getSharedPreferences(FIN_PREFS,0).getString(FIN_MEDICINES,"[]")?:"[]");val m=mutableMapOf<String,Double>()
@@ -205,7 +206,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    if(error.isNotBlank())item{Text(error,color=Color(0xFFB54D42),fontSize=11.sp)}
    item{Button(onClick={
     val t=type?:return@Button;val raw=qty.replace(',','.').toDoubleOrNull()?:0.0;val p=price.replace(',','.').toDoubleOrNull()?:0.0;val count=raw.toInt()
-    if(supplier.isBlank())error="أدخل اسم المورد" else if(raw<=0||raw>100000||p<=0)error="تحقق من الكمية والسعر" else if(t==PurchaseType.ANIMAL&&(raw!=count.toDouble()||count !in 1..500))error="عدد الرؤوس يجب أن يكون صحيحاً من 1 إلى 500" else if(t==PurchaseType.ANIMAL&&(weight.replace(',','.').toDoubleOrNull()?:0.0)<=0)error="أدخل وزن الرأس" else if(t==PurchaseType.MEDICINE&&batch.isBlank())error="أدخل رقم التشغيلة" else if(t==PurchaseType.MEDICINE&&runCatching{LocalDate.parse(expiry);true}.getOrDefault(false).not())error="أدخل تاريخ صلاحية صحيحاً بصيغة YYYY-MM-DD" else{
+    if(supplier.isBlank())error="أدخل اسم المورد" else if(raw<=0||raw>100000||p<=0)error="تحقق من الكمية والسعر" else if(t==PurchaseType.ANIMAL&&(raw!=count.toDouble()||count !in 1..500))error="عدد الرؤوس يجب أن يكون صحيحاً من 1 إلى 500" else if(t==PurchaseType.ANIMAL&&(weight.replace(',','.').toDoubleOrNull()?:0.0)<=0)error="أدخل وزن الرأس" else if(t==PurchaseType.MEDICINE&&batch.isBlank())error="أدخل رقم التشغيلة" else if(t==PurchaseType.MEDICINE&&runCatching{LocalDate.parse(expiry);true}.getOrDefault(false).not())error="أدخل تاريخ صلاحية صحيحاً بصيغة YYYY-MM-DD" else if(t==PurchaseType.MEDICINE&&expiry<LocalDate.now().toString())error="لا يمكن إضافة تشغيلة منتهية الصلاحية إلى المخزون القابل للاستخدام" else{
      val now=LocalDateTime.now().toString();val id="PUR-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val q=if(t==PurchaseType.ANIMAL)count.toDouble() else raw;val total=q*p;var detail=""
      when(t){
       PurchaseType.ANIMAL->{val tags=generateHerdTags(herd.map{it.tag},count);val kg=weight.replace(',','.').toDouble();val updated=herd.toMutableList();tags.forEach{tag->updated.add(HerdAnimal(UUID.randomUUID().toString(),tag,item,age.toIntOrNull()?:0,health,"شراء "+id,kg,productionState=if(item=="كبش")"كبش" else if(item=="حمل/رخلة")"خروف" else state))};saveHerd(c,updated);detail="أضيفت "+count+" رؤوس للقطيع بالمعرفات "+tags.first()+" إلى "+tags.last()+"."}
@@ -247,7 +248,12 @@ fun FinanceScreen(modifier:Modifier=Modifier){
     SaleType.ANIMAL->{val a=herd.firstOrNull{it.tag==item};available=if(a==null)0.0 else 1.0;val bought=readInvoices(c).filter{it.type=="purchase"&&it.category==PurchaseType.ANIMAL.title&&it.item==a?.kind};costUnit=if(bought.isEmpty())0.0 else bought.sumOf{it.total}/bought.sumOf{it.quantity}}
     SaleType.WOOL->available=wool
     SaleType.FEED->{val k=FeedKind.values().firstOrNull{it.label==item};available=feed[k]?:0.0;costUnit=averagePurchaseCost(c,item,PurchaseType.FEED.title)}
-    SaleType.MEDICINE->{available=medicine[item]?:0.0;costUnit=averagePurchaseCost(c,item,PurchaseType.MEDICINE.title)}
+    SaleType.MEDICINE->{
+     val lots=readMedicineLots(c).filter{it.item==item}
+     val validLots=lots.filter{it.expiry>=LocalDate.now().toString()}
+     available=if(lots.isEmpty())medicine[item]?:0.0 else validLots.sumOf{it.quantity}
+     costUnit=averagePurchaseCost(c,item,PurchaseType.MEDICINE.title)
+    }
    }
    if(q>available+1e-8)error="الرصيد غير كافٍ. المتاح: "+available
    else{
@@ -581,7 +587,8 @@ private fun herdAgeLabel(a:HerdAnimal):String{
         val expired=lot.expiry.isNotBlank()&&lot.expiry<today
         Row(verticalAlignment=Alignment.CenterVertically){
          Column(Modifier.weight(1f)){Text("تشغيلة: "+lot.batch,fontSize=10.sp,fontWeight=FontWeight.Bold,color=FinInk);Text("الصلاحية: "+lot.expiry+" • المورد: "+lot.supplier,fontSize=9.sp,color=FinMuted)}
-         Column(horizontalAlignment=Alignment.End){Text(String.format(Locale.US,"%.2f",lot.quantity),fontSize=11.sp,fontWeight=FontWeight.Bold,color=FinGreen);if(expired)Text("منتهية",fontSize=9.sp,color=Color(0xFFB54D42)) else Text("صالحة مسجلة",fontSize=9.sp,color=FinGreen)}
+         val nearExpiry=runCatching{!expired&&LocalDate.parse(lot.expiry)<=LocalDate.now().plusDays(30)}.getOrDefault(false)
+         Column(horizontalAlignment=Alignment.End){Text(String.format(Locale.US,"%.2f",lot.quantity),fontSize=11.sp,fontWeight=FontWeight.Bold,color=FinGreen);if(expired)Text("منتهية — لا تُستخدم",fontSize=9.sp,color=Color(0xFFB54D42)) else if(nearExpiry)Text("تنتهي خلال 30 يوماً",fontSize=9.sp,color=Color(0xFFB18443)) else Text("ضمن الصلاحية المسجلة",fontSize=9.sp,color=FinGreen)}
         }
        }
       }
