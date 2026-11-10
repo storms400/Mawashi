@@ -144,10 +144,10 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
   AlertDialog(onDismissRequest={selected=null},title={Text("بطاقة الحيوان")},text={Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)){
    Image(qr.asImageBitmap(),contentDescription="رمز QR للحيوان",modifier=Modifier.size(170.dp))
    Text(a.tag,color=HerdGreen,fontSize=20.sp,fontWeight=FontWeight.ExtraBold)
-   Text("النوع: \${a.kind} • العمر: \${a.ageMonths} شهر",fontSize=11.sp)
-   Text("الوزن: \${a.weightKg?.let{"%.2f كغ".format(java.util.Locale.US,it)}?:"غير مسجل"}",fontSize=11.sp)
-   Text("الحالة الصحية: \${a.health}",fontSize=11.sp)
-   if(a.kind=="حمل/رخلة"){Text("تاريخ الميلاد: \${a.birthDate}",fontSize=10.sp);Text("وزن الميلاد: \${a.birthWeightKg?:0.0} كغ",fontSize=10.sp);Text("الأم: \${a.motherTag}",fontSize=10.sp)}
+   Text("النوع: ${a.kind} • العمر: ${a.ageMonths} شهر",fontSize=11.sp)
+   Text("الوزن: ${a.weightKg?.let{"%.2f كغ".format(java.util.Locale.US,it)}?:"غير مسجل"}",fontSize=11.sp)
+   Text("الحالة الصحية: ${a.health}",fontSize=11.sp)
+   if(a.kind=="حمل/رخلة"){Text("تاريخ الميلاد: ${a.birthDate}",fontSize=10.sp);Text("وزن الميلاد: ${a.birthWeightKg?:0.0} كغ",fontSize=10.sp);Text("الأم: ${a.motherTag}",fontSize=10.sp)}
   }},confirmButton={Row{TextButton(onClick={printHerdQr(context,listOf(a))}){Icon(Icons.Outlined.Print,null);Text("طباعة QR")};TextButton(onClick={editor=true}){Icon(Icons.Outlined.Edit,null);Text("تعديل")}}},dismissButton={TextButton(onClick={selected=null}){Text("إغلاق")}})
  }
  deleting?.let{a->AlertDialog(onDismissRequest={deleting=null},title={Text("حذف الحيوان؟")},text={Text("سيتم حذف سجل ${a.tag} من هذا الجهاز.")},confirmButton={TextButton(onClick={animals.removeAll{it.id==a.id};saveHerd(context,animals.toList());deleting=null}){Text("حذف",color=Color(0xFFB3261E))}},dismissButton={TextButton(onClick={deleting=null}){Text("إلغاء")}})}
