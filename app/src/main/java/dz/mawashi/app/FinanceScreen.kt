@@ -87,7 +87,7 @@ private val medicineGroups=linkedMapOf(
  "التكاثر والولادة" to listOf("أوكسيتوسين (Oxytocin)","البروستاغلاندين","مستحضرات الكالسيوم","البروبيلين غليكول"),
  "رعاية الحملان" to listOf("العناية بسرة الحملان","بدائل اللبأ")
 )
-private enum class FinancePage{HOME,INVOICES,REPORTS}
+private enum class FinancePage{HOME,INVOICES,REPORTS,PURCHASES}
 private enum class PurchaseType(val title:String){ANIMAL("شراء القطيع"),FEED("شراء الأعلاف"),MEDICINE("شراء الأدوية")}
 private enum class SaleType(val title:String){ANIMAL("بيع رؤوس الأغنام"),WOOL("بيع الصوف"),FEED("بيع الأعلاف"),MEDICINE("بيع الأدوية")}
 
@@ -100,7 +100,6 @@ fun FinanceScreen(modifier:Modifier=Modifier){
  var feeds by remember{mutableStateOf(loadFeedStocks(c))}
  var meds by remember{mutableStateOf(readMedicineStock(c))}
  var wool by remember{mutableDoubleStateOf(readWool(c))}
- var purchase by remember{mutableStateOf(false)}
  var sale by remember{mutableStateOf(false)}
  var otherType by remember{mutableStateOf("")}
  var notice by remember{mutableStateOf<String?>(null)}
@@ -111,16 +110,16 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   Spacer(Modifier.height(12.dp))
   Row(verticalAlignment=Alignment.CenterVertically){
    if(page!=FinancePage.HOME)IconButton(onClick={page=FinancePage.HOME}){Icon(Icons.Outlined.ArrowBack,"رجوع",tint=FinGreen)}
-   Column(Modifier.weight(1f)){Text("المالية",fontSize=25.sp,fontWeight=FontWeight.ExtraBold,color=FinInk);Text("المشتريات والمبيعات والفواتير والأرباح",fontSize=11.sp,color=FinMuted)}
+   Column(Modifier.weight(1f)){Text(if(page==FinancePage.PURCHASES)"متجر المزرعة" else "المالية",fontSize=25.sp,fontWeight=FontWeight.ExtraBold,color=FinInk);Text(if(page==FinancePage.PURCHASES)"أقسام منظمة لاحتياجات المزرعة" else "المشتريات والمبيعات والفواتير والأرباح",fontSize=11.sp,color=FinMuted)}
    Icon(Icons.Outlined.AccountBalanceWallet,null,tint=FinGreen,modifier=Modifier.size(28.dp))
   }
-  if(page==FinancePage.HOME){
+  if(page==FinancePage.PURCHASES){ PurchaseScreen(c,herd,feeds,meds,{page=FinancePage.HOME}){message=it;refresh();page=FinancePage.HOME} }else if(page==FinancePage.HOME){
    LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=22.dp)){
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("إجمالي المداخيل",dinar(revenue),Icons.Outlined.TrendingUp,Modifier.weight(1f));FinMetric("تكلفة الأصناف المباعة",dinar(cogs),Icons.Outlined.Inventory2,Modifier.weight(1f))}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("صافي الأرباح",dinar(net.coerceAtLeast(0.0)),Icons.Outlined.AccountBalance,Modifier.weight(1f));FinMetric("الخسائر",dinar((-net).coerceAtLeast(0.0)+extra.second),Icons.Outlined.TrendingDown,Modifier.weight(1f))}}
     item{Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){Row(Modifier.fillMaxWidth().padding(13.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("النتيجة المالية",fontWeight=FontWeight.Bold,color=FinInk);Text("الإيرادات − تكلفة المباع − المصاريف",fontSize=9.sp,color=FinMuted)};Text(dinar(net),fontWeight=FontWeight.ExtraBold,color=if(net>=0)FinGreen else Color(0xFFB54D42),fontSize=17.sp)}}}
     item{Text("إدارة العمليات",fontSize=16.sp,fontWeight=FontWeight.Bold,color=FinInk)}
-    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("المشتريات","القطيع والعلف والأدوية",Icons.Outlined.ShoppingCart,Modifier.weight(1f)){purchase=true};FinAction("المبيعات","القطيع والصوف والمخزون",Icons.Outlined.PointOfSale,Modifier.weight(1f)){sale=true}}}
+    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("متجر المزرعة","تسوّق احتياجات المزرعة",Icons.Outlined.Storefront,Modifier.weight(1f)){page=FinancePage.PURCHASES};FinAction("المبيعات","القطيع والصوف والمخزون",Icons.Outlined.PointOfSale,Modifier.weight(1f)){sale=true}}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("الفواتير",list.size.toString()+" فاتورة",Icons.Outlined.ReceiptLong,Modifier.weight(1f)){page=FinancePage.INVOICES};FinAction("التقارير","تحليل النشاط",Icons.Outlined.BarChart,Modifier.weight(1f)){page=FinancePage.REPORTS}}}
     item{Text("المخزون المرتبط تلقائياً",fontSize=15.sp,fontWeight=FontWeight.Bold,color=FinInk)}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("رؤوس القطيع",herd.size.toString()+" رأس",Icons.Outlined.Pets,Modifier.weight(1f));FinMetric("مخزون العلف",String.format(Locale.US,"%.1f كغ",feeds.values.sum()),Icons.Outlined.Inventory2,Modifier.weight(1f))}}
@@ -150,43 +149,57 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    }
   }
  }
- if(purchase)PurchaseDialog(c,herd,{purchase=false;refresh()},{notice=it;purchase=false;refresh()})
  if(sale)SaleDialog(c,herd,feeds,meds,wool,{sale=false;refresh()},{notice=it;sale=false;refresh()})
  if(otherType.isNotBlank())OtherDialog(otherType,{otherType=""}){name,amount->addOther(c,otherType,name,amount);otherType="";refresh()}
  notice?.let{AlertDialog(onDismissRequest={notice=null},title={Text("تم تسجيل العملية")},text={Text(it)},confirmButton={TextButton(onClick={notice=null}){Text("حسناً")}})}
 }
 
-@Composable private fun PurchaseDialog(c:Context,herd:List<HerdAnimal>,dismiss:()->Unit,done:(String)->Unit){
- var type by remember{mutableStateOf(PurchaseType.ANIMAL)};var supplier by rememberSaveable{mutableStateOf("")};var item by rememberSaveable{mutableStateOf("نعجة")}
- var qty by rememberSaveable{mutableStateOf("1")};var price by rememberSaveable{mutableStateOf("")};var weight by rememberSaveable{mutableStateOf("")};var age by rememberSaveable{mutableStateOf("12")}
- var health by rememberSaveable{mutableStateOf("جيدة")};var state by rememberSaveable{mutableStateOf("نعجة جافة")};var batch by rememberSaveable{mutableStateOf("")};var expiry by rememberSaveable{mutableStateOf("")};var error by remember{mutableStateOf("")}
- val feedNames=FeedKind.values().map{it.label};val drugNames=medicineGroups.values.flatten()
- val options=when(type){PurchaseType.ANIMAL->listOf("نعجة","كبش","حمل/رخلة");PurchaseType.FEED->feedNames;PurchaseType.MEDICINE->drugNames}
- AlertDialog(onDismissRequest=dismiss,title={Text("فاتورة شراء")},text={LazyColumn(Modifier.heightIn(max=490.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-  item{Row(horizontalArrangement=Arrangement.spacedBy(3.dp)){PurchaseType.values().forEach{t->FilterChip(type==t,{type=t;item=when(t){PurchaseType.ANIMAL->"نعجة";PurchaseType.FEED->feedNames.first();PurchaseType.MEDICINE->drugNames.first()}},label={Text(t.title,fontSize=9.sp)})}}}
-  item{OutlinedTextField(supplier,{supplier=it},label={Text("اسم المورد / البائع")},modifier=Modifier.fillMaxWidth())}
-  item{var open by remember{mutableStateOf(false)};Box{OutlinedButton(onClick={open=true},modifier=Modifier.fillMaxWidth()){Text(item);Spacer(Modifier.weight(1f));Icon(Icons.Outlined.ArrowDropDown,null)};DropdownMenu(open,{open=false}){options.forEach{o->DropdownMenuItem(text={Text(o)},onClick={item=o;open=false})}}}}
-  item{OutlinedTextField(qty,{qty=it.filter(Char::isDigit)},label={Text(if(type==PurchaseType.ANIMAL)"عدد الرؤوس" else "الكمية")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth())}
-  item{OutlinedTextField(price,{price=it},label={Text("سعر الوحدة بالدينار")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())}
-  if(type==PurchaseType.ANIMAL){item{OutlinedTextField(weight,{weight=it},label={Text("وزن كل رأس بالكيلوغرام")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())};item{OutlinedTextField(age,{age=it},label={Text("العمر بالأشهر")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth())};item{Text("الحالة الصحية")};item{Row{listOf("جيدة","متوسطة","تحتاج متابعة").forEach{FilterChip(health==it,{health=it},label={Text(it,fontSize=9.sp)})}}};item{Text("الحالة الإنتاجية")};item{Column{listOf("نعجة جافة","نعجة حامل","نعجة مرضعة","كبش","خروف").forEach{FilterChip(state==it,{state=it},label={Text(it,fontSize=9.sp)})}}}}
-  if(type==PurchaseType.MEDICINE){item{OutlinedTextField(batch,{batch=it},label={Text("رقم التشغيلة")},modifier=Modifier.fillMaxWidth())};item{OutlinedTextField(expiry,{expiry=it},label={Text("تاريخ الصلاحية YYYY-MM-DD")},modifier=Modifier.fillMaxWidth())}}
-  if(error.isNotBlank())item{Text(error,color=Color.Red,fontSize=11.sp)}
- }},confirmButton={TextButton(onClick={
-  val n=qty.toIntOrNull()?:0;val p=price.replace(',','.').toDoubleOrNull()?:0.0
-  if(supplier.isBlank())error="أدخل اسم المورد" else if(n !in 1..500||p<=0)error="تحقق من الكمية والسعر" else if(type==PurchaseType.ANIMAL&&(weight.replace(',','.').toDoubleOrNull()?:0.0)<=0)error="أدخل وزن الرأس"
-  else{
-   val now=LocalDateTime.now().toString();val id="PUR-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val total=n*p;var detail=""
-   when(type){
-    PurchaseType.ANIMAL->{val tags=generateHerdTags(herd.map{it.tag},n);val kg=weight.replace(',','.').toDouble();val updated=herd.toMutableList();tags.forEach{tag->updated.add(HerdAnimal(UUID.randomUUID().toString(),tag,item,age.toIntOrNull()?:0,health,"شراء "+id,kg,productionState=if(item=="كبش")"كبش" else if(item=="حمل/رخلة")"خروف" else state))};saveHerd(c,updated);detail="أضيفت "+n+" رؤوس للقطيع بالمعرفات "+tags.first()+" إلى "+tags.last()+"."}
-    PurchaseType.FEED->{val k=FeedKind.values().first{it.label==item};val stock=loadFeedStocks(c);stock[k]=(stock[k]?:0.0)+n;saveFeedStocks(c,stock);detail="أضيفت الكمية إلى مخزون "+k.label+"."}
-    PurchaseType.MEDICINE->{val stock=readMedicineStock(c);stock[item]=(stock[item]?:0.0)+n;writeMedicineStock(c,stock);detail="أضيف الدواء إلى قسم الأدوية. التشغيلة: "+batch.ifBlank{"غير محددة"}+"، الصلاحية: "+expiry.ifBlank{"غير محددة"}+"."}
-   }
-   writeInvoice(c,FinanceInvoice(id,"purchase",type.title,supplier,item,n.toDouble(),if(type==PurchaseType.ANIMAL)"رأس" else if(type==PurchaseType.FEED)"كغ" else "وحدة",p,total,0.0,now,detail))
-   done("حُفظت الفاتورة "+id+" بقيمة "+dinar(total)+". "+detail)
+@Composable private fun PurchaseScreen(c:Context,herd:List<HerdAnimal>,feeds:Map<FeedKind,Double>,meds:Map<String,Double>,back:()->Unit,done:(String)->Unit){
+ var type by remember{mutableStateOf<PurchaseType?>(null)}
+ var supplier by rememberSaveable{mutableStateOf("")};var item by rememberSaveable{mutableStateOf("نعجة")};var qty by rememberSaveable{mutableStateOf("1")};var price by rememberSaveable{mutableStateOf("")};var weight by rememberSaveable{mutableStateOf("")};var age by rememberSaveable{mutableStateOf("12")};var health by rememberSaveable{mutableStateOf("جيدة")};var state by rememberSaveable{mutableStateOf("نعجة جافة")};var batch by rememberSaveable{mutableStateOf("")};var expiry by rememberSaveable{mutableStateOf("")};var error by remember{mutableStateOf("")}
+ val feedNames=FeedKind.values().map{it.label};val drugs=medicineGroups.values.flatten()
+ val options=when(type){PurchaseType.ANIMAL->listOf("نعجة","كبش","حمل/رخلة");PurchaseType.FEED->feedNames;PurchaseType.MEDICINE->drugs;null->emptyList()}
+ LazyColumn(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(11.dp),contentPadding=PaddingValues(bottom=25.dp)){
+  item{Surface(color=FinGreen,shape=RoundedCornerShape(22.dp)){Row(Modifier.fillMaxWidth().padding(17.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("متجر مزرعتك في مكان واحد",fontSize=19.sp,fontWeight=FontWeight.ExtraBold,color=Color.White);Text("اختر القسم ثم أضف مشترياتك إلى سجل المزرعة",fontSize=10.sp,color=Color.White.copy(alpha=.88f))};Icon(Icons.Outlined.ShoppingBasket,null,tint=Color.White,modifier=Modifier.size(38.dp))}}}
+  item{Text(if(type==null)"تصفح أقسام المتجر" else "تفاصيل الشراء",fontSize=16.sp,fontWeight=FontWeight.Bold,color=FinInk)}
+  if(type==null){
+   item{PurchaseCategoryCard("القطيع","شراء رؤوس الأغنام","نعاج • كباش • حملان",Icons.Outlined.Pets,herd.size.toString()+" رأس"){type=PurchaseType.ANIMAL;item="نعجة"}}
+   item{PurchaseCategoryCard("الأعلاف","شراء الأعلاف","تُضاف الكمية مباشرة إلى مخزون العلف",Icons.Outlined.Inventory2,String.format(Locale.US,"%.1f كغ",feeds.values.sum())){type=PurchaseType.FEED;item=feedNames.first()}}
+   item{PurchaseCategoryCard("الأدوية واللقاحات","المستلزمات البيطرية","تسجيل التشغيلة وتاريخ الصلاحية",Icons.Outlined.Vaccines,meds.size.toString()+" صنف"){type=PurchaseType.MEDICINE;item=drugs.first()}}
+   item{Surface(color=Color.White,shape=RoundedCornerShape(17.dp),border=BorderStroke(1.dp,FinLine)){Column(Modifier.padding(14.dp)){Text("سلة المشتريات",fontWeight=FontWeight.Bold,color=FinInk);Text("بعد اختيار القسم، أدخل المورد والكمية والسعر. سيظهر الإجمالي قبل تأكيد الفاتورة.",fontSize=11.sp,color=FinMuted,lineHeight=17.sp)}}}
+  }else{
+   item{Row(verticalAlignment=Alignment.CenterVertically){TextButton(onClick={type=null;error=""}){Icon(Icons.Outlined.ArrowForward,null);Text("كل الأقسام")};Spacer(Modifier.weight(1f));Text(type!!.title,color=FinGreen,fontWeight=FontWeight.Bold,fontSize=12.sp)}}
+   item{Surface(color=Color.White,shape=RoundedCornerShape(18.dp),border=BorderStroke(1.dp,FinLine)){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
+    Text("بيانات المورد",fontWeight=FontWeight.Bold,color=FinInk);OutlinedTextField(supplier,{supplier=it},label={Text("اسم المورد / البائع")},modifier=Modifier.fillMaxWidth(),singleLine=true)
+    Text("الصنف والكمية",fontWeight=FontWeight.Bold,color=FinInk);var open by remember{mutableStateOf(false)}
+    Box{OutlinedButton(onClick={open=true},modifier=Modifier.fillMaxWidth()){Text(item);Spacer(Modifier.weight(1f));Icon(Icons.Outlined.ExpandMore,null)};DropdownMenu(open,{open=false}){options.forEach{o->DropdownMenuItem(text={Text(o)},onClick={item=o;open=false})}}}
+    OutlinedTextField(qty,{qty=it.filter{ch->ch in "0123456789.,"}},label={Text(if(type==PurchaseType.ANIMAL)"عدد الرؤوس" else "الكمية")},keyboardOptions=KeyboardOptions(keyboardType=if(type==PurchaseType.ANIMAL)KeyboardType.Number else KeyboardType.Decimal),modifier=Modifier.fillMaxWidth(),singleLine=true)
+    OutlinedTextField(price,{price=it.filter{ch->ch in "0123456789.,"}},label={Text("سعر الوحدة بالدينار الجزائري")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth(),singleLine=true)
+    if(type==PurchaseType.ANIMAL){Divider(color=FinLine);Text("بيانات الحيوان",fontWeight=FontWeight.Bold,color=FinInk);OutlinedTextField(weight,{weight=it},label={Text("الوزن بالكيلوغرام")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth());OutlinedTextField(age,{age=it},label={Text("العمر بالأشهر")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth());Text("الحالة الصحية",fontSize=11.sp,color=FinMuted);Row{listOf("جيدة","متوسطة","تحتاج متابعة").forEach{FilterChip(health==it,{health=it},label={Text(it,fontSize=9.sp)})}};Text("الحالة الإنتاجية",fontSize=11.sp,color=FinMuted);Column{listOf("نعجة جافة","نعجة حامل","نعجة مرضعة","كبش","خروف").forEach{FilterChip(state==it,{state=it},label={Text(it,fontSize=10.sp)})}}}
+    if(type==PurchaseType.MEDICINE){Divider(color=FinLine);Text("بيانات الدواء",fontWeight=FontWeight.Bold,color=FinInk);OutlinedTextField(batch,{batch=it},label={Text("رقم التشغيلة")},modifier=Modifier.fillMaxWidth());OutlinedTextField(expiry,{expiry=it},label={Text("تاريخ الصلاحية YYYY-MM-DD")},modifier=Modifier.fillMaxWidth())}
+   }}}
+   item{val q=qty.replace(',','.').toDoubleOrNull()?:0.0;val p=price.replace(',','.').toDoubleOrNull()?:0.0;Surface(color=Color(0xFFEAF1E9),shape=RoundedCornerShape(16.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("إجمالي السلة",fontSize=11.sp,color=FinMuted);Text(dinar(q*p),fontSize=22.sp,fontWeight=FontWeight.ExtraBold,color=FinGreen)};Icon(Icons.Outlined.ReceiptLong,null,tint=FinGreen,modifier=Modifier.size(28.dp))}}}
+   if(error.isNotBlank())item{Text(error,color=Color(0xFFB54D42),fontSize=11.sp)}
+   item{Button(onClick={
+    val t=type?:return@Button;val raw=qty.replace(',','.').toDoubleOrNull()?:0.0;val p=price.replace(',','.').toDoubleOrNull()?:0.0;val count=raw.toInt()
+    if(supplier.isBlank())error="أدخل اسم المورد" else if(raw<=0||raw>100000||p<=0)error="تحقق من الكمية والسعر" else if(t==PurchaseType.ANIMAL&&(raw!=count.toDouble()||count !in 1..500))error="عدد الرؤوس يجب أن يكون صحيحاً من 1 إلى 500" else if(t==PurchaseType.ANIMAL&&(weight.replace(',','.').toDoubleOrNull()?:0.0)<=0)error="أدخل وزن الرأس" else if(t==PurchaseType.MEDICINE&&batch.isBlank())error="أدخل رقم التشغيلة" else{
+     val now=LocalDateTime.now().toString();val id="PUR-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val q=if(t==PurchaseType.ANIMAL)count.toDouble() else raw;val total=q*p;var detail=""
+     when(t){
+      PurchaseType.ANIMAL->{val tags=generateHerdTags(herd.map{it.tag},count);val kg=weight.replace(',','.').toDouble();val updated=herd.toMutableList();tags.forEach{tag->updated.add(HerdAnimal(UUID.randomUUID().toString(),tag,item,age.toIntOrNull()?:0,health,"شراء "+id,kg,productionState=if(item=="كبش")"كبش" else if(item=="حمل/رخلة")"خروف" else state))};saveHerd(c,updated);detail="أضيفت "+count+" رؤوس للقطيع بالمعرفات "+tags.first()+" إلى "+tags.last()+"."}
+      PurchaseType.FEED->{val k=FeedKind.values().first{it.label==item};val stock=loadFeedStocks(c);stock[k]=(stock[k]?:0.0)+q;saveFeedStocks(c,stock);detail="أضيفت "+String.format(Locale.US,"%.2f",q)+" كغ إلى مخزون "+k.label+"."}
+      PurchaseType.MEDICINE->{val stock=readMedicineStock(c);stock[item]=(stock[item]?:0.0)+q;writeMedicineStock(c,stock);detail="أضيف الدواء إلى قسم الأدوية. التشغيلة: "+batch+"، الصلاحية: "+expiry.ifBlank{"غير محددة"}+"."}
+     }
+     writeInvoice(c,FinanceInvoice(id,"purchase",t.title,supplier,item,q,if(t==PurchaseType.ANIMAL)"رأس" else if(t==PurchaseType.FEED)"كغ" else "وحدة",p,total,0.0,now,detail));done("تم حفظ الفاتورة "+id+" بقيمة "+dinar(total)+". "+detail)
+    }
+   },modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FinGreen),shape=RoundedCornerShape(14.dp)){Icon(Icons.Outlined.CheckCircle,null);Spacer(Modifier.width(8.dp));Text("تأكيد الشراء وحفظ الفاتورة",fontWeight=FontWeight.Bold)}}
   }
- }){Text("حفظ الفاتورة")}},dismissButton={TextButton(onClick=dismiss){Text("إلغاء")}})
+ }
 }
-
+@Composable private fun PurchaseCategoryCard(title:String,subtitle:String,description:String,icon:androidx.compose.ui.graphics.vector.ImageVector,metric:String,onClick:()->Unit){
+ Surface(color=Color.White,shape=RoundedCornerShape(19.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable(onClick=onClick)){
+  Row(Modifier.padding(15.dp),verticalAlignment=Alignment.CenterVertically){Surface(color=Color(0xFFEAF1E9),shape=RoundedCornerShape(15.dp)){Icon(icon,null,tint=FinGreen,modifier=Modifier.padding(13.dp).size(29.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(title,fontSize=15.sp,fontWeight=FontWeight.ExtraBold,color=FinInk);Text(subtitle,fontSize=10.sp,color=FinGreen,fontWeight=FontWeight.SemiBold);Text(description,fontSize=10.sp,color=FinMuted)};Column(horizontalAlignment=Alignment.End){Text(metric,fontSize=11.sp,fontWeight=FontWeight.Bold,color=FinGreen);Icon(Icons.Outlined.ChevronLeft,null,tint=FinMuted)}}
+ }
+}
 @Composable private fun SaleDialog(c:Context,herd:List<HerdAnimal>,feed:Map<FeedKind,Double>,medicine:Map<String,Double>,wool:Double,dismiss:()->Unit,done:(String)->Unit){
  var type by remember{mutableStateOf(SaleType.ANIMAL)};var buyer by rememberSaveable{mutableStateOf("")};var item by rememberSaveable{mutableStateOf(herd.firstOrNull()?.tag?:"")};var qty by rememberSaveable{mutableStateOf("1")};var price by rememberSaveable{mutableStateOf("")};var error by remember{mutableStateOf("")}
  val options=when(type){SaleType.ANIMAL->herd.map{it.tag};SaleType.WOOL->listOf("الصوف");SaleType.FEED->feed.filterValues{it>0}.keys.map{it.label};SaleType.MEDICINE->medicine.filterValues{it>0}.keys.toList()}
