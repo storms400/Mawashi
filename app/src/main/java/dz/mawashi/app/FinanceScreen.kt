@@ -212,7 +212,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    if(q>available+1e-8)error="الرصيد غير كافٍ. المتاح: "+available
    else{
     when(type){
-     SaleType.ANIMAL->{saveHerd(c,herd.filterNot{it.tag==item});detail="بيع الحيوان "+item+" وحفظ العملية في سجل الفاتورة."}
+     SaleType.ANIMAL->{val animal=herd.first{it.tag==item};val archiveId="SOLD-"+UUID.randomUUID().toString();archiveSoldAnimal(c,animal,archiveId);saveHerd(c,herd.filterNot{it.tag==item});detail="بيع الحيوان "+item+" وأُرشف ملفه التاريخي برقم "+archiveId+"."}
      SaleType.WOOL->writeWool(c,wool-q)
      SaleType.FEED->{val k=FeedKind.values().first{it.label==item};val s=loadFeedStocks(c);s[k]=(s[k]?:0.0)-q;saveFeedStocks(c,s)}
      SaleType.MEDICINE->{val s=readMedicineStock(c);s[item]=(s[item]?:0.0)-q;writeMedicineStock(c,s)}
