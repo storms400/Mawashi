@@ -329,7 +329,7 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
       val info=medicineInfo(name,group)
       Surface(color=Color.White,shape=RoundedCornerShape(17.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable{selected=name}){
        Row(Modifier.padding(11.dp),verticalAlignment=Alignment.CenterVertically){
-        MedicinePackArt(group,Modifier.width(76.dp).height(86.dp))
+        MedicinePackArt(name,group,Modifier.width(76.dp).height(86.dp))
         Spacer(Modifier.width(11.dp))
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
          Text(name,fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=12.sp)
@@ -351,7 +351,7 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
     item{TextButton(onClick={selected=null}){Icon(Icons.Outlined.ArrowForward,null);Text("العودة إلى الدليل")}}
     item{Surface(color=Color.White,shape=RoundedCornerShape(22.dp),border=BorderStroke(1.dp,FinLine)){
      Column(Modifier.fillMaxWidth().padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(7.dp)){
-      MedicinePackArt(group,Modifier.width(132.dp).height(145.dp))
+      MedicinePackArt(info.name,group,Modifier.width(132.dp).height(145.dp))
       Text(info.name,fontSize=18.sp,fontWeight=FontWeight.ExtraBold,color=FinInk)
       Text(info.scientific,fontSize=12.sp,color=FinGreen,fontWeight=FontWeight.Bold)
       Text(info.group,fontSize=10.sp,color=FinMuted)
@@ -371,21 +371,56 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
  }
 }
 
-@Composable private fun MedicinePackArt(group:String,modifier:Modifier=Modifier){
- val icon=when(group){ "اللقاحات والتطعيمات"->Icons.Outlined.Vaccines; "الجروح والعناية"->Icons.Outlined.Healing; "رعاية الحملان"->Icons.Outlined.Pets; else->Icons.Outlined.Medication }
- val tint=when(group){"اللقاحات والتطعيمات"->Color(0xFF66836A);"مضادات الطفيليات الداخلية"->Color(0xFF9A8051);"الجروح والعناية"->Color(0xFF6C8791);"الجهاز الهضمي والجفاف"->Color(0xFF6D8D8A);"التكاثر والولادة"->Color(0xFF927A9A);else->Color(0xFF66836A)}
- Box(modifier.background(Color(0xFFF7F3EA),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){
-  Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-   Box(Modifier.width(28.dp).height(9.dp).background(tint,RoundedCornerShape(topStart=4.dp,topEnd=4.dp)))
-   Surface(color=Color.White,shape=RoundedCornerShape(bottomStart=10.dp,bottomEnd=10.dp),border=BorderStroke(1.dp,FinLine),shadowElevation=1.dp){
-    Column(Modifier.width(58.dp).height(65.dp).padding(5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-     Icon(icon,null,tint=tint,modifier=Modifier.size(25.dp))
-     Spacer(Modifier.height(2.dp))
-     Box(Modifier.fillMaxWidth().height(4.dp).background(tint.copy(alpha=.22f),RoundedCornerShape(3.dp)))
-     Text("VET",fontSize=7.sp,color=tint,fontWeight=FontWeight.ExtraBold)
+@Composable private fun MedicinePackArt(name:String,group:String,modifier:Modifier=Modifier){
+ val isVaccine=group=="اللقاحات والتطعيمات"
+ val isSpray=name.contains("بخاخ")
+ val isPowder=name.contains("بدائل اللبأ")||name.contains("الأملاح")||name.contains("الإسهال")
+ val isTube=name.contains("مطهرات")||name.contains("التهابات الضرع")||name.contains("سرة")
+ val isSyringe=name.contains("أوكسيتوسين")||name.contains("البروستاغلاندين")
+ val accent=when{
+  isVaccine->Color(0xFF4F806B)
+  group=="مضادات الطفيليات الداخلية"->Color(0xFFB18443)
+  group=="الجروح والعناية"->Color(0xFF56899A)
+  group=="الجهاز الهضمي والجفاف"->Color(0xFF4D8F88)
+  group=="التكاثر والولادة"->Color(0xFF9276A6)
+  else->Color(0xFF66836A)
+ }
+ val label=when{isVaccine->"VACCINE";isSpray->"SPRAY";isPowder->"ORAL";isTube->"CARE";isSyringe->"INJECT";else->"VET"}
+ Box(modifier.background(Color(0xFFF4F1E8),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){
+  when{
+   isSyringe->Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
+    Box(Modifier.width(8.dp).height(38.dp).background(Color(0xFFCBD4D0),RoundedCornerShape(3.dp)))
+    Box(Modifier.width(43.dp).height(13.dp).background(Color.White,RoundedCornerShape(3.dp)),contentAlignment=Alignment.Center){Box(Modifier.fillMaxWidth(.72f).height(5.dp).background(accent.copy(alpha=.35f)))}
+    Box(Modifier.width(13.dp).height(3.dp).background(accent))
+   }
+   isTube->Row(verticalAlignment=Alignment.CenterVertically){
+    Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Box(Modifier.width(20.dp).height(8.dp).background(accent,RoundedCornerShape(topStart=4.dp,topEnd=4.dp)))
+     Box(Modifier.width(35.dp).height(45.dp).background(Color.White,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Outlined.Healing,null,tint=accent,modifier=Modifier.size(19.dp));Box(Modifier.width(23.dp).height(4.dp).background(accent.copy(alpha=.3f),RoundedCornerShape(2.dp)))}}
+    }
+   }
+   isPowder->Column(horizontalAlignment=Alignment.CenterHorizontally){
+    Box(Modifier.width(37.dp).height(9.dp).background(accent,RoundedCornerShape(topStart=4.dp,topEnd=4.dp)))
+    Box(Modifier.width(54.dp).height(42.dp).background(Color.White,RoundedCornerShape(bottomStart=8.dp,bottomEnd=8.dp)),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Outlined.Science,null,tint=accent,modifier=Modifier.size(19.dp));Text("POWDER",fontSize=6.sp,color=accent,fontWeight=FontWeight.ExtraBold)}}
+   }
+   isSpray->Column(horizontalAlignment=Alignment.CenterHorizontally){
+    Box(Modifier.width(18.dp).height(11.dp).background(accent,RoundedCornerShape(topStart=3.dp,topEnd=3.dp)))
+    Box(Modifier.width(12.dp).height(8.dp).background(accent.copy(alpha=.65f)))
+    Box(Modifier.width(35.dp).height(47.dp).background(Color.White,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center){Icon(Icons.Outlined.Healing,null,tint=accent,modifier=Modifier.size(23.dp))}
+   }
+   else->Column(horizontalAlignment=Alignment.CenterHorizontally){
+    Box(Modifier.width(if(isVaccine)27.dp else 34.dp).height(9.dp).background(accent,RoundedCornerShape(topStart=3.dp,topEnd=3.dp)))
+    Box(Modifier.width(if(isVaccine)39.dp else 53.dp).height(if(isVaccine)49.dp else 55.dp).background(Color.White,RoundedCornerShape(bottomStart=8.dp,bottomEnd=8.dp)),contentAlignment=Alignment.Center){
+     Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+      Icon(if(isVaccine)Icons.Outlined.Vaccines else Icons.Outlined.Medication,null,tint=accent,modifier=Modifier.size(if(isVaccine)23.dp else 27.dp))
+      Spacer(Modifier.height(3.dp))
+      Box(Modifier.fillMaxWidth(.8f).height(4.dp).background(accent.copy(alpha=.28f),RoundedCornerShape(3.dp)))
+      Text(label,fontSize=6.sp,color=accent,fontWeight=FontWeight.ExtraBold)
+     }
     }
    }
   }
+  Text(if(isVaccine)"VACCINE" else "VETERINARY",fontSize=6.sp,color=accent.copy(alpha=.8f),fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.BottomCenter).padding(bottom=3.dp))
  }
 }
 
