@@ -84,8 +84,7 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
  val p=c.getSharedPreferences(FEED_PREFS,0)
  val today=LocalDate.now().toString()
  if(p.getString(FEED_LAST_RUN_KEY,"")==today)return "استهلاك اليوم مسجل مسبقاً؛ لم يتكرر الخصم"
- val inputs=animals.mapNotNull{a->val w=a.weightKg?.takeIf{it>0}?:return@mapNotNull null
-  FeedAnimalInput(a.tag,w,a.productionState,a.pregnancyStage,a.fetusCount,a.nursingLambs,a.ageMonths)}
+ val inputs=feedInputsForAnimals(animals)
  if(inputs.isEmpty())return "لا توجد حيوانات بأوزان مسجلة صالحة للحساب"
  val stocks=loadFeedStocks(c)
  val active=FeedKind.values().filter{it!=FeedKind.MINERALS && (stocks[it]?:0.0)>0 && (shares[it]?:0.0)>0}
@@ -116,8 +115,8 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
  var showConsumption by rememberSaveable{mutableStateOf(false)}
  var expandedTag by rememberSaveable{mutableStateOf("")}
  var message by remember{mutableStateOf<String?>(null)}
- val herd=loadHerd(c)
- val eligible=herd.mapNotNull{a->val w=a.weightKg?.takeIf{it>0}?:return@mapNotNull null;FeedAnimalInput(a.tag,w,a.productionState,a.pregnancyStage,a.fetusCount,a.nursingLambs,a.ageMonths)}
+ val herd=activeHerdAnimals(loadHerd(c))
+ val eligible=feedInputsForAnimals(herd)
  val needs=eligible.map{SheepNutrition.calculate(it,pasture)}
  val totalDmi=needs.sumOf{it.dryMatterKg}
  val totalSupplement=needs.sumOf{it.supplementDryMatterKg}
