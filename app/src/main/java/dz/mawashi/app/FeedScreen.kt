@@ -126,6 +126,14 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
  val dailyAsFed=estimatedUses.sumOf{it.asFedKg}
  val totalStock=activeStocks.sumOf{stocks[it]?:0.0}
  val stockDays=estimatedUses.mapNotNull{use->if(use.asFedKg>0)(stocks[use.kind]?:0.0)/use.asFedKg else null}.minOrNull()
+ LaunchedEffect(LocalDate.now().toString(),eligible,pasture,shares,stocks){
+  val configured=activeStocks.filter{(shares[it]?:0.0)>0}
+  if(eligible.isNotEmpty() && configured.isNotEmpty()){
+   val outcome=applyDailyFeedConsumption(c,herd,pasture,shares)
+   stocks=loadFeedStocks(c)
+   if(outcome.startsWith("تم تسجيل"))message=outcome
+  }
+ }
 
  Column(modifier.fillMaxSize().background(FeedCream).padding(horizontal=16.dp)){
   Spacer(Modifier.height(12.dp))
