@@ -20,6 +20,12 @@ internal data class FeedAnimalInput(
     val pregnancyStage:String="غير حامل", val fetusCount:Int=1,
     val nursingLambs:Int=1, val ageMonths:Int=12
 )
+
+internal fun feedInputsForAnimals(animals:List<HerdAnimal>):List<FeedAnimalInput> =
+    activeHerdAnimals(animals).mapNotNull { animal ->
+        val weight=animal.weightKg?.takeIf { it>0.0 } ?: return@mapNotNull null
+        FeedAnimalInput(animal.tag,weight,animal.productionState,animal.pregnancyStage,animal.fetusCount,animal.nursingLambs,animal.ageMonths)
+    }
 internal data class DailyNeed(
     val dryMatterKg:Double, val meMj:Double, val crudeProteinKg:Double,
     val pastureShare:Double, val supplementDryMatterKg:Double
