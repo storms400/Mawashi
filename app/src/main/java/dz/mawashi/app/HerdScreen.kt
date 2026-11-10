@@ -57,11 +57,36 @@ private const val HERD_PREFS = "mawashi_herd_local"
 private const val HERD_KEY = "animals"
 internal data class HerdAnimal(val id:String,val tag:String,val kind:String,val ageMonths:Int,val health:String,val notes:String,val weightKg:Double?=null,val birthDate:String="",val birthWeightKg:Double?=null,val motherTag:String="")
 
-internal fun loadHerd(c:Context):List<HerdAnimal> = try {
- val a=JSONArray(c.getSharedPreferences(HERD_PREFS,0).getString(HERD_KEY,"[]")?:"[]")
- buildList { for(i in 0 until a.length()){val x=a.getJSONObject(i);add(HerdAnimal(x.optString("id"),x.optString("tag"),x.optString("kind","نعجة"),x.optInt("ageMonths"),x.optString("health","جيدة"),x.optString("notes"),if(x.has("weightKg")&&!x.isNull("weightKg"))x.optDouble("weightKg") else null,x.optString("birthDate"),if(x.has("birthWeightKg")&&!x.isNull("birthWeightKg"))x.optDouble("birthWeightKg") else null,x.optString("motherTag")))} }
-} catch(_:Exception){emptyList()}
-private fun saveHerd(c:Context,list:List<HerdAnimal>){val a=JSONArray();list.forEach{x->a.put(JSONObject().apply{put("id",x.id);put("tag",x.tag);put("kind",x.kind);put("ageMonths",x.ageMonths);put("health",x.health);put("notes",x.notes);put("weightKg",x.weightKg);put("birthDate",x.birthDate);put("birthWeightKg",x.birthWeightKg);put("motherTag",x.motherTag)})};c.getSharedPreferences(HERD_PREFS,0).edit().putString(HERD_KEY,a.toString()).apply()}
+internal fun loadHerd(c:Context):List<HerdAnimal> {
+ val raw=c.getSharedPreferences(HERD_PREFS,0).getString(HERD_KEY,"[]") ?: "[]"
+ return try {
+  val a=JSONArray(raw); val result=mutableListOf<HerdAnimal>()
+  for(i in 0 until a.length()) {
+   try {
+    val x=a.getJSONObject(i)
+    val id=x.optString("id").ifBlank{UUID.randomUUID().toString()}
+    val tag=x.optString("tag").trim()
+    if(tag.isNotBlank() && result.none{it.tag.equals(tag,true)}) result.add(
+     HerdAnimal(id,tag,x.optString("kind","غير محدد"),x.optInt("ageMonths"),x.optString("health","غير محددة"),x.optString("notes"),
+      if(x.has("weightKg")&&!x.isNull("weightKg"))x.optDouble("weightKg") else null,
+      x.optString("birthDate"),if(x.has("birthWeightKg")&&!x.isNull("birthWeightKg"))x.optDouble("birthWeightKg") else null,x.optString("motherTag"))
+    )
+   } catch(_:Exception) { /* تجاهل السجل التالف مع الحفاظ على بقية القطيع */ }
+  }
+  result
+ } catch(_:Exception){ emptyList() }
+}
+private fun saveHerd(c:Context,list:List<HerdAnimal>) {
+ val a=JSONArray()
+ list.forEach{x->a.put(JSONObject().apply{
+  put("id",x.id);put("tag",x.tag);put("kind",x.kind);put("ageMonths",x.ageMonths);put("health",x.health);put("notes",x.notes)
+  if(x.weightKg==null)put("weightKg",JSONObject.NULL) else put("weightKg",x.weightKg)
+  put("birthDate",x.birthDate)
+  if(x.birthWeightKg==null)put("birthWeightKg",JSONObject.NULL) else put("birthWeightKg",x.birthWeightKg)
+  put("motherTag",x.motherTag)
+ })}
+ check(c.getSharedPreferences(HERD_PREFS,0).edit().putString(HERD_KEY,a.toString()).commit()) { "تعذر حفظ بيانات القطيع" }
+}
 
 
 internal fun generateHerdTags(existingTags:List<String>,count:Int):List<String>{
