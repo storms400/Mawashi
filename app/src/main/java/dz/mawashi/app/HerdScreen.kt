@@ -107,6 +107,9 @@ internal fun archiveHerdAnimal(animal:HerdAnimal,date:String,reason:String,today
 internal fun restoreHerdAnimal(animal:HerdAnimal):HerdAnimal =
  animal.copy(lifecycleStatus="نشط",exitDate="",exitReason="")
 
+internal fun activeHerdAnimals(animals:List<HerdAnimal>):List<HerdAnimal> =
+ animals.filter { it.lifecycleStatus!="مؤرشف" }
+
 internal fun generateHerdTags(existingTags:List<String>,count:Int):List<String>{
  require(count in 1..500)
  val used=existingTags.mapNotNull{Regex("^Q-([0-9]+)$",RegexOption.IGNORE_CASE).matchEntire(it.trim())?.groupValues?.get(1)?.toIntOrNull()}.toMutableSet()
