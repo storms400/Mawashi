@@ -123,6 +123,9 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
  val totalSupplement=needs.sumOf{it.supplementDryMatterKg}
  val activeStocks=FeedKind.values().filter{(stocks[it]?:0.0)>0.0001}
  val estimatedUses=calculateSupplementUses(needs,activeStocks.map{FeedStock(it,stocks[it]?:0.0,shares[it]?:0.0)})
+ val dailyAsFed=estimatedUses.sumOf{it.asFedKg}
+ val totalStock=activeStocks.sumOf{stocks[it]?:0.0}
+ val stockDays=estimatedUses.mapNotNull{use->if(use.asFedKg>0)(stocks[use.kind]?:0.0)/use.asFedKg else null}.minOrNull()
 
  Column(modifier.fillMaxSize().background(FeedCream).padding(horizontal=16.dp)){
   Spacer(Modifier.height(12.dp))
@@ -137,13 +140,14 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
   if(!showConsumption){
    Spacer(Modifier.height(12.dp))
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-    FeedMetric("الحيوانات ذات الوزن",eligible.size.toString(),Modifier.weight(1f))
-    FeedMetric("المادة الجافة المقدرة",String.format(Locale.US,"%.2f كغ/يوم",totalDmi),Modifier.weight(1f))
+    FeedMetric("إجمالي المخزون",String.format(Locale.US,"%.1f كغ",totalStock),Modifier.weight(1f))
+    FeedMetric("الاستهلاك اليومي المقدر",String.format(Locale.US,"%.2f كغ",dailyAsFed),Modifier.weight(1f))
    }
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-    FeedMetric("المكمل المطلوب",String.format(Locale.US,"%.2f كغ/يوم",totalSupplement),Modifier.weight(1f))
-    FeedMetric("أصناف المخزون",activeStocks.size.toString(),Modifier.weight(1f))
+    FeedMetric("عدد حيوانات القطيع",herd.size.toString(),Modifier.weight(1f))
+    FeedMetric("مدة كفاية الأصناف",stockDays?.let{String.format(Locale.US,"%.1f يوم",it)}?:"—",Modifier.weight(1f))
    }
+   Text("المادة الجافة المطلوبة: "+String.format(Locale.US,"%.2f كغ/يوم",totalDmi)+" • المكمل المقدر: "+String.format(Locale.US,"%.2f كغ مادة جافة/يوم",totalSupplement),fontSize=10.sp,color=FeedMuted)
    Spacer(Modifier.height(12.dp))
    Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=androidx.compose.foundation.BorderStroke(1.dp,FeedLine)){
     Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
