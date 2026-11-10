@@ -36,6 +36,21 @@ class HerdLifecycleTest {
         assertEquals(animal.id, restored.id)
     }
 
+    @Test fun activeHerdExcludesArchivedAnimalsButKeepsLegacyActiveRecords() {
+        val active = animal.copy(tag = "Q-0002")
+        val archived = archiveHerdAnimal(animal, "2026-11-10", "بيع", LocalDate.parse("2026-11-10"))
+        assertEquals(listOf("Q-0002"), activeHerdAnimals(listOf(archived, active)).map { it.tag })
+    }
+
+    @Test fun feedInputsExcludeArchivedAnimalsAndAnimalsWithoutValidWeight() {
+        val active = animal.copy(tag = "Q-0002")
+        val archived = archiveHerdAnimal(animal, "2026-11-10", "نفوق", LocalDate.parse("2026-11-10"))
+        val noWeight = active.copy(tag = "Q-0003", weightKg = null)
+        val inputs = feedInputsForAnimals(listOf(archived, active, noWeight))
+        assertEquals(1, inputs.size)
+        assertEquals("Q-0002", inputs.single().tag)
+    }
+
     @Test fun rejectsInvalidOrFutureExitDates() {
         val today = LocalDate.parse("2026-11-10")
         assertFalse(isValidHerdExitDate("2026-02-31", today))
