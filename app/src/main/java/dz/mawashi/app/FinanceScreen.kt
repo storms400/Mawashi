@@ -113,7 +113,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    Column(Modifier.weight(1f)){Text(if(page==FinancePage.PURCHASES)"متجر المزرعة" else "المالية",fontSize=25.sp,fontWeight=FontWeight.ExtraBold,color=FinInk);Text(if(page==FinancePage.PURCHASES)"أقسام منظمة لاحتياجات المزرعة" else "المشتريات والمبيعات والفواتير والأرباح",fontSize=11.sp,color=FinMuted)}
    Icon(Icons.Outlined.AccountBalanceWallet,null,tint=FinGreen,modifier=Modifier.size(28.dp))
   }
-  if(page==FinancePage.PURCHASES){ PurchaseScreen(c,herd,feeds,meds,{page=FinancePage.HOME}){message=it;refresh();page=FinancePage.HOME} }else if(page==FinancePage.HOME){
+  if(page==FinancePage.PURCHASES){ PurchaseScreen(c,herd,feeds,meds,{page=FinancePage.HOME}){notice=it;refresh();page=FinancePage.HOME} }else if(page==FinancePage.HOME){
    LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=22.dp)){
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("إجمالي المداخيل",dinar(revenue),Icons.Outlined.TrendingUp,Modifier.weight(1f));FinMetric("تكلفة الأصناف المباعة",dinar(cogs),Icons.Outlined.Inventory2,Modifier.weight(1f))}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("صافي الأرباح",dinar(net.coerceAtLeast(0.0)),Icons.Outlined.AccountBalance,Modifier.weight(1f));FinMetric("الخسائر",dinar((-net).coerceAtLeast(0.0)+extra.second),Icons.Outlined.TrendingDown,Modifier.weight(1f))}}
