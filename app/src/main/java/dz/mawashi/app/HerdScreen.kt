@@ -76,7 +76,7 @@ internal fun loadHerd(c:Context):List<HerdAnimal> {
   result
  } catch(_:Exception){ emptyList() }
 }
-private fun saveHerd(c:Context,list:List<HerdAnimal>) {
+internal fun saveHerd(c:Context,list:List<HerdAnimal>) {
  val a=JSONArray()
  list.forEach{x->a.put(JSONObject().apply{
   put("id",x.id);put("tag",x.tag);put("kind",x.kind);put("ageMonths",x.ageMonths);put("health",x.health);put("notes",x.notes)
