@@ -68,6 +68,23 @@ private fun writeInvoice(c:Context,v:FinanceInvoice){
  a.put(JSONObject().apply{put("id",v.id);put("type",v.type);put("category",v.category);put("party",v.party);put("item",v.item);put("quantity",v.quantity);put("unit",v.unit);put("unitPrice",v.unitPrice);put("total",v.total);put("cost",v.cost);put("timestamp",v.timestamp);put("notes",v.notes)})
  check(p.edit().putString(FIN_INVOICES,a.toString()).commit())
 }
+private data class MedicineLot(val item:String,val batch:String,val expiry:String,val quantity:Double,val supplier:String,val receivedAt:String)
+private const val MEDICINE_LOTS_KEY="medicine_stock_lots_v29"
+private fun readMedicineLots(c:Context):List<MedicineLot>{
+ val a=JSONArray(c.getSharedPreferences(FIN_PREFS,0).getString(MEDICINE_LOTS_KEY,"[]")?:"[]")
+ return (0 until a.length()).mapNotNull{i->runCatching{val x=a.getJSONObject(i);MedicineLot(x.optString("item"),x.optString("batch"),x.optString("expiry"),x.optDouble("quantity").coerceAtLeast(0.0),x.optString("supplier"),x.optString("receivedAt"))}.getOrNull()}
+}
+private fun saveMedicineLots(c:Context,lots:List<MedicineLot>){
+ val a=JSONArray();lots.forEach{x->a.put(JSONObject().put("item",x.item).put("batch",x.batch).put("expiry",x.expiry).put("quantity",x.quantity.coerceAtLeast(0.0)).put("supplier",x.supplier).put("receivedAt",x.receivedAt))}
+ check(c.getSharedPreferences(FIN_PREFS,0).edit().putString(MEDICINE_LOTS_KEY,a.toString()).commit())
+}
+private fun consumeMedicineLots(c:Context,item:String,quantity:Double){
+ var remaining=quantity
+ val lots=readMedicineLots(c).toMutableList()
+ val indices=lots.indices.filter{lots[it].item==item&&lots[it].quantity>0.0}.sortedBy{lots[it].expiry}
+ for(i in indices){if(remaining<=1e-8)break;val old=lots[i];val used=minOf(old.quantity,remaining);lots[i]=old.copy(quantity=old.quantity-used);remaining-=used}
+ if(remaining<=1e-8)saveMedicineLots(c,lots)
+}
 private fun readMedicineStock(c:Context):MutableMap<String,Double>{
  val a=JSONArray(c.getSharedPreferences(FIN_PREFS,0).getString(FIN_MEDICINES,"[]")?:"[]");val m=mutableMapOf<String,Double>()
  for(i in 0 until a.length()){val x=a.optJSONObject(i)?:continue;m[x.optString("name")]=x.optDouble("quantity").coerceAtLeast(0.0)}
@@ -188,12 +205,16 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    if(error.isNotBlank())item{Text(error,color=Color(0xFFB54D42),fontSize=11.sp)}
    item{Button(onClick={
     val t=type?:return@Button;val raw=qty.replace(',','.').toDoubleOrNull()?:0.0;val p=price.replace(',','.').toDoubleOrNull()?:0.0;val count=raw.toInt()
-    if(supplier.isBlank())error="أدخل اسم المورد" else if(raw<=0||raw>100000||p<=0)error="تحقق من الكمية والسعر" else if(t==PurchaseType.ANIMAL&&(raw!=count.toDouble()||count !in 1..500))error="عدد الرؤوس يجب أن يكون صحيحاً من 1 إلى 500" else if(t==PurchaseType.ANIMAL&&(weight.replace(',','.').toDoubleOrNull()?:0.0)<=0)error="أدخل وزن الرأس" else if(t==PurchaseType.MEDICINE&&batch.isBlank())error="أدخل رقم التشغيلة" else{
+    if(supplier.isBlank())error="أدخل اسم المورد" else if(raw<=0||raw>100000||p<=0)error="تحقق من الكمية والسعر" else if(t==PurchaseType.ANIMAL&&(raw!=count.toDouble()||count !in 1..500))error="عدد الرؤوس يجب أن يكون صحيحاً من 1 إلى 500" else if(t==PurchaseType.ANIMAL&&(weight.replace(',','.').toDoubleOrNull()?:0.0)<=0)error="أدخل وزن الرأس" else if(t==PurchaseType.MEDICINE&&batch.isBlank())error="أدخل رقم التشغيلة" else if(t==PurchaseType.MEDICINE&&runCatching{LocalDate.parse(expiry);true}.getOrDefault(false).not())error="أدخل تاريخ صلاحية صحيحاً بصيغة YYYY-MM-DD" else{
      val now=LocalDateTime.now().toString();val id="PUR-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val q=if(t==PurchaseType.ANIMAL)count.toDouble() else raw;val total=q*p;var detail=""
      when(t){
       PurchaseType.ANIMAL->{val tags=generateHerdTags(herd.map{it.tag},count);val kg=weight.replace(',','.').toDouble();val updated=herd.toMutableList();tags.forEach{tag->updated.add(HerdAnimal(UUID.randomUUID().toString(),tag,item,age.toIntOrNull()?:0,health,"شراء "+id,kg,productionState=if(item=="كبش")"كبش" else if(item=="حمل/رخلة")"خروف" else state))};saveHerd(c,updated);detail="أضيفت "+count+" رؤوس للقطيع بالمعرفات "+tags.first()+" إلى "+tags.last()+"."}
       PurchaseType.FEED->{val k=FeedKind.values().first{it.label==item};val stock=loadFeedStocks(c);stock[k]=(stock[k]?:0.0)+q;saveFeedStocks(c,stock);detail="أضيفت "+String.format(Locale.US,"%.2f",q)+" كغ إلى مخزون "+k.label+"."}
-      PurchaseType.MEDICINE->{val stock=readMedicineStock(c);stock[item]=(stock[item]?:0.0)+q;writeMedicineStock(c,stock);detail="أضيف الدواء إلى قسم الأدوية. التشغيلة: "+batch+"، الصلاحية: "+expiry.ifBlank{"غير محددة"}+"."}
+      PurchaseType.MEDICINE->{
+       val stock=readMedicineStock(c);stock[item]=(stock[item]?:0.0)+q;writeMedicineStock(c,stock)
+       val lots=readMedicineLots(c).toMutableList();lots.add(MedicineLot(item,batch.trim(),expiry.trim(),q,supplier.trim(),now));saveMedicineLots(c,lots)
+       detail="أضيف الدواء إلى المخزون. التشغيلة: "+batch+"، الصلاحية: "+expiry+"."
+      }
      }
      writeInvoice(c,FinanceInvoice(id,"purchase",t.title,supplier,item,q,if(t==PurchaseType.ANIMAL)"رأس" else if(t==PurchaseType.FEED)"كغ" else "وحدة",p,total,0.0,now,detail));done("تم حفظ الفاتورة "+id+" بقيمة "+dinar(total)+". "+detail)
     }
@@ -234,7 +255,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
      SaleType.ANIMAL->{val animal=herd.first{it.tag==item};val archiveId="SOLD-"+UUID.randomUUID().toString();archiveSoldAnimal(c,animal,archiveId);saveHerd(c,herd.filterNot{it.tag==item});detail="بيع الحيوان "+item+" وأُرشف ملفه التاريخي برقم "+archiveId+"."}
      SaleType.WOOL->writeWool(c,wool-q)
      SaleType.FEED->{val k=FeedKind.values().first{it.label==item};val s=loadFeedStocks(c);s[k]=(s[k]?:0.0)-q;saveFeedStocks(c,s)}
-     SaleType.MEDICINE->{val s=readMedicineStock(c);s[item]=(s[item]?:0.0)-q;writeMedicineStock(c,s)}
+     SaleType.MEDICINE->{consumeMedicineLots(c,item,q);val s=readMedicineStock(c);s[item]=(s[item]?:0.0)-q;writeMedicineStock(c,s)}
     }
     val now=LocalDateTime.now().toString();val id="SAL-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val total=q*p
     writeInvoice(c,FinanceInvoice(id,"sale",type.title,buyer,item,q,if(type==SaleType.ANIMAL)"رأس" else if(type==SaleType.WOOL||type==SaleType.FEED)"كغ" else "وحدة",p,total,q*costUnit,now,detail))
@@ -267,9 +288,21 @@ private fun averagePurchaseCost(c:Context,item:String,category:String):Double{va
 }
 
 private data class MedicineInfo(val name:String,val group:String,val scientific:String,val purpose:String,val active:String,val concentration:String,val storage:String,val warnings:String,val withdrawal:String)
+private data class HerdMetricRecord(val tag:String,val date:String,val weightKg:Double,val bcs:Double,val note:String)
+private const val HERD_METRICS_KEY="herd_metrics_v29"
+private fun readHerdMetrics(c:Context):List<HerdMetricRecord>{
+ val a=JSONArray(c.getSharedPreferences(HERD_CARE_PREFS,0).getString(HERD_METRICS_KEY,"[]")?:"[]")
+ return (0 until a.length()).mapNotNull{i->runCatching{val x=a.getJSONObject(i);HerdMetricRecord(x.optString("tag"),x.optString("date"),x.optDouble("weightKg"),x.optDouble("bcs"),x.optString("note"))}.getOrNull()}
+}
+private fun saveHerdMetric(c:Context,v:HerdMetricRecord){
+ val all=readHerdMetrics(c).toMutableList();all.add(v)
+ val a=JSONArray();all.forEach{x->a.put(JSONObject().put("tag",x.tag).put("date",x.date).put("weightKg",x.weightKg).put("bcs",x.bcs).put("note",x.note))}
+ check(c.getSharedPreferences(HERD_CARE_PREFS,0).edit().putString(HERD_METRICS_KEY,a.toString()).commit())
+}
 private fun medicineInfo(name:String,group:String):MedicineInfo{
  val data=when(name){
   "لقاح التسمم المعوي"->Triple("لقاح مضاد لمرض التسمم المعوي","مستضدات سموم المطثيات، يختلف تركيبها حسب المنتج","الوقاية ضمن برنامج تحصين يحدده الطبيب البيطري")
+  "لقاح جدري الأغنام"->Triple("لقاح جدري الأغنام","فيروس جدري الأغنام المضعّف أو مستحضر معطل حسب المنتج","الوقاية من جدري الأغنام؛ نوع اللقاح وبرنامج التحصين حسب النشرة")
   "لقاح الجدري"->Triple("لقاح جدري الأغنام","فيروس جدري الأغنام المضعّف أو مستحضر معطل حسب المنتج","الوقاية من جدري الأغنام؛ نوع اللقاح وبرنامج التحصين حسب النشرة")
   "لقاح الحمى القلاعية"->Triple("لقاح الحمى القلاعية","مستضدات فيروس الحمى القلاعية للأنماط المصلية المحددة على العبوة","الوقاية وفق النمط المصلي المتداول والبرنامج البيطري الرسمي")
   "لقاح طاعون المجترات الصغيرة PPR"->Triple("لقاح طاعون المجترات الصغيرة","مستضد فيروس PPR؛ غالباً لقاح حي مضعّف بحسب المنتج","الوقاية من طاعون المجترات الصغيرة وفق البرنامج البيطري")
@@ -349,6 +382,11 @@ private fun herdAgeLabel(a:HerdAnimal):String{
  var title by remember{mutableStateOf("")}
  var date by remember{mutableStateOf(LocalDate.now().plusDays(7).toString())}
  var notes by remember{mutableStateOf("")}
+ var metricDialog by remember{mutableStateOf(false)}
+ var metricWeight by remember{mutableStateOf("")}
+ var metricBcs by remember{mutableStateOf("3.0")}
+ var metricNote by remember{mutableStateOf("")}
+ var metrics by remember{mutableStateOf(readHerdMetrics(context))}
  val selected=animals.firstOrNull{it.tag==selectedTag}
  Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(9.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){
@@ -389,13 +427,20 @@ private fun herdAgeLabel(a:HerdAnimal):String{
      if(selected.productionState.contains("حامل")||selected.pregnancyStage!="غير حامل"){
       Text("متابعة النعجة الحامل: راقب درجة حالة الجسم (BCS) والوزن وتغير الشهية، واضبط العليقة حسب مرحلة الحمل وعدد الأجنة بإشراف مختص.",fontSize=10.sp,color=FinGreen,lineHeight=15.sp)
      }
-     Text("الحالة التغذوية: لا توجد درجة حالة جسم مسجلة؛ أضف تقييم BCS ووزن دوري في سجل القطيع بدلاً من افتراضها.",fontSize=10.sp,color=FinMuted,lineHeight=15.sp)
+     val animalMetrics=metrics.filter{it.tag==selected.tag}.sortedByDescending{it.date}
+     Text("آخر تقييم تغذوي: "+(animalMetrics.firstOrNull()?.let{"BCS ${"%.1f".format(Locale.US,it.bcs)} • ${"%.1f".format(Locale.US,it.weightKg)} كغ • ${it.date}"}?:"لا يوجد سجل بعد"),fontSize=10.sp,color=FinGreen)
+     OutlinedButton(onClick={metricWeight=selected.weightKg?.toString()?:"";metricBcs="3.0";metricNote="";metricDialog=true},modifier=Modifier.fillMaxWidth()){Icon(Icons.Outlined.MonitorWeight,null);Spacer(Modifier.width(6.dp));Text("تسجيل وزن وتقييم حالة الجسم BCS")}
+     if(animalMetrics.isNotEmpty()){
+      Text("سجل القياسات",fontWeight=FontWeight.Bold,color=FinInk,fontSize=11.sp)
+      animalMetrics.take(5).forEach{m->Text("${m.date} • ${"%.1f".format(Locale.US,m.weightKg)} كغ • BCS ${"%.1f".format(Locale.US,m.bcs)}"+(if(m.note.isBlank())"" else " • "+m.note),fontSize=9.sp,color=FinMuted)}
+     }
     }
    }
    Row(verticalAlignment=Alignment.CenterVertically){
     Text("التطعيمات والعلاجات القادمة",fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=13.sp,modifier=Modifier.weight(1f))
     Button(onClick={kind="تطعيم";title="";date=LocalDate.now().plusDays(7).toString();notes="";dialog=true},colors=ButtonDefaults.buttonColors(containerColor=FinGreen),contentPadding=PaddingValues(horizontal=10.dp,vertical=5.dp)){Icon(Icons.Outlined.Add,null);Text("موعد جديد",fontSize=10.sp)}
    }
+   val today=LocalDate.now()
    val animalReminders=reminders.filter{it.tag==selected.tag}.sortedBy{it.date}
    if(animalReminders.isEmpty())Text("لا توجد مواعيد مسجلة لهذا الحيوان.",fontSize=11.sp,color=FinMuted)
    animalReminders.forEach{r->
@@ -403,7 +448,8 @@ private fun herdAgeLabel(a:HerdAnimal):String{
      Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){
       Icon(if(r.kind=="تطعيم")Icons.Outlined.Vaccines else Icons.Outlined.Medication,null,tint=FinGreen)
       Spacer(Modifier.width(8.dp))
-      Column(Modifier.weight(1f)){Text(r.title,fontWeight=FontWeight.Bold,color=FinInk,fontSize=11.sp);Text(r.kind+" • "+r.date,fontSize=10.sp,color=FinGreen);if(r.notes.isNotBlank())Text(r.notes,fontSize=9.sp,color=FinMuted)}
+      val dueState=runCatching{val d=LocalDate.parse(r.date);when{r.completed->"مكتمل";d.isBefore(today)->"متأخر";d==today->"موعد اليوم";d<=today.plusDays(7)->"خلال 7 أيام";else->"قادم"}}.getOrDefault("تحقق من التاريخ")
+      Column(Modifier.weight(1f)){Text(r.title,fontWeight=FontWeight.Bold,color=FinInk,fontSize=11.sp);Text(r.kind+" • "+r.date,fontSize=10.sp,color=FinGreen);Text(dueState,fontSize=9.sp,color=if(dueState=="متأخر")Color(0xFFB54D42) else FinGreen);if(r.notes.isNotBlank())Text(r.notes,fontSize=9.sp,color=FinMuted)}
       Checkbox(checked=r.completed,onCheckedChange={v->reminders=reminders.map{if(it.id==r.id)it.copy(completed=v)else it};saveHerdCare(context,reminders)})
      }
     }
@@ -411,6 +457,22 @@ private fun herdAgeLabel(a:HerdAnimal):String{
    Text("التوصيات الصحية",fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=13.sp)
    Surface(color=Color(0xFFF6EEDF),shape=RoundedCornerShape(13.dp)){Text("لا تُفرض جرعات أو أدوية تلقائياً. يختلف برنامج التحصين وتوقيت مضادات الطفيليات باختلاف الولاية والوضع الوبائي واللقاح المسجل وعمر الحيوان وحالته والحمل وفترة السحب. سجّل موعد الطبيب أو البرنامج البيطري المحلي هنا، ولا تعتمد موعداً عاماً بديلاً عن الطبيب.",Modifier.padding(12.dp),fontSize=10.sp,color=FinInk,lineHeight=15.sp)}
   }
+ }
+ if(metricDialog){
+  AlertDialog(onDismissRequest={metricDialog=false},title={Text("تسجيل قياس صحي")},text={
+   Column(verticalArrangement=Arrangement.spacedBy(7.dp)){
+    OutlinedTextField(metricWeight,{metricWeight=it},label={Text("الوزن بالكيلوغرام")},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
+    OutlinedTextField(metricBcs,{metricBcs=it},label={Text("درجة حالة الجسم BCS من 1 إلى 5")},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
+    OutlinedTextField(metricNote,{metricNote=it},label={Text("ملاحظات اختيارية")},minLines=2)
+    Text("سجّل التقييم بالتحسس والفحص؛ لا تستنتج BCS من الوزن وحده.",fontSize=9.sp,color=FinMuted)
+   }
+  },confirmButton={TextButton(onClick={
+   val w=metricWeight.replace(',','.').toDoubleOrNull();val b=metricBcs.replace(',','.').toDoubleOrNull()
+   if(selected!=null&&w!=null&&w in 0.5..250.0&&b!=null&&b in 1.0..5.0){
+    saveHerdMetric(context,HerdMetricRecord(selected.tag,LocalDate.now().toString(),w,b,metricNote.trim()))
+    metrics=readHerdMetrics(context);metricDialog=false
+   }
+  }){Text("حفظ القياس")}},dismissButton={TextButton(onClick={metricDialog=false}){Text("إلغاء")}})
  }
  if(dialog){
   AlertDialog(onDismissRequest={dialog=false},title={Text("إضافة موعد متابعة")},text={
@@ -508,6 +570,23 @@ private fun herdAgeLabel(a:HerdAnimal):String{
     item{MedicineInfoCard("المادة الفعالة",info.active,Icons.Outlined.Biotech)}
     item{MedicineInfoCard("التركيز",info.concentration,Icons.Outlined.Opacity)}
     item{MedicineInfoCard("طريقة الحفظ",info.storage,Icons.Outlined.Inventory2)}
+    item{
+     val lots=readMedicineLots(c).filter{it.item==selected}.sortedBy{it.expiry}
+     val today=LocalDate.now().toString()
+     Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){
+      Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+       Text("التشغيلات والصلاحية",fontWeight=FontWeight.Bold,color=FinInk,fontSize=12.sp)
+       if(lots.isEmpty())Text("لا توجد بيانات تشغيلات مسجلة لهذا الصنف. أضفها عند الشراء.",fontSize=10.sp,color=FinMuted)
+       lots.forEach{lot->
+        val expired=lot.expiry.isNotBlank()&&lot.expiry<today
+        Row(verticalAlignment=Alignment.CenterVertically){
+         Column(Modifier.weight(1f)){Text("تشغيلة: "+lot.batch,fontSize=10.sp,fontWeight=FontWeight.Bold,color=FinInk);Text("الصلاحية: "+lot.expiry+" • المورد: "+lot.supplier,fontSize=9.sp,color=FinMuted)}
+         Column(horizontalAlignment=Alignment.End){Text(String.format(Locale.US,"%.2f",lot.quantity),fontSize=11.sp,fontWeight=FontWeight.Bold,color=FinGreen);if(expired)Text("منتهية",fontSize=9.sp,color=Color(0xFFB54D42)) else Text("صالحة مسجلة",fontSize=9.sp,color=FinGreen)}
+        }
+       }
+      }
+     }
+    }
     item{MedicineInfoCard("التحذيرات",info.warnings,Icons.Outlined.WarningAmber)}
     item{MedicineInfoCard("فترة السحب",info.withdrawal,Icons.Outlined.Schedule)}
     item{Surface(color=Color(0xFFF6EEDF),shape=RoundedCornerShape(15.dp)){Text("تنبيه بيطري: هذه البطاقة للتعريف والتثقيف فقط، ولا تقدم جرعات أو تشخيصاً أو بديلاً عن الطبيب البيطري. اعتمد دائماً النشرة الخاصة بالمنتج المسجل في بلدك.",Modifier.padding(13.dp),fontSize=10.sp,color=FinInk,lineHeight=16.sp)}}
