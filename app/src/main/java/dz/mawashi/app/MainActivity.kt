@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -47,10 +48,10 @@ private data class Section(
 )
 
 private val sections = listOf(
-    Section("القطيع", "الحيوانات والمواليد", Icons.Outlined.Pets, Emerald, "48", "رأساً"),
-    Section("الأدوية والتطعيمات", "العلاجات ومواعيد التحصين", Icons.Outlined.Vaccines, Color(0xFF526B55), "3", "مواعيد قادمة"),
-    Section("مخزون العلف", "الكميات والاستهلاك", Icons.Outlined.Inventory2, Color(0xFF526B55), "850", "كغ في المخزون"),
-    Section("المالية", "الإيرادات والمصاريف", Icons.Outlined.AccountBalanceWallet, Color(0xFF526B55), "152,750", "دج الرصيد")
+    Section("القطيع", "الحيوانات والمواليد", Icons.Outlined.Pets, Emerald, "0", "حيوان مسجل"),
+    Section("الأدوية والتطعيمات", "العلاجات ومواعيد التحصين", Icons.Outlined.Vaccines, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة"),
+    Section("مخزون العلف", "الكميات والاستهلاك", Icons.Outlined.Inventory2, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة"),
+    Section("المالية", "الإيرادات والمصاريف", Icons.Outlined.AccountBalanceWallet, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة")
 )
 
 class MainActivity : ComponentActivity() {
@@ -122,6 +123,14 @@ private fun MawashiApp() {
 
 @Composable
 private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
+    val context = LocalContext.current
+    val herd = remember { loadHerd(context) }
+    val totalAnimals = herd.size
+    val ewes = herd.count { it.kind == "نعجة" }
+    val rams = herd.count { it.kind == "كبش" }
+    val lambs = herd.count { it.kind == "حمل/رخلة" }
+    val weighedAnimals = herd.mapNotNull { it.weightKg }.filter { it > 0.0 }
+    val averageWeight = if (weighedAnimals.isEmpty()) "—" else String.format(java.util.Locale.US, "%.1f", weighedAnimals.average())
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 24.dp),
@@ -181,14 +190,20 @@ private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SummaryCard("إجمالي القطيع", "48", "رأساً", Icons.Outlined.Pets, Modifier.weight(1f))
-                SummaryCard("مواعيد قادمة", "03", "هذا الأسبوع", Icons.Outlined.EventAvailable, Modifier.weight(1f))
+                SummaryCard("إجمالي القطيع", totalAnimals.toString(), "حيوان مسجل", Icons.Outlined.Pets, Modifier.weight(1f))
+                SummaryCard("الحملان", lambs.toString(), "حمل / رخلة", Icons.Outlined.ChildCare, Modifier.weight(1f))
             }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SummaryCard("مخزون العلف", "850", "كغ", Icons.Outlined.Inventory2, Modifier.weight(1f))
-                SummaryCard("الرصيد الحالي", "152,750", "دج", Icons.Outlined.AccountBalanceWallet, Modifier.weight(1f))
+                SummaryCard("النعاج", ewes.toString(), "نعجة مسجلة", Icons.Outlined.Pets, Modifier.weight(1f))
+                SummaryCard("الكباش", rams.toString(), "كبش مسجل", Icons.Outlined.Pets, Modifier.weight(1f))
+            }
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SummaryCard("متوسط الوزن", averageWeight, "كغ للحيوانات الموزونة", Icons.Outlined.MonitorWeight, Modifier.weight(1f))
+                SummaryCard("أوزان مسجلة", weighedAnimals.size.toString(), "حيوان له وزن", Icons.Outlined.Scale, Modifier.weight(1f))
             }
         }
         item {
@@ -202,7 +217,7 @@ private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                 pair.forEachIndexed { colIndex, section ->
                     val index = rowIndex * 2 + colIndex
-                    SectionTile(section, Modifier.weight(1f)) { onSection(index + 1) }
+                    SectionTile(if (index == 0) section.copy(metric = totalAnimals.toString(), metricLabel = "حيوان مسجل") else section, Modifier.weight(1f)) { onSection(index + 1) }
                 }
                 if (pair.size == 1) Spacer(Modifier.weight(1f))
             }
@@ -300,15 +315,15 @@ private fun SectionScreen(modifier: Modifier = Modifier, section: Section) {
             Column(Modifier.padding(20.dp)) {
                 Text("ملخص القسم", color = Color(0xFFEAD7A8), fontSize = 12.sp)
                 Spacer(Modifier.height(8.dp))
-                Text(section.metric, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-                Text(section.metricLabel, color = Color.White.copy(alpha = .8f), fontSize = 12.sp)
+                Text("لا توجد بيانات مسجلة", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text("ستظهر الإحصائيات هنا بعد تسجيل بيانات القسم", color = Color.White.copy(alpha = .8f), fontSize = 12.sp)
             }
         }
         Surface(color = Ivory, shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Line)) {
             Column(Modifier.padding(18.dp)) {
                 Text("مساحة العمل", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Spacer(Modifier.height(7.dp))
-                Text("تم تجهيز التصميم الأساسي لهذا القسم. ستضاف أدوات الإدارة والسجلات والحفظ الفعلي في مراحل التطوير التالية.", color = Muted, fontSize = 12.sp, lineHeight = 20.sp)
+                Text("لم تُسجّل بيانات في هذا القسم بعد. ستُحتسب الإحصائيات تلقائياً عند إضافة السجلات الفعلية.", color = Muted, fontSize = 12.sp, lineHeight = 20.sp)
             }
         }
     }

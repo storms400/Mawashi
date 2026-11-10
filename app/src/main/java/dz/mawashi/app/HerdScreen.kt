@@ -35,9 +35,9 @@ private val HerdMuted = Color(0xFF778078)
 private val HerdLine = Color(0xFFE8E4DA)
 private const val HERD_PREFS = "mawashi_herd_local"
 private const val HERD_KEY = "animals"
-private data class HerdAnimal(val id:String,val tag:String,val kind:String,val ageMonths:Int,val health:String,val notes:String,val weightKg:Double?=null,val birthDate:String="",val birthWeightKg:Double?=null,val motherTag:String="")
+internal data class HerdAnimal(val id:String,val tag:String,val kind:String,val ageMonths:Int,val health:String,val notes:String,val weightKg:Double?=null,val birthDate:String="",val birthWeightKg:Double?=null,val motherTag:String="")
 
-private fun loadHerd(c:Context):List<HerdAnimal> = try {
+internal fun loadHerd(c:Context):List<HerdAnimal> = try {
  val a=JSONArray(c.getSharedPreferences(HERD_PREFS,0).getString(HERD_KEY,"[]")?:"[]")
  buildList { for(i in 0 until a.length()){val x=a.getJSONObject(i);add(HerdAnimal(x.optString("id"),x.optString("tag"),x.optString("kind","نعجة"),x.optInt("ageMonths"),x.optString("health","جيدة"),x.optString("notes"),if(x.has("weightKg")&&!x.isNull("weightKg"))x.optDouble("weightKg") else null,x.optString("birthDate"),if(x.has("birthWeightKg")&&!x.isNull("birthWeightKg"))x.optDouble("birthWeightKg") else null,x.optString("motherTag")))} }
 } catch(_:Exception){emptyList()}
