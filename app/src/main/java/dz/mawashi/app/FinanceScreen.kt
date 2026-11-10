@@ -322,7 +322,7 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
   }
   Spacer(Modifier.height(8.dp))
   if(selected==null){
-   LazyColumn(contentPadding=PaddingValues(vertical=8.dp,bottom=24.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+   LazyColumn(contentPadding=PaddingValues(start=0.dp,end=0.dp,top=8.dp,bottom=24.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
     groups.forEach{(group,names)->
      item{Text(group,fontWeight=FontWeight.ExtraBold,color=FinGreen,fontSize=14.sp,modifier=Modifier.padding(top=7.dp))}
      items(names){name->
@@ -347,7 +347,7 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
   }else{
    val group=groups.entries.firstOrNull{selected in it.value}?.key?: "الأدوية البيطرية"
    val info=medicineInfo(selected!!,group)
-   LazyColumn(contentPadding=PaddingValues(top=8.dp,bottom=24.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+   LazyColumn(contentPadding=PaddingValues(start=0.dp,end=0.dp,top=8.dp,bottom=24.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
     item{TextButton(onClick={selected=null}){Icon(Icons.Outlined.ArrowForward,null);Text("العودة إلى الدليل")}}
     item{Surface(color=Color.White,shape=RoundedCornerShape(22.dp),border=BorderStroke(1.dp,FinLine)){
      Column(Modifier.fillMaxWidth().padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(7.dp)){
