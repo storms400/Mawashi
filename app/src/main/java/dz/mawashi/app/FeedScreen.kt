@@ -202,7 +202,6 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
          Text(kind.label,color=FeedInk,fontWeight=FontWeight.Bold,fontSize=13.sp)
          Text(String.format(Locale.US,"الرصيد المتاح: %.2f كغ",q),color=FeedGreen,fontSize=11.sp,fontWeight=FontWeight.SemiBold)
         }
-        TextButton(onClick={dialogKind=kind;qty=""}){Icon(Icons.Outlined.Add,null);Text("إضافة مخزون")}
        }
        if(kind!=FeedKind.MINERALS){
         Row(verticalAlignment=Alignment.CenterVertically){
