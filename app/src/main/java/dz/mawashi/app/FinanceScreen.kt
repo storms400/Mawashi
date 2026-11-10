@@ -373,11 +373,24 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
 
 @Composable private fun MedicinePackArt(name:String,group:String,modifier:Modifier=Modifier){
  val isVaccine=group=="اللقاحات والتطعيمات"
+ val vaccineMark=when{
+  name.contains("التسمم المعوي")->"ET"
+  name.contains("الجدري")->"POX"
+  name.contains("الحمى القلاعية")->"FMD"
+  name.contains("PPR")->"PPR"
+  name.contains("الكلوستريديا")->"CLO"
+  name.contains("البروسيلا")->"BRU"
+  else->"VAX"
+ }
  val isSpray=name.contains("بخاخ")
  val isPowder=name.contains("بدائل اللبأ")||name.contains("الأملاح")||name.contains("الإسهال")
  val isTube=name.contains("مطهرات")||name.contains("التهابات الضرع")||name.contains("سرة")
  val isSyringe=name.contains("أوكسيتوسين")||name.contains("البروستاغلاندين")
  val accent=when{
+  name.contains("الجدري")->Color(0xFF9A7652)
+  name.contains("الحمى القلاعية")->Color(0xFF56899A)
+  name.contains("PPR")->Color(0xFF9276A6)
+  name.contains("البروسيلا")->Color(0xFFB36A55)
   isVaccine->Color(0xFF4F806B)
   group=="مضادات الطفيليات الداخلية"->Color(0xFFB18443)
   group=="الجروح والعناية"->Color(0xFF56899A)
@@ -415,7 +428,7 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
       Icon(if(isVaccine)Icons.Outlined.Vaccines else Icons.Outlined.Medication,null,tint=accent,modifier=Modifier.size(if(isVaccine)23.dp else 27.dp))
       Spacer(Modifier.height(3.dp))
       Box(Modifier.fillMaxWidth(.8f).height(4.dp).background(accent.copy(alpha=.28f),RoundedCornerShape(3.dp)))
-      Text(label,fontSize=6.sp,color=accent,fontWeight=FontWeight.ExtraBold)
+      Text(if(isVaccine)vaccineMark else label,fontSize=6.sp,color=accent,fontWeight=FontWeight.ExtraBold)
      }
     }
    }
