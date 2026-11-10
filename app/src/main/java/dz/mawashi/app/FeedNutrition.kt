@@ -82,7 +82,7 @@ internal data class FeedStock(val kind:FeedKind,val quantityKg:Double,val shareP
 internal data class FeedUse(val kind:FeedKind,val asFedKg:Double,val dryMatterKg:Double)
 
 internal fun calculateSupplementUses(needs:List<DailyNeed>,stocks:List<FeedStock>):List<FeedUse> {
-    val eligible=stocks.filter{it.kind!=FeedKind.MINERALS && it.quantityKg>0 && it.sharePercent>0}
+    val eligible=stocks.filter{it.kind!=FeedKind.MINERALS && it.sharePercent>0}
     val shareTotal=eligible.sumOf{it.sharePercent}
     if(shareTotal<=0.0)return emptyList()
     val dm=needs.sumOf{it.supplementDryMatterKg}
