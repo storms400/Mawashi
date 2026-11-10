@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MawashiApp() {
     var selected by rememberSaveable { mutableIntStateOf(0) }
+    var dashboardRefresh by remember { mutableIntStateOf(0) }
     MaterialTheme(
         colorScheme = lightColorScheme(
             primary = Emerald,
@@ -94,7 +95,7 @@ private fun MawashiApp() {
                         navItems.forEach { (label, icon, index) ->
                             NavigationBarItem(
                                 selected = selected == index,
-                                onClick = { selected = index },
+                                onClick = { selected = index; dashboardRefresh++ },
                                 icon = { Icon(icon, contentDescription = label, tint = if (index == 3) Forest else if (selected == index) Forest else Muted) },
                                 label = { Text(label, fontSize = 10.sp, maxLines = 1) },
                                 colors = NavigationBarItemDefaults.colors(
@@ -110,7 +111,7 @@ private fun MawashiApp() {
                 }
             ) { padding ->
                 when (selected) {
-                    0 -> Dashboard(Modifier.padding(padding), onSection = { selected = it })
+                    0 -> Dashboard(Modifier.padding(padding), refreshKey = dashboardRefresh, onSection = { selected = it; dashboardRefresh++ })
                     1 -> HerdScreen(Modifier.padding(padding))
                     2 -> MedicineScreen(Modifier.padding(padding))
                     3 -> FeedScreen(Modifier.padding(padding))
@@ -122,9 +123,10 @@ private fun MawashiApp() {
 }
 
 @Composable
-private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
+private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection: (Int) -> Unit) {
     val context = LocalContext.current
-    val herd = remember { loadHerd(context) }
+    var herd by remember { mutableStateOf(activeHerdAnimals(loadHerd(context))) }
+    LaunchedEffect(refreshKey) { herd = activeHerdAnimals(loadHerd(context)) }
     val totalAnimals = herd.size
     val ewes = herd.count { it.kind == "نعجة" }
     val rams = herd.count { it.kind == "كبش" }
