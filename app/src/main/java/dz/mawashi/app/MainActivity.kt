@@ -191,7 +191,7 @@ private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SummaryCard("إجمالي القطيع", totalAnimals.toString(), "حيوان مسجل", Icons.Outlined.Pets, Modifier.weight(1f))
-                SummaryCard("الحملان", lambs.toString(), "حمل / رخلة", Icons.Outlined.ChildCare, Modifier.weight(1f))
+                SummaryCard("الحملان", lambs.toString(), "حمل / رخلة", Icons.Outlined.Pets, Modifier.weight(1f))
             }
         }
         item {
@@ -202,8 +202,8 @@ private fun Dashboard(modifier: Modifier = Modifier, onSection: (Int) -> Unit) {
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SummaryCard("متوسط الوزن", averageWeight, "كغ للحيوانات الموزونة", Icons.Outlined.MonitorWeight, Modifier.weight(1f))
-                SummaryCard("أوزان مسجلة", weighedAnimals.size.toString(), "حيوان له وزن", Icons.Outlined.Scale, Modifier.weight(1f))
+                SummaryCard("متوسط الوزن", averageWeight, "كغ للحيوانات الموزونة", Icons.Outlined.Assessment, Modifier.weight(1f))
+                SummaryCard("أوزان مسجلة", weighedAnimals.size.toString(), "حيوان له وزن", Icons.Outlined.Assessment, Modifier.weight(1f))
             }
         }
         item {
