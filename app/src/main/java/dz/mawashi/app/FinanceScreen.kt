@@ -224,6 +224,22 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   }
  }){Text("تأكيد البيع")}},dismissButton={TextButton(onClick=dismiss){Text("إلغاء")}})
 }
+
+private const val SOLD_ANIMALS_KEY = "sold_animals_history"
+private fun archiveSoldAnimal(c:Context, animal:HerdAnimal, invoiceId:String){
+ val p=c.getSharedPreferences(FIN_PREFS,0);val a=JSONArray(p.getString(SOLD_ANIMALS_KEY,"[]")?:"[]")
+ a.put(JSONObject().apply{
+  put("invoiceId",invoiceId);put("id",animal.id);put("tag",animal.tag);put("kind",animal.kind)
+  put("ageMonths",animal.ageMonths);put("health",animal.health);put("notes",animal.notes)
+  if(animal.weightKg==null)put("weightKg",JSONObject.NULL) else put("weightKg",animal.weightKg)
+  put("birthDate",animal.birthDate);put("birthWeightKg",animal.birthWeightKg?:JSONObject.NULL)
+  put("motherTag",animal.motherTag);put("productionState",animal.productionState)
+  put("pregnancyStage",animal.pregnancyStage);put("fetusCount",animal.fetusCount);put("nursingLambs",animal.nursingLambs)
+  put("soldAt",LocalDateTime.now().toString())
+ })
+ check(p.edit().putString(SOLD_ANIMALS_KEY,a.toString()).commit())
+}
+
 private fun averagePurchaseCost(c:Context,item:String,category:String):Double{val a=readInvoices(c).filter{it.type=="purchase"&&it.category==category&&it.item==item&&it.quantity>0};val q=a.sumOf{it.quantity};return if(q<=0)0.0 else a.sumOf{it.total}/q}
 
 @Composable private fun OtherDialog(type:String,dismiss:()->Unit,save:(String,Double)->Unit){
