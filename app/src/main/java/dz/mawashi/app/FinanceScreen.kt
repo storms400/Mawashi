@@ -44,7 +44,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 
-private const val FIN_PREFS = "mawashi_finance_v22"
+private const val FIN_PREFS = "mawashi_finance_v24"
 private const val FIN_INVOICES = "invoices"
 private const val FIN_MEDICINES = "medicine_stock"
 private const val FIN_WOOL = "wool_stock"
@@ -260,15 +260,143 @@ private fun averagePurchaseCost(c:Context,item:String,category:String):Double{va
  AlertDialog(onDismissRequest=dismiss,title={Text(if(type=="income")"إضافة إيراد" else "إضافة مصروف")},text={Column{OutlinedTextField(name,{name=it},label={Text("البيان")});OutlinedTextField(amount,{amount=it},label={Text("المبلغ بالدينار")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))}},confirmButton={TextButton(onClick={val v=amount.replace(',','.').toDoubleOrNull();if(name.isNotBlank()&&v!=null&&v>0)save(name,v)}){Text("حفظ")}},dismissButton={TextButton(onClick=dismiss){Text("إلغاء")}})
 }
 
+private data class MedicineInfo(val name:String,val group:String,val scientific:String,val purpose:String,val active:String,val concentration:String,val storage:String,val warnings:String,val withdrawal:String)
+private fun medicineInfo(name:String,group:String):MedicineInfo{
+ val data=when(name){
+  "لقاح التسمم المعوي"->Triple("لقاح مضاد لمرض التسمم المعوي","مستضدات سموم المطثيات، يختلف تركيبها حسب المنتج","الوقاية ضمن برنامج تحصين يحدده الطبيب البيطري")
+  "لقاح الجدري"->Triple("لقاح جدري الأغنام","فيروس جدري الأغنام المضعّف أو مستحضر معطل حسب المنتج","الوقاية من جدري الأغنام؛ نوع اللقاح وبرنامج التحصين حسب النشرة")
+  "لقاح الحمى القلاعية"->Triple("لقاح الحمى القلاعية","مستضدات فيروس الحمى القلاعية للأنماط المصلية المحددة على العبوة","الوقاية وفق النمط المصلي المتداول والبرنامج البيطري الرسمي")
+  "لقاح طاعون المجترات الصغيرة PPR"->Triple("لقاح طاعون المجترات الصغيرة","مستضد فيروس PPR؛ غالباً لقاح حي مضعّف بحسب المنتج","الوقاية من طاعون المجترات الصغيرة وفق البرنامج البيطري")
+  "لقاح الكلوستريديا"->Triple("لقاح الكلوستريديا","ذوفانات/مستضدات كلوستريدية متعددة بحسب التركيبة","الوقاية من أمراض كلوستريدية محددة وفق تركيب اللقاح")
+  "لقاح البروسيلا"->Triple("لقاح البروسيلا","سلالة لقاحية معتمدة حسب البرنامج الرسمي والمنتج","لا يستخدم إلا وفق تعليمات السلطات البيطرية والطبيب؛ توجد احتياطات خاصة")
+  "ألبيندازول (Albendazole)"->Triple("Albendazole","ألبيندازول","مضاد لبعض الديدان الداخلية؛ لا يغطي كل الطفيليات")
+  "فينبندازول (Fenbendazole)"->Triple("Fenbendazole","فينبندازول","مضاد لبعض الديدان المعوية والرئوية بحسب الطفيلي والمنتج")
+  "إيفرمكتين (Ivermectin)"->Triple("Ivermectin","إيفرمكتين","مضاد لبعض الطفيليات الداخلية والخارجية؛ لا يعالج جميع أنواع الديدان")
+  "ليفاميزول (Levamisole)"->Triple("Levamisole","ليفاميزول","مضاد لبعض الديدان الأسطوانية؛ هامش الأمان يتطلب دقة بيطرية")
+  "تريكلابندازول"->Triple("Triclabendazole","تريكلابندازول","مضاد للفاشيولا (ديدان الكبد) في مراحل محددة حسب المنتج")
+  "بخاخات الجروح"->Triple("مستحضرات موضعية للجروح","تختلف المواد المطهرة أو المضادة للعدوى حسب العلامة","تنظيف/حماية موضعية للجروح السطحية وفق النشرة؛ لا تغني عن فحص الجروح العميقة")
+  "مطهرات الحوافر"->Triple("مطهرات بيطرية للحوافر","مواد مطهرة مختلفة بحسب التركيبة","العناية بنظافة الحافر والحد من التلوث؛ العرج يحتاج تشخيصاً")
+  "مستحضرات التهابات الضرع"->Triple("مستحضرات بيطرية للضرع","تختلف؛ قد تتضمن مضاداً حيوياً أو مطهراً بحسب المنتج","لا تستخدم لعلاج التهاب الضرع دون تشخيص وخطة طبيب بيطري")
+  "محاليل الأملاح والسوائل"->Triple("محاليل تعويض السوائل والأملاح","إلكتروليتات وأملاح وسكريات بنسب تختلف حسب المنتج","دعم تعويض السوائل في حالات محددة؛ الجفاف الشديد حالة طارئة")
+  "التولترازوريل (Toltrazuril)"->Triple("Toltrazuril","تولترازوريل","مضاد للأوالي يُستخدم ضد الكوكسيديا في ظروف محددة")
+  "مستحضرات علاج النفاخ"->Triple("مستحضرات بيطرية للنفاخ","تختلف المادة والتركيز حسب المنتج","النفاخ الحاد قد يهدد الحياة ويحتاج تدخلاً بيطرياً عاجلاً")
+  "محاليل علاج الإسهال"->Triple("محاليل دعم حالات الإسهال","إلكتروليتات ومكونات داعمة تختلف حسب المنتج","تعويض السوائل والأملاح؛ لا تعالج سبب الإسهال بحد ذاتها")
+  "أوكسيتوسين (Oxytocin)"->Triple("Oxytocin","أوكسيتوسين","دواء هرموني يؤثر في تقلص الرحم وإدرار الحليب؛ لا يستخدم إلا بقرار بيطري")
+  "البروستاغلاندين"->Triple("Prostaglandin","نظائر البروستاغلاندين؛ المادة المحددة حسب المستحضر","تأثيرات تناسلية/رحمية محددة؛ ممنوع الاستخدام العشوائي")
+  "مستحضرات الكالسيوم"->Triple("مستحضرات الكالسيوم","أملاح كالسيوم مختلفة حسب المنتج","تستخدم في حالات نقص الكالسيوم المشخصة؛ طريقة الإعطاء مهمة وخطرة عند الخطأ")
+  "البروبيلين غليكول"->Triple("Propylene glycol","بروبيلين غليكول","مصدر طاقة في حالات استقلابية محددة؛ الكمية والملاءمة يحددهما الطبيب")
+  "العناية بسرة الحملان"->Triple("مطهرات سرة الحملان","مطهرات موضعية تختلف حسب المنتج","تعقيم السرة بعد الولادة للحد من دخول العدوى")
+  "بدائل اللبأ"->Triple("بديل اللبأ للحملان","مسحوق/مستحضر غذائي يحتوي مكونات مناعية بحسب المنتج","بديل عند تعذر الحصول على لبأ الأم؛ ليس كل بديل حليب بديلاً للبأ")
+  else->Triple(name,"المكونات الفعالة تختلف باختلاف الشركة والتركيبة","يستخدم فقط للغرض المكتوب على النشرة البيطرية")
+ }
+ val concentration=when(name){
+  "ألبيندازول (Albendazole)"->"تختلف النسبة والتركيز حسب الشكل التجاري؛ تحقق من الملصق"
+  "فينبندازول (Fenbendazole)"->"تختلف النسبة والتركيز حسب الشكل التجاري؛ تحقق من الملصق"
+  "إيفرمكتين (Ivermectin)"->"توجد تراكيز وأشكال متعددة؛ لا تفترض أن المستحضرات متكافئة"
+  "ليفاميزول (Levamisole)"->"التركيز يختلف بين المستحضرات؛ راجع العبوة بدقة"
+  "تريكلابندازول"->"يختلف التركيز حسب المستحضر التجاري"
+  "التولترازوريل (Toltrazuril)"->"يختلف التركيز والشكل الصيدلاني حسب المنتج"
+  "أوكسيتوسين (Oxytocin)"->"يكتب بوحدات دولية على العبوة؛ التركيز حسب المنتج"
+  else->"غير موحد؛ يُرجع إلى ملصق المنتج ونشرته"
+ }
+ val storage=if(group=="اللقاحات والتطعيمات")"اتبع سلسلة التبريد المحددة على العبوة؛ كثير من اللقاحات تحفظ مبردة ولا تُجمّد. لا تستخدم عبوة تعرضت لخلل تخزين دون استشارة." else "يُحفظ حسب النشرة، بعيداً عن الحرارة والرطوبة والضوء عند الحاجة، وبعيداً عن متناول الأطفال."
+ val warning=if(name=="لقاح البروسيلا")"قد يشكل خطراً على الإنسان، خصوصاً الحوامل وذوي المناعة الضعيفة. لا يُتعامل معه إلا بواسطة مختص ووفق البرنامج الرسمي." else if(name=="أوكسيتوسين (Oxytocin)"||name=="البروستاغلاندين")"أدوية هرمونية ذات موانع استعمال ومخاطر؛ لا تستخدم لتحفيز الولادة أو التناسل دون فحص وقرار بيطري." else "لا تحدد الجرعة أو طريقة الإعطاء من اسم المادة وحده. راجع الطبيب البيطري ونشرة المنتج المسجل، وتحقق من ملاءمته للأغنام والحمل والرضاعة."
+ return MedicineInfo(name,group,data.first,data.third,data.second,concentration,storage,warning,"فترة السحب للحوم والحليب تختلف باختلاف المادة والتركيز والشركة والجرعة المعتمدة. اتبع النشرة المحلية ولا تعتمد رقماً عاماً؛ دوّن تاريخ آخر معالجة.")
+}
+
 @Composable fun MedicineScreen(modifier:Modifier=Modifier){
- val c=LocalContext.current;var stock by remember{mutableStateOf(readMedicineStock(c))};var selected by remember{mutableStateOf<String?>(null)}
+ val c=LocalContext.current
+ var stock by remember{mutableStateOf(readMedicineStock(c))}
+ var selected by remember{mutableStateOf<String?>(null)}
+ val groups=medicineGroups
+ val totalProducts=groups.values.sumOf{it.size}
+ val available=groups.values.flatten().count{(stock[it]?:0.0)>0.0}
  Column(modifier.fillMaxSize().background(FinCream).padding(horizontal=16.dp)){
-  Spacer(Modifier.height(12.dp));Text("الأدوية والتطعيمات",fontSize=24.sp,fontWeight=FontWeight.ExtraBold,color=FinInk);Text("دليل مصنف ومخزون يُحدّث تلقائياً من المالية",fontSize=11.sp,color=FinMuted)
-  LazyColumn(contentPadding=PaddingValues(vertical=10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-   medicineGroups.forEach{(group,names)->item{Text(group,fontWeight=FontWeight.Bold,color=FinGreen,fontSize=14.sp)};items(names){name->Surface(color=Color.White,shape=RoundedCornerShape(15.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable{selected=name}){Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){Icon(if(group=="اللقاحات والتطعيمات")Icons.Outlined.Vaccines else Icons.Outlined.MedicalServices,null,tint=FinGreen,modifier=Modifier.size(25.dp));Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)){Text(name,fontWeight=FontWeight.Bold,color=FinInk,fontSize=12.sp);Text(group,color=FinMuted,fontSize=9.sp);Text("الرصيد: "+(stock[name]?:0.0),color=FinGreen,fontSize=10.sp)};Icon(Icons.Outlined.ChevronLeft,null,tint=FinMuted)}}}}
+  Spacer(Modifier.height(12.dp))
+  Text("الأدوية والتطعيمات",fontSize=24.sp,fontWeight=FontWeight.ExtraBold,color=FinInk)
+  Text("دليل بيطري مصور وبطاقات تعريفية ومتابعة المخزون",fontSize=11.sp,color=FinMuted)
+  Spacer(Modifier.height(12.dp))
+  Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+   FinMetric("أصناف الدليل",totalProducts.toString(),Icons.Outlined.MedicalServices,Modifier.weight(1f))
+   FinMetric("أصناف متوفرة",available.toString(),Icons.Outlined.Inventory2,Modifier.weight(1f))
+  }
+  Spacer(Modifier.height(8.dp))
+  if(selected==null){
+   LazyColumn(contentPadding=PaddingValues(vertical=8.dp,bottom=24.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+    groups.forEach{(group,names)->
+     item{Text(group,fontWeight=FontWeight.ExtraBold,color=FinGreen,fontSize=14.sp,modifier=Modifier.padding(top=7.dp))}
+     items(names){name->
+      val info=medicineInfo(name,group)
+      Surface(color=Color.White,shape=RoundedCornerShape(17.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable{selected=name}){
+       Row(Modifier.padding(11.dp),verticalAlignment=Alignment.CenterVertically){
+        MedicinePackArt(group,Modifier.width(76.dp).height(86.dp))
+        Spacer(Modifier.width(11.dp))
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
+         Text(name,fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=12.sp)
+         Text(info.scientific,fontSize=10.sp,color=FinGreen,fontWeight=FontWeight.SemiBold,maxLines=1)
+         Text(info.purpose,fontSize=9.sp,color=FinMuted,maxLines=2,lineHeight=13.sp)
+         Text("المخزون: "+String.format(Locale.US,"%.2f",stock[name]?:0.0),fontSize=10.sp,color=if((stock[name]?:0.0)>0)FinGreen else FinMuted,fontWeight=FontWeight.Bold)
+        }
+        Icon(Icons.Outlined.ChevronLeft,null,tint=FinMuted)
+       }
+      }
+     }
+    }
+    item{Text("الصور في الدليل رسومات توضيحية لشكل المستحضر وليست صوراً لعبوات تجارية بعلامات محددة.",fontSize=9.sp,color=FinMuted,lineHeight=14.sp,modifier=Modifier.padding(6.dp))}
+   }
+  }else{
+   val group=groups.entries.firstOrNull{selected in it.value}?.key?: "الأدوية البيطرية"
+   val info=medicineInfo(selected!!,group)
+   LazyColumn(contentPadding=PaddingValues(top=8.dp,bottom=24.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+    item{TextButton(onClick={selected=null}){Icon(Icons.Outlined.ArrowForward,null);Text("العودة إلى الدليل")}}
+    item{Surface(color=Color.White,shape=RoundedCornerShape(22.dp),border=BorderStroke(1.dp,FinLine)){
+     Column(Modifier.fillMaxWidth().padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(7.dp)){
+      MedicinePackArt(group,Modifier.width(132.dp).height(145.dp))
+      Text(info.name,fontSize=18.sp,fontWeight=FontWeight.ExtraBold,color=FinInk)
+      Text(info.scientific,fontSize=12.sp,color=FinGreen,fontWeight=FontWeight.Bold)
+      Text(info.group,fontSize=10.sp,color=FinMuted)
+      Text("الرصيد المسجل: "+String.format(Locale.US,"%.2f",stock[selected]?:0.0),fontSize=12.sp,color=FinGreen,fontWeight=FontWeight.Bold)
+     }
+    }}
+    item{MedicineInfoCard("ما هو؟",info.scientific,Icons.Outlined.Science)}
+    item{MedicineInfoCard("ما استعماله؟",info.purpose,Icons.Outlined.MedicalServices)}
+    item{MedicineInfoCard("المادة الفعالة",info.active,Icons.Outlined.Biotech)}
+    item{MedicineInfoCard("التركيز",info.concentration,Icons.Outlined.Opacity)}
+    item{MedicineInfoCard("طريقة الحفظ",info.storage,Icons.Outlined.Inventory2)}
+    item{MedicineInfoCard("التحذيرات",info.warnings,Icons.Outlined.WarningAmber)}
+    item{MedicineInfoCard("فترة السحب",info.withdrawal,Icons.Outlined.Schedule)}
+    item{Surface(color=Color(0xFFF6EEDF),shape=RoundedCornerShape(15.dp)){Text("تنبيه بيطري: هذه البطاقة للتعريف والتثقيف فقط، ولا تقدم جرعات أو تشخيصاً أو بديلاً عن الطبيب البيطري. اعتمد دائماً النشرة الخاصة بالمنتج المسجل في بلدك.",Modifier.padding(13.dp),fontSize=10.sp,color=FinInk,lineHeight=16.sp)}}
+   }
   }
  }
- selected?.let{name->AlertDialog(onDismissRequest={selected=null},title={Text(name)},text={Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Text("الرصيد المتوفر: "+(stock[name]?:0.0));Text("تظهر المشتريات المسجلة من المالية تلقائياً في هذا القسم.");Text("يجب اعتماد الجرعات وفترات السحب من النشرة والطبيب البيطري.",fontSize=11.sp,color=FinMuted)}},confirmButton={TextButton(onClick={selected=null}){Text("إغلاق")}})}
+}
+
+@Composable private fun MedicinePackArt(group:String,modifier:Modifier=Modifier){
+ val icon=when(group){ "اللقاحات والتطعيمات"->Icons.Outlined.Vaccines; "الجروح والعناية"->Icons.Outlined.Healing; "رعاية الحملان"->Icons.Outlined.Pets; else->Icons.Outlined.Medication }
+ val tint=when(group){"اللقاحات والتطعيمات"->Color(0xFF66836A);"مضادات الطفيليات الداخلية"->Color(0xFF9A8051);"الجروح والعناية"->Color(0xFF6C8791);"الجهاز الهضمي والجفاف"->Color(0xFF6D8D8A);"التكاثر والولادة"->Color(0xFF927A9A);else->Color(0xFF66836A)}
+ Box(modifier.background(Color(0xFFF7F3EA),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){
+  Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+   Box(Modifier.width(28.dp).height(9.dp).background(tint,RoundedCornerShape(topStart=4.dp,topEnd=4.dp)))
+   Surface(color=Color.White,shape=RoundedCornerShape(bottomStart=10.dp,bottomEnd=10.dp),border=BorderStroke(1.dp,FinLine),shadowElevation=1.dp){
+    Column(Modifier.width(58.dp).height(65.dp).padding(5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+     Icon(icon,null,tint=tint,modifier=Modifier.size(25.dp))
+     Spacer(Modifier.height(2.dp))
+     Box(Modifier.fillMaxWidth().height(4.dp).background(tint.copy(alpha=.22f),RoundedCornerShape(3.dp)))
+     Text("VET",fontSize=7.sp,color=tint,fontWeight=FontWeight.ExtraBold)
+    }
+   }
+  }
+ }
+}
+
+@Composable private fun MedicineInfoCard(title:String,body:String,icon:androidx.compose.ui.graphics.vector.ImageVector){
+ Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){
+  Row(Modifier.fillMaxWidth().padding(13.dp),verticalAlignment=Alignment.Top){
+   Surface(color=Color(0xFFEAF0E8),shape=RoundedCornerShape(10.dp)){Icon(icon,null,tint=FinGreen,modifier=Modifier.padding(8.dp).size(19.dp))}
+   Spacer(Modifier.width(10.dp))
+   Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)){Text(title,fontWeight=FontWeight.Bold,color=FinInk,fontSize=12.sp);Text(body,color=FinMuted,fontSize=10.sp,lineHeight=16.sp)}
+  }
+ }
 }
 
 @Composable private fun FinMetric(title:String,value:String,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier=Modifier){Surface(modifier,color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){Row(Modifier.padding(11.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,tint=FinGreen,modifier=Modifier.size(23.dp));Spacer(Modifier.width(8.dp));Column(Modifier.weight(1f)){Text(value,color=FinGreen,fontWeight=FontWeight.ExtraBold,fontSize=15.sp);Text(title,color=FinMuted,fontSize=9.sp)}}}}
