@@ -41,7 +41,7 @@ private val FeedInk=Color(0xFF27332A)
 private val FeedMuted=Color(0xFF778078)
 private val FeedLine=Color(0xFFE8E4DA)
 
-private fun loadFeedStocks(c:Context):MutableMap<FeedKind,Double>{
+internal fun loadFeedStocks(c:Context):MutableMap<FeedKind,Double>{
  val p=c.getSharedPreferences(FEED_PREFS,0)
  val a=JSONArray(p.getString(FEED_STOCK_KEY,"[]")?:"[]")
  val m=mutableMapOf<FeedKind,Double>()
@@ -57,7 +57,7 @@ private fun stockJson(m:Map<FeedKind,Double>):String{
  m.forEach{(k,v)->a.put(JSONObject().put("kind",k.name).put("quantity",v.coerceAtLeast(0.0)))}
  return a.toString()
 }
-private fun saveFeedStocks(c:Context,m:Map<FeedKind,Double>){
+internal fun saveFeedStocks(c:Context,m:Map<FeedKind,Double>){
  check(c.getSharedPreferences(FEED_PREFS,0).edit().putString(FEED_STOCK_KEY,stockJson(m)).commit())
 }
 private fun loadShares(c:Context):Map<FeedKind,Double>{
