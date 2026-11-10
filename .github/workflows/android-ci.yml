@@ -65,18 +65,18 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
 
-      - name: Verify independent v25 package and cartoon icon
+      - name: Verify independent v27 package and cartoon icon
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v26.debug'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='26' versionName='1.0.26-debug'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v27.debug'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='27' versionName='1.0.27-debug'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Debug-APK-v26
+          name: Mawashi-Debug-APK-v27
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
