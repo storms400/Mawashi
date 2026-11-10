@@ -74,7 +74,7 @@ internal fun generateHerdTags(existingTags:List<String>,count:Int):List<String>{
 private fun herdQrBitmap(value:String,size:Int=480):Bitmap{
  val matrix=QRCodeWriter().encode(value,BarcodeFormat.QR_CODE,size,size,mapOf(EncodeHintType.MARGIN to 1))
  val pixels=IntArray(size*size)
- for(y in 0 until size)for(x in 0 until size)pixels[y*size+x]=if(matrix[x,y])AndroidColor.BLACK else AndroidColor.WHITE
+ for(y in 0 until size)for(x in 0 until size)pixels[y*size+x]=if(matrix.get(x,y))AndroidColor.BLACK else AndroidColor.WHITE
  return Bitmap.createBitmap(pixels,size,size,Bitmap.Config.ARGB_8888)
 }
 private class HerdQrPrintAdapter(context:Context,private val animals:List<HerdAnimal>):PrintDocumentAdapter(){
