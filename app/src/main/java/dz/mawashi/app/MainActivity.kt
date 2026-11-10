@@ -100,7 +100,7 @@ private fun MawashiApp() {
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = Forest,
                                     selectedTextColor = Forest,
-                                    indicatorColor = Color(0xFFE8EDE5),
+                                    indicatorColor = Color.White,
                                     unselectedIconColor = Muted,
                                     unselectedTextColor = Muted
                                 )
