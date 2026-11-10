@@ -122,7 +122,9 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
  val totalDmi=needs.sumOf{it.dryMatterKg}
  val totalSupplement=needs.sumOf{it.supplementDryMatterKg}
  val activeStocks=FeedKind.values().filter{(stocks[it]?:0.0)>0.0001}
- val estimatedUses=calculateSupplementUses(needs,activeStocks.map{FeedStock(it,stocks[it]?:0.0,shares[it]?:0.0)})
+ val selectedFeeds=FeedKind.values().filter{it!=FeedKind.MINERALS && (shares[it]?:0.0)>0}
+ val unavailableSelected=selectedFeeds.filter{(stocks[it]?:0.0)<=0.0001}
+ val estimatedUses=calculateSupplementUses(needs,selectedFeeds.map{FeedStock(it,stocks[it]?:0.0,shares[it]?:0.0)})
  val dailyAsFed=estimatedUses.sumOf{it.asFedKg}
  val totalStock=activeStocks.sumOf{stocks[it]?:0.0}
  val stockDays=estimatedUses.mapNotNull{use->if(use.asFedKg>0)(stocks[use.kind]?:0.0)/use.asFedKg else null}.minOrNull()
@@ -156,6 +158,11 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
     FeedMetric("مدة كفاية الأصناف",stockDays?.let{String.format(Locale.US,"%.1f يوم",it)}?:"—",Modifier.weight(1f))
    }
    Text("المادة الجافة المطلوبة: "+String.format(Locale.US,"%.2f كغ/يوم",totalDmi)+" • المكمل المقدر: "+String.format(Locale.US,"%.2f كغ مادة جافة/يوم",totalSupplement),fontSize=10.sp,color=FeedMuted)
+   if(unavailableSelected.isNotEmpty()){
+    Surface(color=Color(0xFFFFF1D9),shape=RoundedCornerShape(12.dp)){
+     Text("تنبيه: لا يوجد مخزون من "+unavailableSelected.joinToString("، "){it.label}+" رغم وجود نسبة لها في الخلطة. لن يعيد التطبيق توزيع هذه النسبة تلقائياً، ولن ينفذ خصم اليوم حتى توفيرها أو تعديل النسب.",modifier=Modifier.padding(11.dp),color=Color(0xFF81551A),fontSize=10.sp,lineHeight=15.sp)
+    }
+   }
    Spacer(Modifier.height(12.dp))
    Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=androidx.compose.foundation.BorderStroke(1.dp,FeedLine)){
     Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
@@ -264,7 +271,7 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
         Text("الطاقة: ${String.format(Locale.US,"%.1f ميغاجول",need.meMj)} • البروتين الخام المستهدف: ${String.format(Locale.US,"%.0f غ",need.crudeProteinKg*1000)}",color=FeedMuted,fontSize=10.sp)
         Text("مساهمة المرعى المقدرة: ${(need.pastureShare*100).toInt()}% من المادة الجافة • الباقي مكمل من المخزون",color=FeedMuted,fontSize=10.sp)
         val animalInputs=listOf(need)
-        val animalUses=calculateSupplementUses(animalInputs,activeStocks.map{FeedStock(it,stocks[it]?:0.0,shares[it]?:0.0)})
+        val animalUses=calculateSupplementUses(animalInputs,selectedFeeds.map{FeedStock(it,stocks[it]?:0.0,shares[it]?:0.0)})
         if(animalUses.isEmpty())Text("لا توجد أعلاف تكميلية متاحة ومحددة النسبة.",color=Color(0xFF9A6720),fontSize=10.sp)
         animalUses.forEach{use->
          Text("${use.kind.label}: ${String.format(Locale.US,"%.0f غ/يوم",use.asFedKg*1000)} (كما يُقدّم)",color=FeedGreen,fontSize=10.sp)
