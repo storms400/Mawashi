@@ -13,6 +13,8 @@ import android.print.PrintDocumentInfo
 import android.print.PrintManager
 import android.print.pdf.PrintedPdfDocument
 import java.io.FileOutputStream
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -304,10 +306,123 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
  return MedicineInfo(name,group,data.first,data.third,data.second,concentration,storage,warning,"فترة السحب للحوم والحليب تختلف باختلاف المادة والتركيز والشركة والجرعة المعتمدة. اتبع النشرة المحلية ولا تعتمد رقماً عاماً؛ دوّن تاريخ آخر معالجة.")
 }
 
+
+private const val HERD_CARE_PREFS="mawashi_herd_care_v27"
+private const val HERD_CARE_KEY="scheduled_care"
+private data class HerdCareReminder(val id:String,val tag:String,val kind:String,val title:String,val date:String,val notes:String,val completed:Boolean=false)
+private fun readHerdCare(c:Context):List<HerdCareReminder>{
+ val a=JSONArray(c.getSharedPreferences(HERD_CARE_PREFS,0).getString(HERD_CARE_KEY,"[]")?:"[]")
+ return (0 until a.length()).mapNotNull{i->runCatching{val x=a.getJSONObject(i);HerdCareReminder(x.optString("id"),x.optString("tag"),x.optString("kind"),x.optString("title"),x.optString("date"),x.optString("notes"),x.optBoolean("completed"))}.getOrNull()}
+}
+private fun saveHerdCare(c:Context,list:List<HerdCareReminder>){
+ val a=JSONArray();list.forEach{x->a.put(JSONObject().put("id",x.id).put("tag",x.tag).put("kind",x.kind).put("title",x.title).put("date",x.date).put("notes",x.notes).put("completed",x.completed))}
+ check(c.getSharedPreferences(HERD_CARE_PREFS,0).edit().putString(HERD_CARE_KEY,a.toString()).commit())
+}
+private fun herdAgeLabel(a:HerdAnimal):String{
+ val months=runCatching{if(a.birthDate.isNotBlank())ChronoUnit.MONTHS.between(LocalDate.parse(a.birthDate),LocalDate.now()).toInt().coerceAtLeast(0) else a.ageMonths}.getOrDefault(a.ageMonths)
+ return if(months<1)"أقل من شهر" else if(months<12)"$months شهر" else "\${months/12} سنة و \${months%12} شهر"
+}
+@Composable private fun HerdHealthMonitor(onBack:()->Unit){
+ val context=LocalContext.current
+ var animals by remember{mutableStateOf(loadHerd(context))}
+ var reminders by remember{mutableStateOf(readHerdCare(context))}
+ var selectedTag by rememberSaveable{mutableStateOf<String?>(null)}
+ var dialog by remember{mutableStateOf(false)}
+ var kind by remember{mutableStateOf("تطعيم")}
+ var title by remember{mutableStateOf("")}
+ var date by remember{mutableStateOf(LocalDate.now().plusDays(7).toString())}
+ var notes by remember{mutableStateOf("")}
+ val selected=animals.firstOrNull{it.tag==selectedTag}
+ Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(9.dp)){
+  Row(verticalAlignment=Alignment.CenterVertically){
+   TextButton(onClick=onBack){Icon(Icons.Outlined.ArrowForward,null);Text("العودة إلى دليل الأدوية")}
+   Spacer(Modifier.weight(1f))
+   Text("متابعة القطيع",fontWeight=FontWeight.ExtraBold,color=FinGreen,fontSize=15.sp)
+  }
+  Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
+   FinMetric("إجمالي الرؤوس",animals.size.toString(),Icons.Outlined.Pets,Modifier.weight(1f))
+   FinMetric("مواعيد مسجلة",reminders.count{!it.completed}.toString(),Icons.Outlined.Event,Modifier.weight(1f))
+  }
+  if(selected==null){
+   Text("اختر الحيوان لمتابعة ملفه الصحي والإنتاجي",fontWeight=FontWeight.Bold,color=FinInk,fontSize=13.sp)
+   if(animals.isEmpty())EmptyFinance("لا توجد حيوانات في قسم القطيع","أضف الحيوانات أولاً من قسم القطيع لتظهر هنا")
+   LazyColumn(Modifier.fillMaxWidth().heightIn(max=520.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+    items(animals,key={it.id}){a->
+     Surface(color=Color.White,shape=RoundedCornerShape(14.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable{selectedTag=a.tag}){
+      Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){
+       Icon(Icons.Outlined.Pets,null,tint=FinGreen,modifier=Modifier.size(26.dp))
+       Spacer(Modifier.width(10.dp))
+       Column(Modifier.weight(1f)){Text(a.tag+" • "+a.kind,fontWeight=FontWeight.Bold,color=FinInk,fontSize=12.sp);Text("العمر: "+herdAgeLabel(a)+"  |  الوزن: "+(a.weightKg?.let{"%.1f كغ".format(Locale.US,it)}?:"غير مسجل"),fontSize=10.sp,color=FinMuted);Text("الحالة: "+a.health+" • "+a.productionState,fontSize=10.sp,color=FinGreen)}
+       Icon(Icons.Outlined.ChevronLeft,null,tint=FinMuted)
+      }
+     }
+    }
+   }
+  }else{
+   TextButton(onClick={selectedTag=null}){Icon(Icons.Outlined.ArrowBack,null);Text("كل القطيع")}
+   Surface(color=Color.White,shape=RoundedCornerShape(17.dp),border=BorderStroke(1.dp,FinLine)){
+    Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+     Text(selected.tag+" • "+selected.kind,fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=17.sp)
+     Text("العمر: "+herdAgeLabel(selected)+"   |   الوزن الحالي: "+(selected.weightKg?.let{"%.1f كغ".format(Locale.US,it)}?:"غير مسجل"),fontSize=11.sp,color=FinMuted)
+     Text("الحالة الصحية المسجلة: "+selected.health,fontSize=11.sp,color=FinInk)
+     Text("الحالة الإنتاجية: "+selected.productionState+" • "+selected.pregnancyStage,fontSize=11.sp,color=FinInk)
+     if(selected.kind.contains("حمل")||selected.ageMonths<6){
+      Text("متابعة المواليد: راقب الرضاعة وتناول اللبأ في الساعات الأولى، وسجّل وزن الميلاد ثم أعد الوزن دورياً، وراقب السرة والإسهال والتنفس والنشاط. أي خمول أو امتناع عن الرضاعة يستدعي تقييماً بيطرياً عاجلاً.",fontSize=10.sp,color=FinGreen,lineHeight=15.sp)
+     }
+     if(selected.productionState.contains("حامل")||selected.pregnancyStage!="غير حامل"){
+      Text("متابعة النعجة الحامل: راقب درجة حالة الجسم (BCS) والوزن وتغير الشهية، واضبط العليقة حسب مرحلة الحمل وعدد الأجنة بإشراف مختص.",fontSize=10.sp,color=FinGreen,lineHeight=15.sp)
+     }
+     Text("الحالة التغذوية: لا توجد درجة حالة جسم مسجلة؛ أضف تقييم BCS ووزن دوري في سجل القطيع بدلاً من افتراضها.",fontSize=10.sp,color=FinMuted,lineHeight=15.sp)
+    }
+   }
+   Row(verticalAlignment=Alignment.CenterVertically){
+    Text("التطعيمات والعلاجات القادمة",fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=13.sp,modifier=Modifier.weight(1f))
+    Button(onClick={kind="تطعيم";title="";date=LocalDate.now().plusDays(7).toString();notes="";dialog=true},colors=ButtonDefaults.buttonColors(containerColor=FinGreen),contentPadding=PaddingValues(horizontal=10.dp,vertical=5.dp)){Icon(Icons.Outlined.Add,null);Text("موعد جديد",fontSize=10.sp)}
+   }
+   val animalReminders=reminders.filter{it.tag==selected.tag}.sortedBy{it.date}
+   if(animalReminders.isEmpty())Text("لا توجد مواعيد مسجلة لهذا الحيوان.",fontSize=11.sp,color=FinMuted)
+   animalReminders.forEach{r->
+    Surface(color=Color.White,shape=RoundedCornerShape(13.dp),border=BorderStroke(1.dp,FinLine)){
+     Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){
+      Icon(if(r.kind=="تطعيم")Icons.Outlined.Vaccines else Icons.Outlined.Medication,null,tint=FinGreen)
+      Spacer(Modifier.width(8.dp))
+      Column(Modifier.weight(1f)){Text(r.title,fontWeight=FontWeight.Bold,color=FinInk,fontSize=11.sp);Text(r.kind+" • "+r.date,fontSize=10.sp,color=FinGreen);if(r.notes.isNotBlank())Text(r.notes,fontSize=9.sp,color=FinMuted)}
+      Checkbox(checked=r.completed,onCheckedChange={v->reminders=reminders.map{if(it.id==r.id)it.copy(completed=v)else it};saveHerdCare(context,reminders)})
+     }
+    }
+   }
+   Text("التوصيات الصحية",fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=13.sp)
+   Surface(color=Color(0xFFF6EEDF),shape=RoundedCornerShape(13.dp)){Text("لا تُفرض جرعات أو أدوية تلقائياً. يختلف برنامج التحصين وتوقيت مضادات الطفيليات باختلاف الولاية والوضع الوبائي واللقاح المسجل وعمر الحيوان وحالته والحمل وفترة السحب. سجّل موعد الطبيب أو البرنامج البيطري المحلي هنا، ولا تعتمد موعداً عاماً بديلاً عن الطبيب.",Modifier.padding(12.dp),fontSize=10.sp,color=FinInk,lineHeight=15.sp)}
+  }
+ }
+ if(dialog){
+  AlertDialog(onDismissRequest={dialog=false},title={Text("إضافة موعد متابعة")},text={
+   Column(verticalArrangement=Arrangement.spacedBy(7.dp)){
+    Text("نوع المتابعة",fontSize=11.sp,color=FinMuted)
+    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+     FilterChip(selected=kind=="تطعيم",onClick={kind="تطعيم"},label={Text("تطعيم")})
+     FilterChip(selected=kind=="علاج / فحص",onClick={kind="علاج / فحص"},label={Text("علاج / فحص")})
+     FilterChip(selected=kind=="وزن",onClick={kind="وزن"},label={Text("وزن")})
+    }
+    OutlinedTextField(title,{title=it},label={Text("اسم التطعيم أو المتابعة")},singleLine=true)
+    OutlinedTextField(date,{date=it},label={Text("التاريخ YYYY-MM-DD")},singleLine=true)
+    OutlinedTextField(notes,{notes=it},label={Text("ملاحظات الطبيب / التشغيلة / الجرعة الموصوفة")},minLines=2)
+   }
+  },confirmButton={TextButton(onClick={
+   val valid=runCatching{LocalDate.parse(date);true}.getOrDefault(false)
+   if(title.isNotBlank()&&valid){
+    val item=HerdCareReminder(UUID.randomUUID().toString(),selected!!.tag,kind,title.trim(),date,notes.trim())
+    reminders=reminders+item;saveHerdCare(context,reminders);dialog=false
+   }
+  }){Text("حفظ")}},dismissButton={TextButton(onClick={dialog=false}){Text("إلغاء")}})
+ }
+}
+
 @Composable fun MedicineScreen(modifier:Modifier=Modifier){
  val c=LocalContext.current
  var stock by remember{mutableStateOf(readMedicineStock(c))}
  var selected by remember{mutableStateOf<String?>(null)}
+ var showHerdMonitor by rememberSaveable{mutableStateOf(false)}
  val groups=medicineGroups
  val totalProducts=groups.values.sumOf{it.size}
  val available=groups.values.flatten().count{(stock[it]?:0.0)>0.0}
@@ -316,6 +431,19 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
   Text("الأدوية والتطعيمات",fontSize=24.sp,fontWeight=FontWeight.ExtraBold,color=FinInk)
   Text("دليل بيطري مصور وبطاقات تعريفية ومتابعة المخزون",fontSize=11.sp,color=FinMuted)
   Spacer(Modifier.height(12.dp))
+  if(!showHerdMonitor){
+   Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable{showHerdMonitor=true}){
+    Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically){
+     Surface(color=Color(0xFFEAF0E8),shape=RoundedCornerShape(12.dp)){Icon(Icons.Outlined.Pets,null,tint=FinGreen,modifier=Modifier.padding(10.dp).size(25.dp))}
+     Spacer(Modifier.width(10.dp))
+     Column(Modifier.weight(1f)){Text("القطيع",fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=15.sp);Text("متابعة صحية وإنتاجية وتغذوية لكل رأس ومواعيده القادمة",fontSize=10.sp,color=FinMuted)}
+     Icon(Icons.Outlined.ChevronLeft,null,tint=FinGreen)
+    }
+   }
+  }else{
+   HerdHealthMonitor(onBack={showHerdMonitor=false})
+  }
+  if(showHerdMonitor) return@Column
   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
    FinMetric("أصناف الدليل",totalProducts.toString(),Icons.Outlined.MedicalServices,Modifier.weight(1f))
    FinMetric("أصناف متوفرة",available.toString(),Icons.Outlined.Inventory2,Modifier.weight(1f))
