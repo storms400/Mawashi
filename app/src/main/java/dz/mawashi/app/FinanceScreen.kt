@@ -394,6 +394,9 @@ private fun herdAgeLabel(a:HerdAnimal):String{
  var metricNote by remember{mutableStateOf("")}
  var metrics by remember{mutableStateOf(readHerdMetrics(context))}
  val selected=animals.firstOrNull{it.tag==selectedTag}
+ val today=LocalDate.now()
+ val openReminders=reminders.filter{!it.completed}.sortedBy{it.date}
+ val overdueCount=openReminders.count{runCatching{LocalDate.parse(it.date).isBefore(today)}.getOrDefault(false)}
  Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(9.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){
    TextButton(onClick=onBack){Icon(Icons.Outlined.ArrowForward,null);Text("العودة إلى دليل الأدوية")}
@@ -402,7 +405,15 @@ private fun herdAgeLabel(a:HerdAnimal):String{
   }
   Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
    FinMetric("إجمالي الرؤوس",animals.size.toString(),Icons.Outlined.Pets,Modifier.weight(1f))
-   FinMetric("مواعيد مسجلة",reminders.count{!it.completed}.toString(),Icons.Outlined.Event,Modifier.weight(1f))
+   FinMetric("مواعيد مسجلة",openReminders.size.toString(),Icons.Outlined.Event,Modifier.weight(1f))
+  }
+  if(openReminders.isNotEmpty()){
+   Surface(color=if(overdueCount>0)Color(0xFFFFF0EA) else Color(0xFFEAF1E9),shape=RoundedCornerShape(14.dp)){
+    Column(Modifier.fillMaxWidth().padding(11.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+     Text(if(overdueCount>0)"لديك $overdueCount موعداً متأخراً" else "المتابعات القادمة",fontWeight=FontWeight.Bold,color=if(overdueCount>0)Color(0xFF9F443B) else FinGreen,fontSize=11.sp)
+     openReminders.take(4).forEach{r->Text("${r.tag} • ${r.title} — ${r.date}",fontSize=9.sp,color=FinInk)}
+    }
+   }
   }
   if(selected==null){
    Text("اختر الحيوان لمتابعة ملفه الصحي والإنتاجي",fontWeight=FontWeight.Bold,color=FinInk,fontSize=13.sp)
@@ -446,7 +457,6 @@ private fun herdAgeLabel(a:HerdAnimal):String{
     Text("التطعيمات والعلاجات القادمة",fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=13.sp,modifier=Modifier.weight(1f))
     Button(onClick={kind="تطعيم";title="";date=LocalDate.now().plusDays(7).toString();notes="";dialog=true},colors=ButtonDefaults.buttonColors(containerColor=FinGreen),contentPadding=PaddingValues(horizontal=10.dp,vertical=5.dp)){Icon(Icons.Outlined.Add,null);Text("موعد جديد",fontSize=10.sp)}
    }
-   val today=LocalDate.now()
    val animalReminders=reminders.filter{it.tag==selected.tag}.sortedBy{it.date}
    if(animalReminders.isEmpty())Text("لا توجد مواعيد مسجلة لهذا الحيوان.",fontSize=11.sp,color=FinMuted)
    animalReminders.forEach{r->
