@@ -112,9 +112,9 @@ private fun MawashiApp() {
                 when (selected) {
                     0 -> Dashboard(Modifier.padding(padding), onSection = { selected = it })
                     1 -> HerdScreen(Modifier.padding(padding))
-                    2 -> SectionScreen(Modifier.padding(padding), sections[1])
+                    2 -> MedicineScreen(Modifier.padding(padding))
                     3 -> FeedScreen(Modifier.padding(padding))
-                    else -> SectionScreen(Modifier.padding(padding), sections[3])
+                    else -> FinanceScreen(Modifier.padding(padding))
                 }
             }
         }
