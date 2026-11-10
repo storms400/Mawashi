@@ -55,7 +55,7 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
  val inputs=animals.mapNotNull{a->val w=a.weightKg?.takeIf{it>0}?:return@mapNotNull null
   FeedAnimalInput(a.tag,w,a.productionState,a.pregnancyStage,a.fetusCount,a.nursingLambs,a.ageMonths)}
  val needs=inputs.map{SheepNutrition.calculate(it,pasture)}
- val active=FeedKind.values().filter{it!=FeedKind.MINERALS && (stocks[it]?:0.0)>0 && (shares[it]?:0.0)>0}
+ val active=FeedKind.values().filter{it!=FeedKind.MINERALS && (shares[it]?:0.0)>0}
  val shareTotal=active.sumOf{shares[it]?:0.0}
  if(inputs.isEmpty())return "لا توجد حيوانات بأوزان وحالات صالحة للحساب"
  if(shareTotal<=0.0)return "حدد نسب توزيع الأعلاف المتوفرة قبل بدء الخصم"
@@ -119,7 +119,7 @@ private fun stockJson(m:Map<FeedKind,Double>):String{val a=JSONArray();m.forEach
    item{Text("مجموع نسب الأعلاف: ${shares.filterKeys{it!=FeedKind.MINERALS}.values.sum().toInt()}% — تُطبّع النسب تلقائياً عند حساب العليقة.",fontSize=10.sp,color=FeedMuted)}
    item{Button(onClick={message=applyDailyFeedConsumption(c,herd,pasture,shares);stocks=loadFeedStocks(c)},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FeedGreen)){Icon(Icons.Outlined.Inventory2,null);Text("احتساب وخصم استهلاك اليوم")}}
    item{Text("تقدير الاحتياج الغذائي",fontWeight=FontWeight.Bold,color=FeedInk,fontSize=15.sp)}
-   items(eligible.zip(needs),key={it.first.tag}){(a,n)->Surface(color=Color.White,shape=RoundedCornerShape(12.dp)){Column(Modifier.fillMaxWidth().padding(10.dp)){Text("${a.tag} • ${"%.1f".format(Locale.US,a.weightKg)} كغ • ${a.state}",fontWeight=FontWeight.Bold,color=FeedInk,fontSize=12.sp);Text("المادة الجافة: ${"%.0f".format(Locale.US,n.dryMatterKg*1000)} غ/يوم • طاقة تقديرية: ${"%.1f".format(Locale.US,n.meMj)} ميغاجول/يوم",fontSize=10.sp,color=FeedMuted);Text("المكمل من المخزون: ${"%.0f".format(Locale.US,n.supplementDryMatterKg*1000)} غ مادة جافة/يوم",fontSize=10.sp,color=FeedGreen)}}}
+   items(eligible.zip(needs),key={it.first.tag}){(a,n)->Surface(color=Color.White,shape=RoundedCornerShape(12.dp)){Column(Modifier.fillMaxWidth().padding(10.dp)){Text("${a.tag} • ${"%.1f".format(Locale.US,a.weightKg)} كغ • ${a.state}",fontWeight=FontWeight.Bold,color=FeedInk,fontSize=12.sp);Text("المادة الجافة: ${"%.0f".format(Locale.US,n.dryMatterKg*1000)} غ/يوم • طاقة تقديرية: ${"%.1f".format(Locale.US,n.meMj)} ميغاجول/يوم",fontSize=10.sp,color=FeedMuted);Text("المكمل من المخزون: ${"%.0f".format(Locale.US,n.supplementDryMatterKg*1000)} غ مادة جافة/يوم",fontSize=10.sp,color=FeedGreen);val activeKinds=FeedKind.values().filter{it!=FeedKind.MINERALS && (stocks[it]?:0.0)>0 && (shares[it]?:0.0)>0};val sum=activeKinds.sumOf{shares[it]?:0.0};activeKinds.forEach{k->val grams=if(sum>0)n.supplementDryMatterKg*((shares[k]?:0.0)/sum)/k.dryMatter*1000 else 0.0;Text("${k.label}: ${"%.0f".format(Locale.US,grams)} غ/يوم",fontSize=9.sp,color=FeedMuted)}}}}
   }
  }
  message?.let{AlertDialog(onDismissRequest={message=null},title={Text("نتيجة العملية")},text={Text(it)},confirmButton={TextButton(onClick={message=null}){Text("حسناً")}})}
