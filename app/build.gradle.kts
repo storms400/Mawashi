@@ -7,12 +7,12 @@ android {
     namespace = "dz.mawashi.app"
     compileSdk = 35
     defaultConfig {
-        // Unique package and isolated local data for iteration 16.
-        applicationId = "dz.mawashi.app.independent.v16"
+        // Unique package and isolated local data for iteration 17.
+        applicationId = "dz.mawashi.app.independent.v17"
         minSdk = 26
         targetSdk = 35
-        versionCode = 16
-        versionName = "1.0.16"
+        versionCode = 17
+        versionName = "1.0.17"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
