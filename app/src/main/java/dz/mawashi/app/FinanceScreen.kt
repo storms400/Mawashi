@@ -92,8 +92,7 @@ private fun saveMedicineLots(c:Context,lots:List<MedicineLot>){
 }
 private fun consumeMedicineLots(c:Context,item:String,quantity:Double){
  if(!quantity.isFinite()||quantity<=0.0) return
- var remaining=quantity
- val lots=readMedicineLots(c).toMutableList()
+ var remaining=quantity val lots=readMedicineLots(c).toMutableList()
  val today=LocalDate.now()
  val indices=lots.indices.filter{lots[it].item==item&&lots[it].quantity.isFinite()&&lots[it].quantity>0.0&&isMedicineLotUsable(lots[it].expiry,today)}
   .sortedBy{LocalDate.parse(lots[it].expiry)}
@@ -101,7 +100,7 @@ private fun consumeMedicineLots(c:Context,item:String,quantity:Double){
  saveMedicineLots(c,lots)
 }
 private fun readMedicineStock(c:Context):MutableMap<String,Double>{
- val a=JSONArray(c.getSharedPreferences(FIN_PREFS,0).getString(FIN_MEDICINES,"[]")?:"[]");val m=mutableMapOf<String,Double>() for(i in 0 until a.length()){val x=a.optJSONObject(i)?:continue;m[x.optString("name")]=x.optDouble("quantity").coerceAtLeast(0.0)}
+ val a=JSONArray(c.getSharedPreferences(FIN_PREFS,0).getString(FIN_MEDICINES,"[]")?:"[]");val m=mutableMapOf<String,Double>(); for(i in 0 until a.length()){val x=a.optJSONObject(i)?:continue;m[x.optString("name")]=x.optDouble("quantity").coerceAtLeast(0.0)}
  return m
 }
 private fun writeMedicineStock(c:Context,m:Map<String,Double>){val a=JSONArray();m.forEach{(n,q)->a.put(JSONObject().put("name",n).put("quantity",q.coerceAtLeast(0.0)))};check(c.getSharedPreferences(FIN_PREFS,0).edit().putString(FIN_MEDICINES,a.toString()).commit())}
