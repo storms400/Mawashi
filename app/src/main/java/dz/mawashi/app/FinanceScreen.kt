@@ -140,7 +140,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
  var notice by remember{mutableStateOf<String?>(null)}
  fun refresh(){list=readInvoices(c);herd=loadHerd(c);feeds=loadFeedStocks(c);meds=readMedicineStock(c);wool=readWool(c)}
  val sales=list.filter{it.type=="sale"};val purchases=list.filter{it.type=="purchase"}
- val extra=otherTotals(c);val revenue=sales.sumOf{it.total}+extra.first;val cogs=sales.sumOf{it.cost};val feedAccounting=calculateFeedConsumptionAccounting(readFeedConsumptionEntries(c),purchases.filter{it.category==PurchaseType.FEED.title}.map{FeedPurchaseCost(it.item,it.quantity,it.total,it.timestamp.take(10))});val operatingExpenses=extra.second+feedAccounting.totalCost;val net=revenue-cogs-operatingExpenses
+ val extra=otherTotals(c);val revenue=sales.sumOf{it.total}+extra.first;val feedSales=sales.filter{it.category==SaleType.FEED.title}.map{FeedSaleEntry(it.id,it.item,it.quantity,it.timestamp.take(10))};val feedAccounting=calculateFeedConsumptionAccounting(readFeedConsumptionEntries(c),purchases.filter{it.category==PurchaseType.FEED.title}.map{FeedPurchaseCost(it.item,it.quantity,it.total,it.timestamp.take(10))},feedSales);val cogs=sales.filter{it.category!=SaleType.FEED.title}.sumOf{it.cost}+feedAccounting.totalSaleCost;val operatingExpenses=extra.second+feedAccounting.totalCost;val uncostedFeedQuantity=feedAccounting.uncostedQuantityKg+feedAccounting.uncostedSaleQuantityKg;val net=revenue-cogs-operatingExpenses
  Column(modifier.fillMaxSize().background(FinCream).padding(horizontal=16.dp)){
   Spacer(Modifier.height(12.dp))
   Row(verticalAlignment=Alignment.CenterVertically){
@@ -151,9 +151,9 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   if(page==FinancePage.PURCHASES){ PurchaseScreen(c,herd,feeds,meds,{page=FinancePage.HOME}){notice=it;refresh();page=FinancePage.HOME} }else if(page==FinancePage.HOME){
    LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=22.dp)){
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("إجمالي المداخيل",dinar(revenue),Icons.Outlined.TrendingUp,Modifier.weight(1f));FinMetric("تكلفة الأصناف المباعة",dinar(cogs),Icons.Outlined.Inventory2,Modifier.weight(1f))}}
-    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric(if(feedAccounting.uncostedQuantityKg>1e-8)"الربح التقديري" else "صافي الأرباح",dinar(net.coerceAtLeast(0.0)),Icons.Outlined.AccountBalance,Modifier.weight(1f));FinMetric("الخسائر",dinar((-net).coerceAtLeast(0.0)),Icons.Outlined.TrendingDown,Modifier.weight(1f))}}
+    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric(if(uncostedFeedQuantity>1e-8)"الربح التقديري" else "صافي الأرباح",dinar(net.coerceAtLeast(0.0)),Icons.Outlined.AccountBalance,Modifier.weight(1f));FinMetric("الخسائر",dinar((-net).coerceAtLeast(0.0)),Icons.Outlined.TrendingDown,Modifier.weight(1f))}}
     item{Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){Row(Modifier.fillMaxWidth().padding(13.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("النتيجة المالية",fontWeight=FontWeight.Bold,color=FinInk);Text("الإيرادات − تكلفة المباع − المصاريف − العلف المستهلك",fontSize=9.sp,color=FinMuted)};Text(dinar(net),fontWeight=FontWeight.ExtraBold,color=if(net>=0)FinGreen else Color(0xFFB54D42),fontSize=17.sp)}}}
-    item{if(feedAccounting.uncostedQuantityKg>1e-8)Surface(color=Color(0xFFFFF4E5),shape=RoundedCornerShape(14.dp),border=BorderStroke(1.dp,Color(0xFFE8D3B4))){Column(Modifier.fillMaxWidth().padding(12.dp)){Text("تنبيه: الربح تقديري",fontWeight=FontWeight.Bold,color=Color(0xFF8A5A22));Text("يوجد "+String.format(Locale.US,"%.2f",feedAccounting.uncostedQuantityKg)+" كغ من العلف المستهلك بلا تكلفة شراء موثقة؛ لذلك قد يكون الربح الظاهر أعلى من الربح الفعلي.",fontSize=10.sp,color=FinInk)}}}
+    item{if(uncostedFeedQuantity>1e-8)Surface(color=Color(0xFFFFF4E5),shape=RoundedCornerShape(14.dp),border=BorderStroke(1.dp,Color(0xFFE8D3B4))){Column(Modifier.fillMaxWidth().padding(12.dp)){Text("تنبيه: الربح تقديري",fontWeight=FontWeight.Bold,color=Color(0xFF8A5A22));Text("يوجد "+String.format(Locale.US,"%.2f",uncostedFeedQuantity)+" كغ من العلف المستهلك أو المباع بلا تكلفة شراء موثقة؛ لذلك قد يكون الربح الظاهر أعلى من الربح الفعلي.",fontSize=10.sp,color=FinInk)}}}
     item{Text("إدارة العمليات",fontSize=16.sp,fontWeight=FontWeight.Bold,color=FinInk)}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("متجر المزرعة","تسوّق احتياجات المزرعة",Icons.Outlined.Storefront,Modifier.weight(1f)){page=FinancePage.PURCHASES};FinAction("المبيعات","القطيع والصوف والمخزون",Icons.Outlined.PointOfSale,Modifier.weight(1f)){sale=true}}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("الفواتير",list.size.toString()+" فاتورة",Icons.Outlined.ReceiptLong,Modifier.weight(1f)){page=FinancePage.INVOICES};FinAction("التقارير","تحليل النشاط",Icons.Outlined.BarChart,Modifier.weight(1f)){page=FinancePage.REPORTS}}}
@@ -176,11 +176,11 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(bottom=20.dp)){
     item{Text("التقارير المالية",fontWeight=FontWeight.Bold,color=FinInk,fontSize=16.sp)}
     item{FinReport("إجمالي المبيعات",dinar(sales.sumOf{it.total}),sales.size.toString()+" فاتورة")}
-    item{FinReport("تكلفة الأصناف المباعة",dinar(cogs),"وفق متوسط تكلفة الشراء المسجل")}
+    item{FinReport("تكلفة الأصناف المباعة",dinar(cogs),"تشمل تكلفة القطيع والصوف والأدوية والعلف المباع وفق المتوسط المتحرك")}
     item{FinReport("إجمالي المشتريات",dinar(purchases.sumOf{it.total}),purchases.size.toString()+" فاتورة")}
     item{FinReport("الإيرادات الأخرى",dinar(extra.first),"")}
     item{FinReport("تكلفة العلف المستهلك",dinar(feedAccounting.totalCost),"وفق المتوسط المرجّح المتحرك للمخزون حتى تاريخ الاستهلاك")}
-    item{FinReport("استهلاك علف دون تكلفة شراء",String.format(Locale.US,"%.2f كغ",feedAccounting.uncostedQuantityKg),"كميات استهلاك لا تقابلها فواتير شراء مسجلة")}
+    item{FinReport("علف مستهلك دون تكلفة شراء",String.format(Locale.US,"%.2f كغ",feedAccounting.uncostedQuantityKg),"كميات استهلاك لا تقابلها فواتير شراء مسجلة")};item{FinReport("علف مباع دون تكلفة شراء",String.format(Locale.US,"%.2f كغ",feedAccounting.uncostedSaleQuantityKg),"كميات مبيعات لا تقابلها تكلفة مخزون موثقة")}
     item{FinReport("المصاريف التشغيلية",dinar(operatingExpenses),"تشمل المصاريف الأخرى وتكلفة العلف المستهلك") }
     item{FinReport("صافي النتيجة",dinar(net),if(net>=0)"فائض مالي" else "عجز مالي")}
     sales.groupBy{it.category}.forEach{(k,v)->item{FinReport(k,dinar(v.sumOf{it.total}),v.size.toString()+" عملية بيع")}}
@@ -264,7 +264,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    when(type){
     SaleType.ANIMAL->{val a=activeHerd.firstOrNull{it.tag==item};available=if(a==null)0.0 else 1.0;val bought=readInvoices(c).filter{it.type=="purchase"&&it.category==PurchaseType.ANIMAL.title&&it.item==a?.kind};val legacy=if(bought.isEmpty())0.0 else bought.sumOf{it.total}/bought.sumOf{it.quantity};costUnit=herdAnimalCostForSale(a,legacy)}
     SaleType.WOOL->available=wool
-    SaleType.FEED->{val k=FeedKind.values().firstOrNull{it.label==item};available=feed[k]?:0.0;costUnit=averagePurchaseCost(c,item,PurchaseType.FEED.title)}
+    SaleType.FEED->{val k=FeedKind.values().firstOrNull{it.label==item};available=feed[k]?:0.0;costUnit=0.0}
     SaleType.MEDICINE->{
      available=usableMedicineStock(item,medicine[item]?:0.0,medicineLots,today)
      costUnit=averagePurchaseCost(c,item,PurchaseType.MEDICINE.title)
@@ -273,7 +273,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    }
    if(q>available+1e-8)error="الرصيد غير كافٍ. المتاح: "+available
    else{
-    val now=LocalDateTime.now().toString();val id="SAL-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val total=q*p;val totalCost=medicineCostOverride?:q*costUnit
+    val now=LocalDateTime.now().toString();val id="SAL-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val total=q*p;val feedSaleCost=if(type==SaleType.FEED){val invoices=readInvoices(c);val priorSales=invoices.filter{it.type=="sale"&&it.category==SaleType.FEED.title}.map{FeedSaleEntry(it.id,it.item,it.quantity,it.timestamp.take(10))};val priorPurchases=invoices.filter{it.type=="purchase"&&it.category==PurchaseType.FEED.title}.map{FeedPurchaseCost(it.item,it.quantity,it.total,it.timestamp.take(10))};calculateFeedConsumptionAccounting(readFeedConsumptionEntries(c),priorPurchases,priorSales+FeedSaleEntry(id,item,q,now.take(10))).saleCostByInvoice[id]?:0.0}else null;val totalCost=medicineCostOverride?:feedSaleCost?:q*costUnit
     if(!isValidFinanceAmount(total)||!totalCost.isFinite()||totalCost<0.0){error="القيمة المالية خارج النطاق الصحيح؛ لم يتم تغيير المخزون."}else{
      val transaction=runFinanceTransaction(c,financeTransactionStoreNames()){
       when(type){
