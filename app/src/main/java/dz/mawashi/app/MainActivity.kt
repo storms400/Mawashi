@@ -232,8 +232,8 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                     }
                     Spacer(Modifier.width(11.dp))
                     Column {
-                        Text("بياناتك في أمان", color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text("نجهّز أدوات الحفظ والنسخ الاحتياطي ضمن المراحل القادمة", color = Muted, fontSize = 10.sp)
+                        Text("حفظ البيانات على هذا الجهاز", color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("تُحفظ السجلات محلياً؛ احرص على عدم حذف بيانات التطبيق قبل توفر النسخ الاحتياطي", color = Muted, fontSize = 10.sp)
                     }
                 }
             }
