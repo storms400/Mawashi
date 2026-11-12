@@ -80,7 +80,7 @@ internal fun readFeedConsumptionEntries(c:Context):List<FeedConsumptionEntry>{
   val x=a.getJSONObject(i)
   if(x.optString("type")!="consumption")null else{
    val kind=FeedKind.valueOf(x.optString("kind"));val quantity=x.optDouble("quantityKg",0.0)
-   if(quantity.isFinite()&&quantity>0.0)FeedConsumptionEntry(kind.label,quantity) else null
+   if(quantity.isFinite()&&quantity>0.0)FeedConsumptionEntry(kind.label,quantity,x.optString("date")) else null
   }
  }.getOrNull()}
 }

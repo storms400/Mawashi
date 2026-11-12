@@ -134,7 +134,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
  var notice by remember{mutableStateOf<String?>(null)}
  fun refresh(){list=readInvoices(c);herd=loadHerd(c);feeds=loadFeedStocks(c);meds=readMedicineStock(c);wool=readWool(c)}
  val sales=list.filter{it.type=="sale"};val purchases=list.filter{it.type=="purchase"}
- val extra=otherTotals(c);val revenue=sales.sumOf{it.total}+extra.first;val cogs=sales.sumOf{it.cost};val feedAccounting=calculateFeedConsumptionAccounting(readFeedConsumptionEntries(c),purchases.filter{it.category==PurchaseType.FEED.title}.map{FeedPurchaseCost(it.item,it.quantity,it.total)});val operatingExpenses=extra.second+feedAccounting.totalCost;val net=revenue-cogs-operatingExpenses
+ val extra=otherTotals(c);val revenue=sales.sumOf{it.total}+extra.first;val cogs=sales.sumOf{it.cost};val feedAccounting=calculateFeedConsumptionAccounting(readFeedConsumptionEntries(c),purchases.filter{it.category==PurchaseType.FEED.title}.map{FeedPurchaseCost(it.item,it.quantity,it.total,it.timestamp.take(10))});val operatingExpenses=extra.second+feedAccounting.totalCost;val net=revenue-cogs-operatingExpenses
  Column(modifier.fillMaxSize().background(FinCream).padding(horizontal=16.dp)){
   Spacer(Modifier.height(12.dp))
   Row(verticalAlignment=Alignment.CenterVertically){
