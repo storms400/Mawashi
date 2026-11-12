@@ -286,6 +286,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                         }
                     }
                     Text("الاستعادة تستبدل بيانات التطبيق الحالية بعد التحقق من الملف. احتفظ بنسخة حديثة قبل الاستعادة.", color = Muted, fontSize = 9.sp)
+                    Text("تنبيه: ملف النسخة الاحتياطية غير مشفّر؛ احفظه في مكان خاص وآمن ولا تشاركه.", color = Color(0xFFB18443), fontSize = 9.sp)
                 }
             }
         }
