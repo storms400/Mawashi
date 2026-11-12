@@ -90,7 +90,7 @@ private fun recordFeedTransaction(c:Context,type:String,kind:FeedKind,qty:Double
  a.put(JSONObject().put("date",LocalDate.now().toString()).put("type",type).put("kind",kind.name).put("quantityKg",qty).put("note",note))
  check(p.edit().putString(FEED_LEDGER_KEY,a.toString()).commit())
 }
-private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture:String,shares:Map<FeedKind,Double>):String{
+internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture:String,shares:Map<FeedKind,Double>):String{
  val p=c.getSharedPreferences(FEED_PREFS,0)
  val today=LocalDate.now().toString()
  if(p.getString(FEED_LAST_RUN_KEY,"")==today)return "استهلاك اليوم مسجل مسبقاً؛ لم يتكرر الخصم"
