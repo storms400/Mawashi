@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.InputStream
+import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.security.MessageDigest
 
@@ -48,9 +49,18 @@ internal object MawashiBackup {
 
     fun prepareRestore(input: InputStream): PreparedMawashiBackup {
         val bytes = input.use { stream ->
-            val result = stream.readBytes()
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            var total = 0
+            while (true) {
+                val count = stream.read(buffer)
+                if (count < 0) break
+                total += count
+                require(total <= MAX_BACKUP_BYTES) { "حجم ملف النسخة الاحتياطية أكبر من الحد المسموح" }
+                output.write(buffer, 0, count)
+            }
+            val result = output.toByteArray()
             require(result.isNotEmpty()) { "ملف النسخة الاحتياطية فارغ" }
-            require(result.size <= MAX_BACKUP_BYTES) { "حجم ملف النسخة الاحتياطية أكبر من الحد المسموح" }
             result
         }
         val envelope = JSONObject(String(bytes, Charsets.UTF_8))
@@ -91,8 +101,8 @@ internal object MawashiBackup {
             storeNames.forEach { name ->
                 val editor = context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear()
                 backup.stores.getValue(name).forEach { (key, value) -> putValue(editor, key, value) }
-                check(editor.commit()) { "تعذر حفظ بيانات قسم $name" }
                 changed.add(name)
+                check(editor.commit()) { "تعذر حفظ بيانات قسم $name" }
             }
         } catch (failure: Exception) {
             changed.asReversed().forEach { name ->
