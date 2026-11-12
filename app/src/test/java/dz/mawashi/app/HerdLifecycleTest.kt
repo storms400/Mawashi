@@ -51,6 +51,15 @@ class HerdLifecycleTest {
         assertEquals("Q-0002", inputs.single().tag)
     }
 
+    @Test fun rejectsImpossibleOrFutureLambBirthDates() {
+        val today = LocalDate.parse("2026-11-10")
+        assertFalse(isValidLambBirthDate("2026-02-31", today))
+        assertFalse(isValidLambBirthDate("2026-11-11", today))
+        assertFalse(isValidLambBirthDate("not-a-date", today))
+        assertTrue(isValidLambBirthDate("2026-11-10", today))
+        assertTrue(isValidLambBirthDate("2026-11-09", today))
+    }
+
     @Test fun rejectsInvalidOrFutureExitDates() {
         val today = LocalDate.parse("2026-11-10")
         assertFalse(isValidHerdExitDate("2026-02-31", today))
