@@ -151,8 +151,9 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   if(page==FinancePage.PURCHASES){ PurchaseScreen(c,herd,feeds,meds,{page=FinancePage.HOME}){notice=it;refresh();page=FinancePage.HOME} }else if(page==FinancePage.HOME){
    LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=22.dp)){
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("إجمالي المداخيل",dinar(revenue),Icons.Outlined.TrendingUp,Modifier.weight(1f));FinMetric("تكلفة الأصناف المباعة",dinar(cogs),Icons.Outlined.Inventory2,Modifier.weight(1f))}}
-    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("صافي الأرباح",dinar(net.coerceAtLeast(0.0)),Icons.Outlined.AccountBalance,Modifier.weight(1f));FinMetric("الخسائر",dinar((-net).coerceAtLeast(0.0)),Icons.Outlined.TrendingDown,Modifier.weight(1f))}}
+    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric(if(feedAccounting.uncostedQuantityKg>1e-8)"الربح التقديري" else "صافي الأرباح",dinar(net.coerceAtLeast(0.0)),Icons.Outlined.AccountBalance,Modifier.weight(1f));FinMetric("الخسائر",dinar((-net).coerceAtLeast(0.0)),Icons.Outlined.TrendingDown,Modifier.weight(1f))}}
     item{Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){Row(Modifier.fillMaxWidth().padding(13.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("النتيجة المالية",fontWeight=FontWeight.Bold,color=FinInk);Text("الإيرادات − تكلفة المباع − المصاريف − العلف المستهلك",fontSize=9.sp,color=FinMuted)};Text(dinar(net),fontWeight=FontWeight.ExtraBold,color=if(net>=0)FinGreen else Color(0xFFB54D42),fontSize=17.sp)}}}
+    item{if(feedAccounting.uncostedQuantityKg>1e-8)Surface(color=Color(0xFFFFF4E5),shape=RoundedCornerShape(14.dp),border=BorderStroke(1.dp,Color(0xFFE8D3B4))){Column(Modifier.fillMaxWidth().padding(12.dp)){Text("تنبيه: الربح تقديري",fontWeight=FontWeight.Bold,color=Color(0xFF8A5A22));Text("يوجد "+String.format(Locale.US,"%.2f",feedAccounting.uncostedQuantityKg)+" كغ من العلف المستهلك بلا تكلفة شراء موثقة؛ لذلك قد يكون الربح الظاهر أعلى من الربح الفعلي.",fontSize=10.sp,color=FinInk)}}}
     item{Text("إدارة العمليات",fontSize=16.sp,fontWeight=FontWeight.Bold,color=FinInk)}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("متجر المزرعة","تسوّق احتياجات المزرعة",Icons.Outlined.Storefront,Modifier.weight(1f)){page=FinancePage.PURCHASES};FinAction("المبيعات","القطيع والصوف والمخزون",Icons.Outlined.PointOfSale,Modifier.weight(1f)){sale=true}}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("الفواتير",list.size.toString()+" فاتورة",Icons.Outlined.ReceiptLong,Modifier.weight(1f)){page=FinancePage.INVOICES};FinAction("التقارير","تحليل النشاط",Icons.Outlined.BarChart,Modifier.weight(1f)){page=FinancePage.REPORTS}}}
@@ -178,7 +179,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
     item{FinReport("تكلفة الأصناف المباعة",dinar(cogs),"وفق متوسط تكلفة الشراء المسجل")}
     item{FinReport("إجمالي المشتريات",dinar(purchases.sumOf{it.total}),purchases.size.toString()+" فاتورة")}
     item{FinReport("الإيرادات الأخرى",dinar(extra.first),"")}
-    item{FinReport("تكلفة العلف المستهلك",dinar(feedAccounting.totalCost),"وفق متوسط تكلفة فواتير شراء الأعلاف المسجلة")}
+    item{FinReport("تكلفة العلف المستهلك",dinar(feedAccounting.totalCost),"وفق المتوسط المرجّح المتحرك للمخزون حتى تاريخ الاستهلاك")}
     item{FinReport("استهلاك علف دون تكلفة شراء",String.format(Locale.US,"%.2f كغ",feedAccounting.uncostedQuantityKg),"كميات استهلاك لا تقابلها فواتير شراء مسجلة")}
     item{FinReport("المصاريف التشغيلية",dinar(operatingExpenses),"تشمل المصاريف الأخرى وتكلفة العلف المستهلك") }
     item{FinReport("صافي النتيجة",dinar(net),if(net>=0)"فائض مالي" else "عجز مالي")}
