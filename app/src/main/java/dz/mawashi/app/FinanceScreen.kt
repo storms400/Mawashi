@@ -68,7 +68,12 @@ private fun writeInvoice(c:Context,v:FinanceInvoice){
  a.put(JSONObject().apply{put("id",v.id);put("type",v.type);put("category",v.category);put("party",v.party);put("item",v.item);put("quantity",v.quantity);put("unit",v.unit);put("unitPrice",v.unitPrice);put("total",v.total);put("cost",v.cost);put("timestamp",v.timestamp);put("notes",v.notes)})
  check(p.edit().putString(FIN_INVOICES,a.toString()).commit())
 }
-private data class MedicineLot(val item:String,val batch:String,val expiry:String,val quantity:Double,val supplier:String,val receivedAt:String)
+internal data class MedicineLot(val item:String,val batch:String,val expiry:String,val quantity:Double,val supplier:String,val receivedAt:String)
+
+internal fun usableMedicineStock(item:String,legacyStock:Double,lots:List<MedicineLot>,today:String):Double {
+ val matching=lots.filter{it.item==item}
+ return if(matching.isEmpty()) legacyStock.coerceAtLeast(0.0) else matching.filter{it.expiry>=today}.sumOf{it.quantity.coerceAtLeast(0.0)}
+}
 private const val MEDICINE_LOTS_KEY="medicine_stock_lots_v29"
 private fun readMedicineLots(c:Context):List<MedicineLot>{
  val a=JSONArray(c.getSharedPreferences(FIN_PREFS,0).getString(MEDICINE_LOTS_KEY,"[]")?:"[]")
@@ -231,9 +236,12 @@ fun FinanceScreen(modifier:Modifier=Modifier){
 @Composable private fun SaleDialog(c:Context,herd:List<HerdAnimal>,feed:Map<FeedKind,Double>,medicine:Map<String,Double>,wool:Double,dismiss:()->Unit,done:(String)->Unit){
  val activeHerd=activeHerdAnimals(herd)
  var type by remember{mutableStateOf(SaleType.ANIMAL)};var buyer by rememberSaveable{mutableStateOf("")};var item by rememberSaveable{mutableStateOf(activeHerd.firstOrNull()?.tag?:"")};var qty by rememberSaveable{mutableStateOf("1")};var price by rememberSaveable{mutableStateOf("")};var error by remember{mutableStateOf("")}
- val options=when(type){SaleType.ANIMAL->activeHerd.map{it.tag};SaleType.WOOL->listOf("الصوف");SaleType.FEED->feed.filterValues{it>0}.keys.map{it.label};SaleType.MEDICINE->medicine.filterValues{it>0}.keys.toList()}
+ val medicineLots=readMedicineLots(c)
+ val today=LocalDate.now().toString()
+ val usableMedicineItems=medicine.keys.filter{usableMedicineStock(it,medicine[it]?:0.0,medicineLots,today)>0.0}
+ val options=when(type){SaleType.ANIMAL->activeHerd.map{it.tag};SaleType.WOOL->listOf("الصوف");SaleType.FEED->feed.filterValues{it>0}.keys.map{it.label};SaleType.MEDICINE->usableMedicineItems}
  AlertDialog(onDismissRequest=dismiss,title={Text("فاتورة بيع")},text={LazyColumn(Modifier.heightIn(max=440.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-  item{Row(horizontalArrangement=Arrangement.spacedBy(2.dp)){SaleType.values().forEach{t->FilterChip(type==t,{type=t;item=when(t){SaleType.ANIMAL->activeHerd.firstOrNull()?.tag?:"";SaleType.WOOL->"الصوف";SaleType.FEED->feed.keys.firstOrNull()?.label?:"";SaleType.MEDICINE->medicine.keys.firstOrNull()?:""};qty="1"},label={Text(t.title,fontSize=8.sp)})}}}
+  item{Row(horizontalArrangement=Arrangement.spacedBy(2.dp)){SaleType.values().forEach{t->FilterChip(type==t,{type=t;item=when(t){SaleType.ANIMAL->activeHerd.firstOrNull()?.tag?:"";SaleType.WOOL->"الصوف";SaleType.FEED->feed.filterValues{it>0}.keys.firstOrNull()?.label?:"";SaleType.MEDICINE->usableMedicineItems.firstOrNull()?:""};qty="1"},label={Text(t.title,fontSize=8.sp)})}}}
   item{OutlinedTextField(buyer,{buyer=it},label={Text("اسم المشتري")},modifier=Modifier.fillMaxWidth())}
   item{var open by remember{mutableStateOf(false)};Box{OutlinedButton(onClick={open=true},enabled=options.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text(item.ifBlank{"لا توجد أصناف متاحة"});Spacer(Modifier.weight(1f));Icon(Icons.Outlined.ArrowDropDown,null)};DropdownMenu(open,{open=false}){options.forEach{o->DropdownMenuItem(text={Text(o)},onClick={item=o;open=false})}}}}
   if(type!=SaleType.ANIMAL)item{OutlinedTextField(qty,{qty=it},label={Text("الكمية المراد بيعها")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())}
@@ -250,9 +258,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
     SaleType.WOOL->available=wool
     SaleType.FEED->{val k=FeedKind.values().firstOrNull{it.label==item};available=feed[k]?:0.0;costUnit=averagePurchaseCost(c,item,PurchaseType.FEED.title)}
     SaleType.MEDICINE->{
-     val lots=readMedicineLots(c).filter{it.item==item}
-     val validLots=lots.filter{it.expiry>=LocalDate.now().toString()}
-     available=if(lots.isEmpty())medicine[item]?:0.0 else validLots.sumOf{it.quantity}
+     available=usableMedicineStock(item,medicine[item]?:0.0,medicineLots,today)
      costUnit=averagePurchaseCost(c,item,PurchaseType.MEDICINE.title)
     }
    }
@@ -511,7 +517,9 @@ private fun herdAgeLabel(a:HerdAnimal):String{
  var showHerdMonitor by rememberSaveable{mutableStateOf(false)}
  val groups=medicineGroups
  val totalProducts=groups.values.sumOf{it.size}
- val available=groups.values.flatten().count{(stock[it]?:0.0)>0.0}
+ val medicineLots=readMedicineLots(c)
+ val today=LocalDate.now().toString()
+ val available=groups.values.flatten().count{usableMedicineStock(it,stock[it]?:0.0,medicineLots,today)>0.0}
  Column(modifier.fillMaxSize().background(FinCream).padding(horizontal=16.dp)){
   Spacer(Modifier.height(12.dp))
   Text("الأدوية والتطعيمات",fontSize=24.sp,fontWeight=FontWeight.ExtraBold,color=FinInk)
@@ -549,7 +557,8 @@ private fun herdAgeLabel(a:HerdAnimal):String{
          Text(name,fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=12.sp)
          Text(info.scientific,fontSize=10.sp,color=FinGreen,fontWeight=FontWeight.SemiBold,maxLines=1)
          Text(info.purpose,fontSize=9.sp,color=FinMuted,maxLines=2,lineHeight=13.sp)
-         Text("المخزون: "+String.format(Locale.US,"%.2f",stock[name]?:0.0),fontSize=10.sp,color=if((stock[name]?:0.0)>0)FinGreen else FinMuted,fontWeight=FontWeight.Bold)
+         val usable=usableMedicineStock(name,stock[name]?:0.0,medicineLots,today)
+         Text("المخزون الصالح: "+String.format(Locale.US,"%.2f",usable),fontSize=10.sp,color=if(usable>0)FinGreen else FinMuted,fontWeight=FontWeight.Bold)
         }
         Icon(Icons.Outlined.ChevronLeft,null,tint=FinMuted)
        }
@@ -569,7 +578,7 @@ private fun herdAgeLabel(a:HerdAnimal):String{
       Text(info.name,fontSize=18.sp,fontWeight=FontWeight.ExtraBold,color=FinInk)
       Text(info.scientific,fontSize=12.sp,color=FinGreen,fontWeight=FontWeight.Bold)
       Text(info.group,fontSize=10.sp,color=FinMuted)
-      Text("الرصيد المسجل: "+String.format(Locale.US,"%.2f",stock[selected]?:0.0),fontSize=12.sp,color=FinGreen,fontWeight=FontWeight.Bold)
+      Text("الرصيد الصالح للاستخدام: "+String.format(Locale.US,"%.2f",usableMedicineStock(selected!!,stock[selected]?:0.0,medicineLots,today)),fontSize=12.sp,color=FinGreen,fontWeight=FontWeight.Bold)
      }
     }}
     item{MedicineInfoCard("ما هو؟",info.scientific,Icons.Outlined.Science)}
