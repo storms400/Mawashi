@@ -171,7 +171,7 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
      Row(verticalAlignment=Alignment.CenterVertically){
       Text("مساهمة المرعى الطبيعي",fontWeight=FontWeight.Bold,color=FeedInk,fontSize=14.sp)
       Spacer(Modifier.weight(1f))
-      Text("رعي مختلط",fontSize=10.sp,color=FeedGreen,fontWeight=FontWeight.SemiBold)
+      Text("مرعى طبيعي",fontSize=10.sp,color=FeedGreen,fontWeight=FontWeight.SemiBold)
      }
      Row(horizontalArrangement=Arrangement.spacedBy(5.dp)){
       listOf("ضعيف","متوسط","جيد").forEach{FilterChip(selected=pasture==it,onClick={pasture=it;c.getSharedPreferences(FEED_PREFS,0).edit().putString(FEED_PASTURE_KEY,it).commit()},label={Text(it,fontSize=11.sp)})}
