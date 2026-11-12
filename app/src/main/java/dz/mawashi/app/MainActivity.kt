@@ -204,8 +204,8 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SummaryCard("متوسط الوزن", averageWeight, "كغ للحيوانات الموزونة", Icons.Outlined.Assessment, Modifier.weight(1f))
-                SummaryCard("أوزان مسجلة", weighedAnimals.size.toString(), "حيوان له وزن", Icons.Outlined.Assessment, Modifier.weight(1f))
+                SummaryCard("متوسط الوزن", averageWeight, "كغ للحيوانات الموزونة", { Icon(Icons.Outlined.Assessment, null, tint = Emerald, modifier = Modifier.size(19.dp)) }, Modifier.weight(1f))
+                SummaryCard("أوزان مسجلة", weighedAnimals.size.toString(), "حيوان له وزن", { Icon(Icons.Outlined.Assessment, null, tint = Emerald, modifier = Modifier.size(19.dp)) }, Modifier.weight(1f))
             }
         }
         item {
