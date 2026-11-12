@@ -23,6 +23,16 @@ class SheepNutritionTest {
   assertTrue(lactating.meMj>dry.meMj)
   assertTrue(lactating.crudeProteinKg>dry.crudeProteinKg)
  }
+ @Test fun selectedIngredientWithoutStockIsReportedInsteadOfSilentlyRedistributing(){
+  val stocks=mapOf(FeedKind.BARLEY to 20.0,FeedKind.BRAN to 0.0)
+  val shares=mapOf(FeedKind.BARLEY to 60.0,FeedKind.BRAN to 40.0)
+  assertEquals(listOf(FeedKind.BRAN),unavailableSelectedFeedKinds(stocks,shares))
+ }
+ @Test fun mineralsAreNotTreatedAsBulkRationIngredients(){
+  val stocks=mapOf(FeedKind.MINERALS to 0.0)
+  val shares=mapOf(FeedKind.MINERALS to 100.0)
+  assertTrue(unavailableSelectedFeedKinds(stocks,shares).isEmpty())
+ }
  @Test fun mineralSaltIsNotIncludedInBulkRationAllocation(){
   val uses=calculateSupplementUses(listOf(SheepNutrition.calculate(FeedAnimalInput("Q-1",35.0,"نعجة جافة"),"متوسط")),listOf(FeedStock(FeedKind.MINERALS,10.0,100.0),FeedStock(FeedKind.BARLEY,100.0,100.0)))
   assertEquals(1,uses.size)
