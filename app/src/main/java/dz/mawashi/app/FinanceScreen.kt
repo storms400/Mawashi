@@ -68,7 +68,7 @@ private fun writeInvoice(c:Context,v:FinanceInvoice){
  a.put(JSONObject().apply{put("id",v.id);put("type",v.type);put("category",v.category);put("party",v.party);put("item",v.item);put("quantity",v.quantity);put("unit",v.unit);put("unitPrice",v.unitPrice);put("total",v.total);put("cost",v.cost);put("timestamp",v.timestamp);put("notes",v.notes)})
  check(p.edit().putString(FIN_INVOICES,a.toString()).commit())
 }
-internal data class MedicineLot(val item:String,val batch:String,val expiry:String,val quantity:Double,val supplier:String,val receivedAt:String)
+internal data class MedicineLot(val item:String,val batch:String,val expiry:String,val quantity:Double,val supplier:String,val receivedAt:String,val unitCost:Double=0.0)
 
 internal fun isMedicineLotUsable(expiry:String,today:LocalDate):Boolean {
  val expiryDate=runCatching{LocalDate.parse(expiry)}.getOrNull()?:return false
@@ -84,10 +84,10 @@ internal fun usableMedicineStock(item:String,legacyStock:Double,lots:List<Medici
 private const val MEDICINE_LOTS_KEY="medicine_stock_lots_v29"
 private fun readMedicineLots(c:Context):List<MedicineLot>{
  val a=JSONArray(c.getSharedPreferences(FIN_PREFS,0).getString(MEDICINE_LOTS_KEY,"[]")?:"[]")
- return (0 until a.length()).mapNotNull{i->runCatching{val x=a.getJSONObject(i);MedicineLot(x.optString("item"),x.optString("batch"),x.optString("expiry"),x.optDouble("quantity").coerceAtLeast(0.0),x.optString("supplier"),x.optString("receivedAt"))}.getOrNull()}
+ return (0 until a.length()).mapNotNull{i->runCatching{val x=a.getJSONObject(i);MedicineLot(x.optString("item"),x.optString("batch"),x.optString("expiry"),x.optDouble("quantity").coerceAtLeast(0.0),x.optString("supplier"),x.optString("receivedAt"),x.optDouble("unitCost",0.0))}.getOrNull()}
 }
 private fun saveMedicineLots(c:Context,lots:List<MedicineLot>){
- val a=JSONArray();lots.forEach{x->a.put(JSONObject().put("item",x.item).put("batch",x.batch).put("expiry",x.expiry).put("quantity",x.quantity.coerceAtLeast(0.0).takeIf{it.isFinite()}?:0.0).put("supplier",x.supplier).put("receivedAt",x.receivedAt))}
+ val a=JSONArray();lots.forEach{x->a.put(JSONObject().put("item",x.item).put("batch",x.batch).put("expiry",x.expiry).put("quantity",x.quantity.coerceAtLeast(0.0).takeIf{it.isFinite()}?:0.0).put("supplier",x.supplier).put("receivedAt",x.receivedAt).put("unitCost",x.unitCost))}
  check(c.getSharedPreferences(FIN_PREFS,0).edit().putString(MEDICINE_LOTS_KEY,a.toString()).commit())
 }
 private fun consumeMedicineLots(c:Context,item:String,quantity:Double){
@@ -225,7 +225,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
       when(t){
        PurchaseType.ANIMAL->{val tags=generateHerdTags(herd.map{it.tag},count);val kg=weight.replace(',','.').toDouble();val birthDateValue=if(item=="حمل/رخلة")birthDate.trim() else "";val birthWeightValue=if(item=="حمل/رخلة")birthWeight.replace(',','.').toDouble() else null;val animalAgeMonths=if(item=="حمل/رخلة")ChronoUnit.MONTHS.between(LocalDate.parse(birthDateValue),LocalDate.now()).toInt().coerceAtLeast(0) else age.toIntOrNull()?:0;val updated=herd.toMutableList();tags.forEach{tag->updated.add(HerdAnimal(id=UUID.randomUUID().toString(),tag=tag,kind=item,ageMonths=animalAgeMonths,health=health,notes="شراء "+id,weightKg=kg,birthDate=birthDateValue,birthWeightKg=birthWeightValue,productionState=if(item=="كبش")"كبش" else if(item=="حمل/رخلة")"خروف" else state))};saveHerd(c,updated);detail="أضيفت "+count+" رؤوس للقطيع بالمعرفات "+tags.first()+" إلى "+tags.last()+"."}
        PurchaseType.FEED->{val k=FeedKind.values().first{it.label==item};val stock=loadFeedStocks(c);stock[k]=(stock[k]?:0.0)+q;saveFeedStocks(c,stock);detail="أضيفت "+String.format(Locale.US,"%.2f",q)+" كغ إلى مخزون "+k.label+"."}
-       PurchaseType.MEDICINE->{val stock=readMedicineStock(c);stock[item]=(stock[item]?:0.0)+q;writeMedicineStock(c,stock);val lots=readMedicineLots(c).toMutableList();lots.add(MedicineLot(item,batch.trim(),expiry.trim(),q,supplier.trim(),now));saveMedicineLots(c,lots);detail="أضيف الدواء إلى المخزون. التشغيلة: "+batch+"، الصلاحية: "+expiry+"."}
+       PurchaseType.MEDICINE->{val stock=readMedicineStock(c);stock[item]=(stock[item]?:0.0)+q;writeMedicineStock(c,stock);val lots=readMedicineLots(c).toMutableList();lots.add(MedicineLot(item,batch.trim(),expiry.trim(),q,supplier.trim(),now,p));saveMedicineLots(c,lots);detail="أضيف الدواء إلى المخزون. التشغيلة: "+batch+"، الصلاحية: "+expiry+"."}
       }
       writeInvoice(c,FinanceInvoice(id,"purchase",t.title,supplier,item,q,if(t==PurchaseType.ANIMAL)"رأس" else if(t==PurchaseType.FEED)"كغ" else "وحدة",p,total,0.0,now,detail))
      }
@@ -259,7 +259,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   val q=if(type==SaleType.ANIMAL)1.0 else qty.replace(',','.').toDoubleOrNull()?:0.0;val p=price.replace(',','.').toDoubleOrNull()?:0.0
   if(buyer.isBlank())error="أدخل اسم المشتري" else if(options.isEmpty()||item.isBlank())error="لا توجد كمية متاحة" else if(!isValidFinanceAmount(q)||!isValidFinanceAmount(p)||!(q*p).isFinite())error="تحقق من الكمية والسعر والقيمة الإجمالية"
   else{
-   var available=0.0;var costUnit=0.0;var detail=""
+   var available=0.0;var costUnit=0.0;var medicineCostOverride:Double?=null;var detail=""
    when(type){
     SaleType.ANIMAL->{val a=activeHerd.firstOrNull{it.tag==item};available=if(a==null)0.0 else 1.0;val bought=readInvoices(c).filter{it.type=="purchase"&&it.category==PurchaseType.ANIMAL.title&&it.item==a?.kind};costUnit=if(bought.isEmpty())0.0 else bought.sumOf{it.total}/bought.sumOf{it.quantity}}
     SaleType.WOOL->available=wool
@@ -267,11 +267,12 @@ fun FinanceScreen(modifier:Modifier=Modifier){
     SaleType.MEDICINE->{
      available=usableMedicineStock(item,medicine[item]?:0.0,medicineLots,today)
      costUnit=averagePurchaseCost(c,item,PurchaseType.MEDICINE.title)
+     medicineCostOverride=medicineLotCostForSale(item,q,medicineLots,LocalDate.now(),costUnit)
     }
    }
    if(q>available+1e-8)error="الرصيد غير كافٍ. المتاح: "+available
    else{
-    val now=LocalDateTime.now().toString();val id="SAL-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val total=q*p;val totalCost=q*costUnit
+    val now=LocalDateTime.now().toString();val id="SAL-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val total=q*p;val totalCost=medicineCostOverride?:q*costUnit
     if(!isValidFinanceAmount(total)||!totalCost.isFinite()||totalCost<0.0){error="القيمة المالية خارج النطاق الصحيح؛ لم يتم تغيير المخزون."}else{
      val transaction=runFinanceTransaction(c,financeTransactionStoreNames()){
       when(type){
