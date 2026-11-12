@@ -11,7 +11,7 @@ import java.security.MessageDigest
 
 internal data class PreparedMawashiBackup(
     val createdAt: String,
-    internal val stores: Map<String, Map<String, Any>>
+    internal val stores: Map<String, Map<String, Any?>>
 )
 
 internal object MawashiBackup {
@@ -74,10 +74,10 @@ internal object MawashiBackup {
         require(payload.optString("app_family") == "mawashi-v32") { "النسخة الاحتياطية لا تخص إصدار مواشي v32" }
         val stores = payload.optJSONObject("stores") ?: error("بيانات الأقسام غير موجودة في النسخة الاحتياطية")
         val storeNames = listOf("mawashi_herd_local", "mawashi_feed_stock", "mawashi_finance_v24", "mawashi_herd_care_v27")
-        val decoded = linkedMapOf<String, Map<String, Any>>()
+        val decoded = linkedMapOf<String, Map<String, Any?>>()
         storeNames.forEach { name ->
             val store = stores.optJSONObject(name) ?: error("النسخة الاحتياطية ناقصة: $name")
-            val values = linkedMapOf<String, Any>()
+            val values = linkedMapOf<String, Any?>()
             val keys = store.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
@@ -114,10 +114,11 @@ internal object MawashiBackup {
         }
     }
 
-    private fun encodeValue(value: Any): JSONObject {
+    private fun encodeValue(value: Any?): JSONObject {
         val type: String
         val encoded: Any
         when (value) {
+            null -> { type = "null"; encoded = JSONObject.NULL }
             is String -> { type = "string"; encoded = value }
             is Boolean -> { type = "boolean"; encoded = value }
             is Int -> { type = "int"; encoded = value }
@@ -132,9 +133,10 @@ internal object MawashiBackup {
         return JSONObject().put("type", type).put("value", encoded)
     }
 
-    private fun decodeValue(entry: JSONObject): Any {
+    private fun decodeValue(entry: JSONObject): Any? {
         val value = entry.opt("value")
         return when (entry.optString("type")) {
+            "null" -> null
             "string" -> value as? String ?: error("قيمة نصية غير صالحة")
             "boolean" -> value as? Boolean ?: error("قيمة منطقية غير صالحة")
             "int" -> (value as? Number)?.toInt() ?: error("قيمة عددية غير صالحة")
@@ -148,8 +150,9 @@ internal object MawashiBackup {
         }
     }
 
-    private fun putValue(editor: SharedPreferences.Editor, key: String, value: Any) {
+    private fun putValue(editor: SharedPreferences.Editor, key: String, value: Any?) {
         when (value) {
+            null -> editor.remove(key)
             is String -> editor.putString(key, value)
             is Boolean -> editor.putBoolean(key, value)
             is Int -> editor.putInt(key, value)
@@ -160,8 +163,9 @@ internal object MawashiBackup {
         }
     }
 
-    private fun putOriginalValue(editor: SharedPreferences.Editor, key: String, value: Any) {
+    private fun putOriginalValue(editor: SharedPreferences.Editor, key: String, value: Any?) {
         when (value) {
+            null -> editor.remove(key)
             is String -> editor.putString(key, value)
             is Boolean -> editor.putBoolean(key, value)
             is Int -> editor.putInt(key, value)
