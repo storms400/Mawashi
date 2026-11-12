@@ -96,7 +96,7 @@ private fun MawashiApp() {
                             NavigationBarItem(
                                 selected = selected == index,
                                 onClick = { selected = index; dashboardRefresh++ },
-                                icon = { Icon(icon, contentDescription = label, tint = if (index == 3) Forest else if (selected == index) Forest else Muted) },
+                                icon = { if (index == 1) EweLogo(28) else Icon(icon, contentDescription = label, tint = if (index == 3) Forest else if (selected == index) Forest else Muted) },
                                 label = { Text(label, fontSize = 10.sp, maxLines = 1) },
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = Forest,
@@ -153,7 +153,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                 Spacer(Modifier.width(9.dp))
                 Surface(shape = CircleShape, color = Forest) {
                     Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Outlined.Pets, contentDescription = "شعار مواشي", tint = Color(0xFFF7F3EA), modifier = Modifier.size(25.dp))
+                        EweLogo(40)
                     }
                 }
             }
@@ -178,7 +178,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                         }
                     }
                     Box(Modifier.size(88.dp).clip(CircleShape).background(Color.White.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Outlined.Pets, null, tint = Color(0xFFF7F3EA), modifier = Modifier.size(58.dp))
+                        EweLogo(76)
                     }
                 }
             }
@@ -192,14 +192,14 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SummaryCard("إجمالي القطيع", totalAnimals.toString(), "حيوان مسجل", Icons.Outlined.Pets, Modifier.weight(1f))
-                SummaryCard("الحملان", lambs.toString(), "حمل / رخلة", Icons.Outlined.Pets, Modifier.weight(1f))
+                SummaryCard("إجمالي القطيع", totalAnimals.toString(), "حيوان مسجل", { EweLogo(25) }, Modifier.weight(1f))
+                SummaryCard("الحملان", lambs.toString(), "حمل / رخلة", { EweLogo(25) }, Modifier.weight(1f))
             }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SummaryCard("النعاج", ewes.toString(), "نعجة مسجلة", Icons.Outlined.Pets, Modifier.weight(1f))
-                SummaryCard("الكباش", rams.toString(), "كبش مسجل", Icons.Outlined.Pets, Modifier.weight(1f))
+                SummaryCard("النعاج", ewes.toString(), "نعجة مسجلة", { EweLogo(25) }, Modifier.weight(1f))
+                SummaryCard("الكباش", rams.toString(), "كبش مسجل", { EweLogo(25) }, Modifier.weight(1f))
             }
         }
         item {
@@ -242,7 +242,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
 }
 
 @Composable
-private fun SummaryCard(title: String, value: String, unit: String, icon: ImageVector, modifier: Modifier = Modifier) {
+private fun SummaryCard(title: String, value: String, unit: String, icon: @Composable () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         color = Ivory,
@@ -252,7 +252,7 @@ private fun SummaryCard(title: String, value: String, unit: String, icon: ImageV
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = Emerald, modifier = Modifier.size(19.dp))
+                icon()
                 Spacer(Modifier.weight(1f))
                 Box(Modifier.size(6.dp).clip(CircleShape).background(Gold))
             }
@@ -278,7 +278,7 @@ private fun SectionTile(section: Section, modifier: Modifier = Modifier, onClick
         Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(color = section.tint.copy(alpha = .10f), shape = RoundedCornerShape(13.dp)) {
-                    Icon(section.icon, null, tint = section.tint, modifier = Modifier.padding(9.dp).size(23.dp))
+                    if (section.title == "القطيع") EweLogo(42) else Icon(section.icon, null, tint = section.tint, modifier = Modifier.padding(9.dp).size(23.dp))
                 }
                 Spacer(Modifier.weight(1f))
                 Icon(Icons.Outlined.ArrowOutward, null, tint = Gold, modifier = Modifier.size(17.dp))
