@@ -43,7 +43,11 @@ internal object MawashiBackup {
             .put("created_at", System.currentTimeMillis())
             .put("payload", payloadText)
             .put("sha256", sha256(payloadText))
-        output.write(envelope.toString(2).toByteArray(Charsets.UTF_8))
+        val backupBytes = envelope.toString(2).toByteArray(Charsets.UTF_8)
+        require(backupBytes.size <= MAX_BACKUP_BYTES) {
+            "حجم النسخة الاحتياطية يتجاوز الحد المسموح (25 ميغابايت)؛ لم يتم تصدير ملف"
+        }
+        output.write(backupBytes)
         output.flush()
     }
 
