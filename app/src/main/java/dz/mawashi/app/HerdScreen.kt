@@ -202,7 +202,7 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
  deleting?.let{a->AlertDialog(onDismissRequest={deleting=null},title={Text("إخراج الحيوان من القطيع")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Text("سيُنقل ${a.tag} إلى الأرشيف مع الاحتفاظ بجميع بياناته وسجلاته.");Text("سبب الخروج");Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){listOf("بيع","نفوق","استبعاد").forEach{FilterChip(exitReason==it,{exitReason=it},label={Text(it,fontSize=11.sp)},colors=FilterChipDefaults.filterChipColors(containerColor=Color.White,selectedContainerColor=Color.White,labelColor=HerdInk,selectedLabelColor=HerdGreen))}};OutlinedTextField(exitDate,{exitDate=it;exitError=null},label={Text("تاريخ الخروج YYYY-MM-DD")},singleLine=true);exitError?.let{Text(it,color=MaterialTheme.colorScheme.error,fontSize=11.sp)};Text("لن يُحذف سجل الحيوان نهائياً.",color=HerdMuted,fontSize=11.sp)}},confirmButton={TextButton(onClick={if(!isValidHerdExitDate(exitDate)){exitError="أدخل تاريخاً صحيحاً بصيغة YYYY-MM-DD، ولا يمكن أن يكون في المستقبل."}else{val i=animals.indexOfFirst{it.id==a.id};if(i>=0){animals[i]=archiveHerdAnimal(a,exitDate,exitReason);saveHerd(context,animals.toList())};deleting=null}}){Text("تأكيد الأرشفة",color=HerdGreen)}},dismissButton={TextButton(onClick={deleting=null}){Text("إلغاء")}})}
 }
 
-@Composable private fun EweLogo(size:Int){
+@Composable fun EweLogo(size:Int){
  Box(Modifier.size(size.dp).background(Color(0xFFE8EDE5),CircleShape),contentAlignment=Alignment.Center){
   Text("🐑",fontSize=(size*.55f).sp)
  }
