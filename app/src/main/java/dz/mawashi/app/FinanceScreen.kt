@@ -134,7 +134,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
  var notice by remember{mutableStateOf<String?>(null)}
  fun refresh(){list=readInvoices(c);herd=loadHerd(c);feeds=loadFeedStocks(c);meds=readMedicineStock(c);wool=readWool(c)}
  val sales=list.filter{it.type=="sale"};val purchases=list.filter{it.type=="purchase"}
- val extra=otherTotals(c);val revenue=sales.sumOf{it.total}+extra.first;val cogs=sales.sumOf{it.cost};val net=revenue-cogs-extra.second
+ val extra=otherTotals(c);val revenue=sales.sumOf{it.total}+extra.first;val cogs=sales.sumOf{it.cost};val feedAccounting=calculateFeedConsumptionAccounting(readFeedConsumptionEntries(c),purchases.filter{it.category==PurchaseType.FEED.title}.map{FeedPurchaseCost(it.item,it.quantity,it.total)});val operatingExpenses=extra.second+feedAccounting.totalCost;val net=revenue-cogs-operatingExpenses
  Column(modifier.fillMaxSize().background(FinCream).padding(horizontal=16.dp)){
   Spacer(Modifier.height(12.dp))
   Row(verticalAlignment=Alignment.CenterVertically){
@@ -146,7 +146,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=22.dp)){
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("إجمالي المداخيل",dinar(revenue),Icons.Outlined.TrendingUp,Modifier.weight(1f));FinMetric("تكلفة الأصناف المباعة",dinar(cogs),Icons.Outlined.Inventory2,Modifier.weight(1f))}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("صافي الأرباح",dinar(net.coerceAtLeast(0.0)),Icons.Outlined.AccountBalance,Modifier.weight(1f));FinMetric("الخسائر",dinar((-net).coerceAtLeast(0.0)),Icons.Outlined.TrendingDown,Modifier.weight(1f))}}
-    item{Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){Row(Modifier.fillMaxWidth().padding(13.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("النتيجة المالية",fontWeight=FontWeight.Bold,color=FinInk);Text("الإيرادات − تكلفة المباع − المصاريف",fontSize=9.sp,color=FinMuted)};Text(dinar(net),fontWeight=FontWeight.ExtraBold,color=if(net>=0)FinGreen else Color(0xFFB54D42),fontSize=17.sp)}}}
+    item{Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){Row(Modifier.fillMaxWidth().padding(13.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("النتيجة المالية",fontWeight=FontWeight.Bold,color=FinInk);Text("الإيرادات − تكلفة المباع − المصاريف − العلف المستهلك",fontSize=9.sp,color=FinMuted)};Text(dinar(net),fontWeight=FontWeight.ExtraBold,color=if(net>=0)FinGreen else Color(0xFFB54D42),fontSize=17.sp)}}}
     item{Text("إدارة العمليات",fontSize=16.sp,fontWeight=FontWeight.Bold,color=FinInk)}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("متجر المزرعة","تسوّق احتياجات المزرعة",Icons.Outlined.Storefront,Modifier.weight(1f)){page=FinancePage.PURCHASES};FinAction("المبيعات","القطيع والصوف والمخزون",Icons.Outlined.PointOfSale,Modifier.weight(1f)){sale=true}}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("الفواتير",list.size.toString()+" فاتورة",Icons.Outlined.ReceiptLong,Modifier.weight(1f)){page=FinancePage.INVOICES};FinAction("التقارير","تحليل النشاط",Icons.Outlined.BarChart,Modifier.weight(1f)){page=FinancePage.REPORTS}}}
@@ -172,7 +172,9 @@ fun FinanceScreen(modifier:Modifier=Modifier){
     item{FinReport("تكلفة الأصناف المباعة",dinar(cogs),"وفق متوسط تكلفة الشراء المسجل")}
     item{FinReport("إجمالي المشتريات",dinar(purchases.sumOf{it.total}),purchases.size.toString()+" فاتورة")}
     item{FinReport("الإيرادات الأخرى",dinar(extra.first),"")}
-    item{FinReport("المصاريف التشغيلية",dinar(extra.second),"")}
+    item{FinReport("تكلفة العلف المستهلك",dinar(feedAccounting.totalCost),"وفق متوسط تكلفة فواتير شراء الأعلاف المسجلة")}
+    item{FinReport("استهلاك علف دون تكلفة شراء",String.format(Locale.US,"%.2f كغ",feedAccounting.uncostedQuantityKg),"كميات استهلاك لا تقابلها فواتير شراء مسجلة")}
+    item{FinReport("المصاريف التشغيلية",dinar(operatingExpenses),"تشمل المصاريف الأخرى وتكلفة العلف المستهلك") }
     item{FinReport("صافي النتيجة",dinar(net),if(net>=0)"فائض مالي" else "عجز مالي")}
     sales.groupBy{it.category}.forEach{(k,v)->item{FinReport(k,dinar(v.sumOf{it.total}),v.size.toString()+" عملية بيع")}}
    }

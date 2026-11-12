@@ -74,6 +74,16 @@ private fun saveShares(c:Context,m:Map<FeedKind,Double>){
  m.forEach{(k,v)->a.put(JSONObject().put("kind",k.name).put("share",v.coerceIn(0.0,100.0)))}
  check(c.getSharedPreferences(FEED_PREFS,0).edit().putString("shares",a.toString()).commit())
 }
+internal fun readFeedConsumptionEntries(c:Context):List<FeedConsumptionEntry>{
+ val a=JSONArray(c.getSharedPreferences(FEED_PREFS,0).getString(FEED_LEDGER_KEY,"[]")?:"[]")
+ return (0 until a.length()).mapNotNull{i->runCatching{
+  val x=a.getJSONObject(i)
+  if(x.optString("type")!="consumption")null else{
+   val kind=FeedKind.valueOf(x.optString("kind"));val quantity=x.optDouble("quantityKg",0.0)
+   if(quantity.isFinite()&&quantity>0.0)FeedConsumptionEntry(kind.label,quantity) else null
+  }
+ }.getOrNull()}
+}
 private fun recordFeedTransaction(c:Context,type:String,kind:FeedKind,qty:Double,note:String){
  val p=c.getSharedPreferences(FEED_PREFS,0)
  val a=JSONArray(p.getString(FEED_LEDGER_KEY,"[]")?:"[]")
