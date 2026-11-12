@@ -92,7 +92,7 @@ private fun saveMedicineLots(c:Context,lots:List<MedicineLot>){
 }
 private fun consumeMedicineLots(c:Context,item:String,quantity:Double){
  if(!quantity.isFinite()||quantity<=0.0) return
- var remaining=quantity; val lots=readMedicineLots(c).toMutableList() val today=LocalDate.now()
+ var remaining=quantity; val lots=readMedicineLots(c).toMutableList(); val today=LocalDate.now()
  val indices=lots.indices.filter{lots[it].item==item&&lots[it].quantity.isFinite()&&lots[it].quantity>0.0&&isMedicineLotUsable(lots[it].expiry,today)}
   .sortedBy{LocalDate.parse(lots[it].expiry)}
  for(i in indices){if(remaining<=1e-8)break;val old=lots[i];val used=minOf(old.quantity,remaining);lots[i]=old.copy(quantity=old.quantity-used);remaining-=used}
