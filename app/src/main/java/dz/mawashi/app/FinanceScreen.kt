@@ -219,18 +219,17 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    if(error.isNotBlank())item{Text(error,color=Color(0xFFB54D42),fontSize=11.sp)}
    item{Button(onClick={
     val t=type?:return@Button;val raw=qty.replace(',','.').toDoubleOrNull()?:0.0;val p=price.replace(',','.').toDoubleOrNull()?:0.0;val count=raw.toInt()
-    if(supplier.isBlank())error="أدخل اسم المورد" else if(raw<=0||raw>100000||p<=0)error="تحقق من الكمية والسعر" else if(t==PurchaseType.ANIMAL&&(raw!=count.toDouble()||count !in 1..500))error="عدد الرؤوس يجب أن يكون صحيحاً من 1 إلى 500" else if(t==PurchaseType.ANIMAL&&(weight.replace(',','.').toDoubleOrNull()?:0.0)<=0)error="أدخل وزن الرأس" else if(t==PurchaseType.ANIMAL&&item=="حمل/رخلة"&&!isValidLambBirthDate(birthDate))error="أدخل تاريخ ميلاد صحيحاً للحمل، ولا يمكن أن يكون في المستقبل" else if(t==PurchaseType.ANIMAL&&item=="حمل/رخلة"&&(birthWeight.replace(',','.').toDoubleOrNull()?:0.0)<=0)error="أدخل وزن الميلاد لكل حمل" else if(t==PurchaseType.ANIMAL&&item=="حمل/رخلة"&&(birthWeight.replace(',','.').toDoubleOrNull()?:0.0)>(weight.replace(',','.').toDoubleOrNull()?:0.0))error="وزن الميلاد لا يمكن أن يتجاوز الوزن الحالي" else if(t==PurchaseType.MEDICINE&&batch.isBlank())error="أدخل رقم التشغيلة" else if(t==PurchaseType.MEDICINE&&runCatching{LocalDate.parse(expiry);true}.getOrDefault(false).not())error="أدخل تاريخ صلاحية صحيحاً بصيغة YYYY-MM-DD" else if(t==PurchaseType.MEDICINE&&expiry<LocalDate.now().toString())error="لا يمكن إضافة تشغيلة منتهية الصلاحية إلى المخزون القابل للاستخدام" else{
+    if(supplier.isBlank())error="أدخل اسم المورد" else if(!isValidFinanceAmount(raw)||raw>100000||!isValidFinanceAmount(p)||!(raw*p).isFinite())error="تحقق من الكمية والسعر والقيمة الإجمالية" else if(t==PurchaseType.ANIMAL&&(raw!=count.toDouble()||count !in 1..500))error="عدد الرؤوس يجب أن يكون صحيحاً من 1 إلى 500" else if(t==PurchaseType.ANIMAL&&(weight.replace(',','.').toDoubleOrNull()?:0.0)<=0)error="أدخل وزن الرأس" else if(t==PurchaseType.ANIMAL&&item=="حمل/رخلة"&&!isValidLambBirthDate(birthDate))error="أدخل تاريخ ميلاد صحيحاً للحمل، ولا يمكن أن يكون في المستقبل" else if(t==PurchaseType.ANIMAL&&item=="حمل/رخلة"&&(birthWeight.replace(',','.').toDoubleOrNull()?:0.0)<=0)error="أدخل وزن الميلاد لكل حمل" else if(t==PurchaseType.ANIMAL&&item=="حمل/رخلة"&&(birthWeight.replace(',','.').toDoubleOrNull()?:0.0)>(weight.replace(',','.').toDoubleOrNull()?:0.0))error="وزن الميلاد لا يمكن أن يتجاوز الوزن الحالي" else if(t==PurchaseType.MEDICINE&&batch.isBlank())error="أدخل رقم التشغيلة" else if(t==PurchaseType.MEDICINE&&runCatching{LocalDate.parse(expiry);true}.getOrDefault(false).not())error="أدخل تاريخ صلاحية صحيحاً بصيغة YYYY-MM-DD" else if(t==PurchaseType.MEDICINE&&expiry<LocalDate.now().toString())error="لا يمكن إضافة تشغيلة منتهية الصلاحية إلى المخزون القابل للاستخدام" else{
      val now=LocalDateTime.now().toString();val id="PUR-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val q=if(t==PurchaseType.ANIMAL)count.toDouble() else raw;val total=q*p;var detail=""
-     when(t){
-      PurchaseType.ANIMAL->{val tags=generateHerdTags(herd.map{it.tag},count);val kg=weight.replace(',','.').toDouble();val birthDateValue=if(item=="حمل/رخلة")birthDate.trim() else "";val birthWeightValue=if(item=="حمل/رخلة")birthWeight.replace(',','.').toDouble() else null;val animalAgeMonths=if(item=="حمل/رخلة")ChronoUnit.MONTHS.between(LocalDate.parse(birthDateValue),LocalDate.now()).toInt().coerceAtLeast(0) else age.toIntOrNull()?:0;val updated=herd.toMutableList();tags.forEach{tag->updated.add(HerdAnimal(id=UUID.randomUUID().toString(),tag=tag,kind=item,ageMonths=animalAgeMonths,health=health,notes="شراء "+id,weightKg=kg,birthDate=birthDateValue,birthWeightKg=birthWeightValue,productionState=if(item=="كبش")"كبش" else if(item=="حمل/رخلة")"خروف" else state))};saveHerd(c,updated);detail="أضيفت "+count+" رؤوس للقطيع بالمعرفات "+tags.first()+" إلى "+tags.last()+"."}
-      PurchaseType.FEED->{val k=FeedKind.values().first{it.label==item};val stock=loadFeedStocks(c);stock[k]=(stock[k]?:0.0)+q;saveFeedStocks(c,stock);detail="أضيفت "+String.format(Locale.US,"%.2f",q)+" كغ إلى مخزون "+k.label+"."}
-      PurchaseType.MEDICINE->{
-       val stock=readMedicineStock(c);stock[item]=(stock[item]?:0.0)+q;writeMedicineStock(c,stock)
-       val lots=readMedicineLots(c).toMutableList();lots.add(MedicineLot(item,batch.trim(),expiry.trim(),q,supplier.trim(),now));saveMedicineLots(c,lots)
-       detail="أضيف الدواء إلى المخزون. التشغيلة: "+batch+"، الصلاحية: "+expiry+"."
+     val transaction=runFinanceTransaction(c,financeTransactionStoreNames()){
+      when(t){
+       PurchaseType.ANIMAL->{val tags=generateHerdTags(herd.map{it.tag},count);val kg=weight.replace(',','.').toDouble();val birthDateValue=if(item=="حمل/رخلة")birthDate.trim() else "";val birthWeightValue=if(item=="حمل/رخلة")birthWeight.replace(',','.').toDouble() else null;val animalAgeMonths=if(item=="حمل/رخلة")ChronoUnit.MONTHS.between(LocalDate.parse(birthDateValue),LocalDate.now()).toInt().coerceAtLeast(0) else age.toIntOrNull()?:0;val updated=herd.toMutableList();tags.forEach{tag->updated.add(HerdAnimal(id=UUID.randomUUID().toString(),tag=tag,kind=item,ageMonths=animalAgeMonths,health=health,notes="شراء "+id,weightKg=kg,birthDate=birthDateValue,birthWeightKg=birthWeightValue,productionState=if(item=="كبش")"كبش" else if(item=="حمل/رخلة")"خروف" else state))};saveHerd(c,updated);detail="أضيفت "+count+" رؤوس للقطيع بالمعرفات "+tags.first()+" إلى "+tags.last()+"."}
+       PurchaseType.FEED->{val k=FeedKind.values().first{it.label==item};val stock=loadFeedStocks(c);stock[k]=(stock[k]?:0.0)+q;saveFeedStocks(c,stock);detail="أضيفت "+String.format(Locale.US,"%.2f",q)+" كغ إلى مخزون "+k.label+"."}
+       PurchaseType.MEDICINE->{val stock=readMedicineStock(c);stock[item]=(stock[item]?:0.0)+q;writeMedicineStock(c,stock);val lots=readMedicineLots(c).toMutableList();lots.add(MedicineLot(item,batch.trim(),expiry.trim(),q,supplier.trim(),now));saveMedicineLots(c,lots);detail="أضيف الدواء إلى المخزون. التشغيلة: "+batch+"، الصلاحية: "+expiry+"."}
       }
+      writeInvoice(c,FinanceInvoice(id,"purchase",t.title,supplier,item,q,if(t==PurchaseType.ANIMAL)"رأس" else if(t==PurchaseType.FEED)"كغ" else "وحدة",p,total,0.0,now,detail))
      }
-     writeInvoice(c,FinanceInvoice(id,"purchase",t.title,supplier,item,q,if(t==PurchaseType.ANIMAL)"رأس" else if(t==PurchaseType.FEED)"كغ" else "وحدة",p,total,0.0,now,detail));done("تم حفظ الفاتورة "+id+" بقيمة "+dinar(total)+". "+detail)
+     if(transaction.committed)done("تم حفظ الفاتورة "+id+" بقيمة "+dinar(total)+". "+detail) else error=if(transaction.rollbackSucceeded)"تعذر حفظ الفاتورة؛ أُعيد المخزون إلى حالته السابقة." else "تعذر حفظ العملية واكتمل التراجع جزئياً فقط. راجع المخزون والفواتير قبل متابعة الشراء."
     }
    },modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FinGreen),shape=RoundedCornerShape(14.dp)){Icon(Icons.Outlined.CheckCircle,null);Spacer(Modifier.width(8.dp));Text("تأكيد الشراء وحفظ الفاتورة",fontWeight=FontWeight.Bold)}}
   }
@@ -258,7 +257,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   if(error.isNotBlank())item{Text(error,color=Color.Red,fontSize=11.sp)}
  }},confirmButton={TextButton(onClick={
   val q=if(type==SaleType.ANIMAL)1.0 else qty.replace(',','.').toDoubleOrNull()?:0.0;val p=price.replace(',','.').toDoubleOrNull()?:0.0
-  if(buyer.isBlank())error="أدخل اسم المشتري" else if(options.isEmpty()||item.isBlank())error="لا توجد كمية متاحة" else if(q<=0||p<=0)error="تحقق من الكمية والسعر"
+  if(buyer.isBlank())error="أدخل اسم المشتري" else if(options.isEmpty()||item.isBlank())error="لا توجد كمية متاحة" else if(!isValidFinanceAmount(q)||!isValidFinanceAmount(p)||!(q*p).isFinite())error="تحقق من الكمية والسعر والقيمة الإجمالية"
   else{
    var available=0.0;var costUnit=0.0;var detail=""
    when(type){
@@ -272,20 +271,19 @@ fun FinanceScreen(modifier:Modifier=Modifier){
    }
    if(q>available+1e-8)error="الرصيد غير كافٍ. المتاح: "+available
    else{
-    when(type){
-     SaleType.ANIMAL->{
-      val animal=activeHerd.first{it.tag==item}
-      val archived=archiveHerdAnimal(animal,LocalDate.now().toString(),"بيع")
-      saveHerd(c,herd.map{if(it.id==animal.id)archived else it})
-      detail="بيع الحيوان "+item+" وأُرشف ملفه مع الاحتفاظ ببياناته. تاريخ البيع: "+archived.exitDate+"."
+    val now=LocalDateTime.now().toString();val id="SAL-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val total=q*p;val totalCost=q*costUnit
+    if(!isValidFinanceAmount(total)||!totalCost.isFinite()||totalCost<0.0){error="القيمة المالية خارج النطاق الصحيح؛ لم يتم تغيير المخزون."}else{
+     val transaction=runFinanceTransaction(c,financeTransactionStoreNames()){
+      when(type){
+       SaleType.ANIMAL->{val animal=activeHerd.first{it.tag==item};val archived=archiveHerdAnimal(animal,LocalDate.now().toString(),"بيع");saveHerd(c,herd.map{if(it.id==animal.id)archived else it});detail="بيع الحيوان "+item+" وأُرشف ملفه مع الاحتفاظ ببياناته. تاريخ البيع: "+archived.exitDate+"."}
+       SaleType.WOOL->writeWool(c,wool-q)
+       SaleType.FEED->{val k=FeedKind.values().first{it.label==item};val s=loadFeedStocks(c);s[k]=(s[k]?:0.0)-q;saveFeedStocks(c,s)}
+       SaleType.MEDICINE->{consumeMedicineLots(c,item,q);val s=readMedicineStock(c);s[item]=(s[item]?:0.0)-q;writeMedicineStock(c,s)}
+      }
+      writeInvoice(c,FinanceInvoice(id,"sale",type.title,buyer,item,q,if(type==SaleType.ANIMAL)"رأس" else if(type==SaleType.WOOL||type==SaleType.FEED)"كغ" else "وحدة",p,total,totalCost,now,detail))
      }
-     SaleType.WOOL->writeWool(c,wool-q)
-     SaleType.FEED->{val k=FeedKind.values().first{it.label==item};val s=loadFeedStocks(c);s[k]=(s[k]?:0.0)-q;saveFeedStocks(c,s)}
-     SaleType.MEDICINE->{consumeMedicineLots(c,item,q);val s=readMedicineStock(c);s[item]=(s[item]?:0.0)-q;writeMedicineStock(c,s)}
+     if(transaction.committed)done("حُفظت فاتورة البيع "+id+" بقيمة "+dinar(total)+". تم خصم الكمية تلقائياً من القسم المعني.") else error=if(transaction.rollbackSucceeded)"تعذر حفظ الفاتورة؛ أُعيد المخزون إلى حالته السابقة." else "تعذر حفظ العملية واكتمل التراجع جزئياً فقط. راجع المخزون والفواتير قبل متابعة البيع."
     }
-    val now=LocalDateTime.now().toString();val id="SAL-"+now.filter{it.isDigit()}.take(14)+"-"+UUID.randomUUID().toString().take(4).uppercase();val total=q*p
-    writeInvoice(c,FinanceInvoice(id,"sale",type.title,buyer,item,q,if(type==SaleType.ANIMAL)"رأس" else if(type==SaleType.WOOL||type==SaleType.FEED)"كغ" else "وحدة",p,total,q*costUnit,now,detail))
-    done("حُفظت فاتورة البيع "+id+" بقيمة "+dinar(total)+". تم خصم الكمية تلقائياً من القسم المعني.")
    }
   }
  }){Text("تأكيد البيع")}},dismissButton={TextButton(onClick=dismiss){Text("إلغاء")}})
@@ -295,7 +293,7 @@ private fun averagePurchaseCost(c:Context,item:String,category:String):Double{va
 
 @Composable private fun OtherDialog(type:String,dismiss:()->Unit,save:(String,Double)->Unit){
  var name by rememberSaveable{mutableStateOf("")};var amount by rememberSaveable{mutableStateOf("")}
- AlertDialog(onDismissRequest=dismiss,title={Text(if(type=="income")"إضافة إيراد" else "إضافة مصروف")},text={Column{OutlinedTextField(name,{name=it},label={Text("البيان")});OutlinedTextField(amount,{amount=it},label={Text("المبلغ بالدينار")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))}},confirmButton={TextButton(onClick={val v=amount.replace(',','.').toDoubleOrNull();if(name.isNotBlank()&&v!=null&&v>0)save(name,v)}){Text("حفظ")}},dismissButton={TextButton(onClick=dismiss){Text("إلغاء")}})
+ AlertDialog(onDismissRequest=dismiss,title={Text(if(type=="income")"إضافة إيراد" else "إضافة مصروف")},text={Column{OutlinedTextField(name,{name=it},label={Text("البيان")});OutlinedTextField(amount,{amount=it},label={Text("المبلغ بالدينار")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))}},confirmButton={TextButton(onClick={val v=amount.replace(',','.').toDoubleOrNull();if(name.isNotBlank()&&v!=null&&isValidFinanceAmount(v))save(name,v)}){Text("حفظ")}},dismissButton={TextButton(onClick=dismiss){Text("إلغاء")}})
 }
 
 private data class MedicineInfo(val name:String,val group:String,val scientific:String,val purpose:String,val active:String,val concentration:String,val storage:String,val warnings:String,val withdrawal:String)
