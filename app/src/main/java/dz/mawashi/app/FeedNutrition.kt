@@ -87,6 +87,9 @@ internal object SheepNutrition {
 internal data class FeedStock(val kind:FeedKind,val quantityKg:Double,val sharePercent:Double=0.0)
 internal data class FeedUse(val kind:FeedKind,val asFedKg:Double,val dryMatterKg:Double)
 
+internal fun unavailableSelectedFeedKinds(stocks:Map<FeedKind,Double>,shares:Map<FeedKind,Double>):List<FeedKind> =
+    FeedKind.values().filter { it!=FeedKind.MINERALS && (shares[it]?:0.0)>0.0 && (stocks[it]?:0.0)<=0.0 }
+
 internal fun calculateSupplementUses(needs:List<DailyNeed>,stocks:List<FeedStock>):List<FeedUse> {
     val eligible=stocks.filter{it.kind!=FeedKind.MINERALS && it.sharePercent>0}
     val shareTotal=eligible.sumOf{it.sharePercent}
