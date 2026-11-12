@@ -87,12 +87,15 @@ private fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pasture
  val inputs=feedInputsForAnimals(animals)
  if(inputs.isEmpty())return "لا توجد حيوانات بأوزان مسجلة صالحة للحساب"
  val stocks=loadFeedStocks(c)
- val active=FeedKind.values().filter{it!=FeedKind.MINERALS && (stocks[it]?:0.0)>0 && (shares[it]?:0.0)>0}
- val shareTotal=active.sumOf{shares[it]?:0.0}
- if(shareTotal<=0.0)return "أضف مخزوناً من علف واحد على الأقل وحدد نسبته قبل الخصم"
+ val selected=FeedKind.values().filter{it!=FeedKind.MINERALS && (shares[it]?:0.0)>0.0}
+ if(selected.isEmpty())return "حدد نسب مكونات الخلطة قبل الخصم"
+ val missing=unavailableSelectedFeedKinds(stocks,shares)
+ if(missing.isNotEmpty())return "لا يوجد مخزون من: "+missing.joinToString("، "){it.label}+"؛ لم يُخصم أي شيء ولم تُعدّل نسب الخلطة"
+ val shareTotal=selected.sumOf{shares[it]?:0.0}
+ if(shareTotal<=0.0)return "حدد نسب مكونات الخلطة قبل الخصم"
  val needs=inputs.map{SheepNutrition.calculate(it,pasture)}
  val totalDm=needs.sumOf{it.supplementDryMatterKg}
- val uses=active.associateWith{k->(totalDm*((shares[k]?:0.0)/shareTotal))/k.dryMatter}
+ val uses=selected.associateWith{k->(totalDm*((shares[k]?:0.0)/shareTotal))/k.dryMatter}
  val shortages=uses.filter{(k,v)->v>(stocks[k]?:0.0)+1e-8}
  if(shortages.isNotEmpty())return "المخزون غير كافٍ: "+shortages.keys.joinToString("، "){it.label}+"؛ لم يُخصم أي شيء"
  val updated=stocks.toMutableMap()
