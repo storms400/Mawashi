@@ -3,6 +3,9 @@ package dz.mawashi.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -132,6 +135,30 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
     val rams = herd.count { it.kind == "كبش" }
     val lambs = herd.count { it.kind == "حمل/رخلة" }
     val weighedAnimals = herd.mapNotNull { it.weightKg }.filter { it > 0.0 }
+    var pendingBackup by remember { mutableStateOf<PreparedMawashiBackup?>(null) }
+    var restoreDialog by remember { mutableStateOf(false) }
+    val createBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            try {
+                val output = context.contentResolver.openOutputStream(uri) ?: error("تعذر فتح ملف الحفظ")
+                output.use { MawashiBackup.export(context, it) }
+                Toast.makeText(context, "تم إنشاء النسخة الاحتياطية بنجاح", Toast.LENGTH_LONG).show()
+            } catch (failure: Exception) {
+                Toast.makeText(context, "تعذر إنشاء النسخة: ${failure.message ?: "خطأ غير معروف"}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+    val restoreBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            try {
+                val input = context.contentResolver.openInputStream(uri) ?: error("تعذر قراءة الملف")
+                pendingBackup = MawashiBackup.prepareRestore(input)
+                restoreDialog = true
+            } catch (failure: Exception) {
+                Toast.makeText(context, "لم تتم الاستعادة: ${failure.message ?: "ملف غير صالح"}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
     val averageWeight = if (weighedAnimals.isEmpty()) "—" else String.format(java.util.Locale.US, "%.1f", weighedAnimals.average())
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -226,18 +253,68 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
         }
         item {
             Surface(color = Ivory, shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Line)) {
-                Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = Color(0xFFE8EDE5), shape = RoundedCornerShape(13.dp)) {
-                        Icon(Icons.Outlined.Security, null, tint = Emerald, modifier = Modifier.padding(10.dp).size(22.dp))
+                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(color = Color(0xFFE8EDE5), shape = RoundedCornerShape(13.dp)) {
+                            Icon(Icons.Outlined.Security, null, tint = Emerald, modifier = Modifier.padding(10.dp).size(22.dp))
+                        }
+                        Spacer(Modifier.width(11.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("النسخ الاحتياطي وحماية بياناتك", color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("احفظ القطيع والعلف والمالية والرعاية الصحية في ملف واحد خارج التطبيق", color = Muted, fontSize = 10.sp)
+                        }
                     }
-                    Spacer(Modifier.width(11.dp))
-                    Column {
-                        Text("حفظ البيانات على هذا الجهاز", color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text("تُحفظ السجلات محلياً؛ احرص على عدم حذف بيانات التطبيق قبل توفر النسخ الاحتياطي", color = Muted, fontSize = 10.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(
+                            onClick = { createBackupLauncher.launch("Mawashi-Backup-v32.json") },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = Forest),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
+                        ) {
+                            Icon(Icons.Outlined.SaveAlt, null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text("إنشاء نسخة", fontSize = 11.sp)
+                        }
+                        OutlinedButton(
+                            onClick = { restoreBackupLauncher.launch(arrayOf("application/json", "text/json", "application/octet-stream")) },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
+                        ) {
+                            Icon(Icons.Outlined.Restore, null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text("استعادة نسخة", fontSize = 11.sp)
+                        }
                     }
+                    Text("الاستعادة تستبدل بيانات التطبيق الحالية بعد التحقق من الملف. احتفظ بنسخة حديثة قبل الاستعادة.", color = Muted, fontSize = 9.sp)
                 }
             }
         }
+    }
+    if (restoreDialog && pendingBackup != null) {
+        AlertDialog(
+            onDismissRequest = { restoreDialog = false; pendingBackup = null },
+            title = { Text("تأكيد استعادة البيانات", fontWeight = FontWeight.Bold) },
+            text = { Text("سيتم استبدال بيانات القطيع والعلف والمالية والرعاية الصحية بالبيانات الموجودة في النسخة الاحتياطية. هل تريد المتابعة؟") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val backup = pendingBackup
+                    if (backup != null) {
+                        try {
+                            MawashiBackup.restore(context, backup)
+                            herd = activeHerdAnimals(loadHerd(context))
+                            Toast.makeText(context, "تمت استعادة بيانات مواشي بنجاح", Toast.LENGTH_LONG).show()
+                        } catch (failure: Exception) {
+                            Toast.makeText(context, "فشلت الاستعادة: ${failure.message ?: "خطأ غير معروف"}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    restoreDialog = false
+                    pendingBackup = null
+                }) { Text("استعادة البيانات", color = Forest) }
+            },
+            dismissButton = {
+                TextButton(onClick = { restoreDialog = false; pendingBackup = null }) { Text("إلغاء") }
+            }
+        )
     }
 }
 
