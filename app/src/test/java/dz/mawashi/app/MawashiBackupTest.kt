@@ -72,7 +72,7 @@ class MawashiBackupTest {
 
         val output = ByteArrayOutputStream()
         MawashiBackup.export(context, output)
-        val corrupted = output.toString("UTF-8").replace("\\"sha256\\":\\"","\\"sha256\\":\\"0")
+        val corrupted = output.toString("UTF-8").replace("sha256", "sha256-corrupt")
         assertFalse("Test fixture must alter the checksum", corrupted == output.toString("UTF-8"))
 
         assertThrows(IllegalArgumentException::class.java) {
