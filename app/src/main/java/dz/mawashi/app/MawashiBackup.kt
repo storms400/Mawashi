@@ -109,12 +109,27 @@ internal object MawashiBackup {
                 check(editor.commit()) { "تعذر حفظ بيانات قسم $name" }
             }
         } catch (failure: Exception) {
+            val rollbackFailures = mutableListOf<String>()
             changed.asReversed().forEach { name ->
-                val editor = context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear()
-                originals.getValue(name).forEach { (key, value) -> putOriginalValue(editor, key, value) }
-                editor.commit()
+                try {
+                    val editor = context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear()
+                    originals.getValue(name).forEach { (key, value) -> putOriginalValue(editor, key, value) }
+                    if (!editor.commit()) rollbackFailures += name
+                } catch (_: Exception) {
+                    rollbackFailures += name
+                }
             }
-            throw IllegalStateException("تعذرت الاستعادة؛ تمت محاولة إعادة البيانات السابقة. " + (failure.message ?: ""), failure)
+            val rollbackMessage = if (rollbackFailures.isEmpty()) {
+                "تمت إعادة البيانات السابقة بنجاح."
+            } else {
+                "تحذير مهم: تعذرت إعادة البيانات السابقة لبعض الأقسام: " +
+                    rollbackFailures.joinToString("، ") +
+                    ". أوقف استخدام التطبيق وأنشئ نسخة من البيانات المتاحة قبل أي محاولة أخرى."
+            }
+            throw IllegalStateException(
+                "تعذرت الاستعادة. $rollbackMessage " + (failure.message ?: ""),
+                failure
+            )
         }
     }
 
