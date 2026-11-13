@@ -28,7 +28,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
@@ -136,13 +135,6 @@ fun AuthGate(onAuthenticated: @Composable () -> Unit) {
             onSignedIn = { signedInUser ->
                 user = signedInUser
                 isVerified = signedInUser.isEmailVerified
-            },
-            onOtpRequired = { signedInUser, callback ->
-                callOtpApi(signedInUser, "/v1/otp/send") { result ->
-                    user = signedInUser
-                    isVerified = false
-                    callback(result)
-                }
             }
         )
     }
@@ -151,8 +143,7 @@ fun AuthGate(onAuthenticated: @Composable () -> Unit) {
 @Composable
 private fun SignInScreen(
     auth: FirebaseAuth,
-    onSignedIn: (FirebaseUser) -> Unit,
-    onOtpRequired: (FirebaseUser, (OtpResult) -> Unit) -> Unit
+    onSignedIn: (FirebaseUser) -> Unit
 ) {
     var isRegister by rememberSaveable { mutableStateOf(false) }
     var email by rememberSaveable { mutableStateOf("") }
@@ -229,11 +220,8 @@ private fun SignInScreen(
                                                 busy = false
                                                 onSignedIn(current)
                                             } else {
-                                                onOtpRequired(current) { otpResult ->
-                                                    busy = false
-                                                    onSignedIn(current)
-                                                    if (!otpResult.ok) message = otpResult.message
-                                                }
+                                                busy = false
+                                                onSignedIn(current)
                                             }
                                         }
                                     }
@@ -285,14 +273,12 @@ private fun OtpVerificationScreen(
     var code by rememberSaveable { mutableStateOf("") }
     var message by remember { mutableStateOf("أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى ${user.email ?: "بريدك الإلكتروني"}.") }
     var busy by remember { mutableStateOf(false) }
-    var sendEnabled by remember { mutableStateOf(true) }
 
     LaunchedEffect(user.uid) {
         // On app restart, send a fresh code so the user can continue the pending registration.
         busy = true
         callOtpApi(user, "/v1/otp/send") { result ->
             busy = false
-            sendEnabled = !result.ok
             message = result.message
         }
     }
@@ -340,11 +326,10 @@ private fun OtpVerificationScreen(
                     busy = true
                     callOtpApi(user, "/v1/otp/send") { result ->
                         busy = false
-                        sendEnabled = !result.ok
                         message = result.message
                     }
                 },
-                enabled = !busy && sendEnabled
+                enabled = !busy
             ) { Text("إعادة إرسال الرمز") }
             TextButton(onClick = onSignOut, enabled = !busy) { Text("تسجيل الخروج") }
         }
