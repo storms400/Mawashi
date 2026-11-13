@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ProjectIdentityTest {
-    @Test fun debugApplicationIdentityUsesFinalPackageId() {
-        assertEquals("dz.mawashi.app.debug", BuildConfig.APPLICATION_ID)
+    @Test fun debugApplicationIdentityMatchesFirebasePackage() {
+        assertEquals("dz.mawashi.app", BuildConfig.APPLICATION_ID)
     }
 }
