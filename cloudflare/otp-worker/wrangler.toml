@@ -5,4 +5,7 @@ compatibility_date = "2026-11-13"
 [[d1_databases]]
 binding = "OTP_DB"
 database_name = "mawashi-otp"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "c02dfcb6-12da-4d65-b791-82452aaabc74"
+
+[vars]
+TEST_RECIPIENT_EMAIL = "mmsmimo16@gmail.com"
