@@ -109,11 +109,12 @@ fun AuthGate(onAuthenticated: @Composable () -> Unit) {
     val auth = remember { FirebaseAuth.getInstance() }
     var user by remember { mutableStateOf(auth.currentUser) }
     var isVerified by remember { mutableStateOf(auth.currentUser?.isEmailVerified == true) }
+    var showOwnerDashboard by rememberSaveable { mutableStateOf(true) }
 
     if (isVerified) {
         val signedIn = auth.currentUser
         if (signedIn?.email.equals(MAWASHI_OWNER_EMAIL, ignoreCase = true) && signedIn != null) {
-            OwnerDashboardScreen(user = signedIn, onContinue = onAuthenticated)
+            OwnerDashboardScreen(user = signedIn, onContinue = { showOwnerDashboard = false })
         } else {
             onAuthenticated()
         }
@@ -133,6 +134,7 @@ fun AuthGate(onAuthenticated: @Composable () -> Unit) {
                 auth.signOut()
                 user = null
                 isVerified = false
+                showOwnerDashboard = true
             }
         )
     } else {
