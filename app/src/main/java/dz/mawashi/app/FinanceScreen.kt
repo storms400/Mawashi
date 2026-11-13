@@ -393,6 +393,7 @@ private fun herdAgeLabel(a:HerdAnimal):String{
 }
 @Composable private fun HerdHealthMonitor(onBack:()->Unit){
  val context=LocalContext.current
+ val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (!granted) Toast.makeText(context, "يمكنك تفعيل الإشعارات من إعدادات الهاتف لتصلك مواعيد المتابعة", Toast.LENGTH_LONG).show() }
  var animals by remember{mutableStateOf(activeHerdAnimals(loadHerd(context)))}
  var reminders by remember{mutableStateOf(readHerdCare(context))}
  var selectedTag by rememberSaveable{mutableStateOf<String?>(null)}
