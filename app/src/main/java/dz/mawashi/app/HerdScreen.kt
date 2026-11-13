@@ -172,7 +172,10 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){HerdStat("إجمالي القطيع",animals.count{it.lifecycleStatus=="نشط"}.toString(),Modifier.weight(1f));HerdStat("النعاج",animals.count{it.lifecycleStatus=="نشط"&&it.kind=="نعجة"}.toString(),Modifier.weight(1f));HerdStat("الحملان",animals.count{it.lifecycleStatus=="نشط"&&it.kind=="حمل/رخلة"}.toString(),Modifier.weight(1f))}
   if(animals.isNotEmpty())OutlinedButton(onClick={printHerdQr(context,animals.toList())},modifier=Modifier.fillMaxWidth()){Icon(Icons.Outlined.Print,null);Text("طباعة رموز QR للقطيع (${animals.size})")}
   OutlinedTextField(search,{search=it},Modifier.fillMaxWidth(),placeholder={Text("ابحث برقم التعريف",fontSize=12.sp)},leadingIcon={Icon(Icons.Outlined.Search,null)},singleLine=true,shape=RoundedCornerShape(15.dp))
-  Row(horizontalArrangement=Arrangement.spacedBy(5.dp)){listOf("الكل","نعجة","كبش","حمل/رخلة","غير محدد","الأرشيف").forEach{FilterChip(filter==it,{filter=it},label={Text(it,fontSize=10.sp)},colors=FilterChipDefaults.filterChipColors(containerColor=Color.White,selectedContainerColor=Color.White,labelColor=HerdInk,selectedLabelColor=HerdGreen))}}
+  Row(horizontalArrangement=Arrangement.spacedBy(5.dp)){listOf("الكل","نعجة","كبش","حمل/رخلة","غير محدد").forEach{FilterChip(filter==it,{filter=it},label={Text(it,fontSize=10.sp)},colors=FilterChipDefaults.filterChipColors(containerColor=Color.White,selectedContainerColor=Color.White,labelColor=HerdInk,selectedLabelColor=HerdGreen))}}
+  Row(horizontalArrangement=Arrangement.Start,modifier=Modifier.fillMaxWidth()){
+   FilterChip(filter=="الأرشيف",{filter="الأرشيف"},label={Text("الأرشيف",fontSize=10.sp)},leadingIcon={Icon(Icons.Outlined.Archive,contentDescription=null,modifier=Modifier.size(16.dp))},colors=FilterChipDefaults.filterChipColors(containerColor=Color.White,selectedContainerColor=Color.White,labelColor=HerdInk,selectedLabelColor=HerdGreen))
+  }
   if(visible.isEmpty()){
    Column(Modifier.fillMaxWidth().weight(1f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
     EweLogo(76);Spacer(Modifier.height(12.dp));Text(if(animals.isEmpty())"ابدأ بتسجيل حيوانات القطيع" else "لا توجد نتائج مطابقة",color=HerdInk,fontWeight=FontWeight.Bold)
