@@ -69,7 +69,7 @@ jobs:
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.debug'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='32' versionName='1.0.32-debug'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
