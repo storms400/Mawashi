@@ -18,6 +18,14 @@ android {
     }
     buildTypes {
         debug { versionNameSuffix = "-debug" }
+        // Separate installable test app; requires its own Firebase Android app
+        // registration and app/src/standalone/google-services.json.
+        create("standalone") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".test"
+            versionNameSuffix = "-test"
+            matchingFallbacks += listOf("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
