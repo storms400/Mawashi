@@ -42,7 +42,8 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-private const val MAWASHI_OWNER_EMAIL = "mmsmmimo16@gmail.com"
+internal const val MAWASHI_OWNER_EMAIL = "mmsmmimo16@gmail.com"
+private const val OWNER_API_BASE = "https://mawashi-otp-api.mmsmimo16.workers.dev"
 
 private data class ManagedUser(
     val uid: String,
