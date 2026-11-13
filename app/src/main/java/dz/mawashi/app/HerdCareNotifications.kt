@@ -20,6 +20,7 @@ internal data class HerdCareNotificationData(val id:String,val tag:String,val ti
 internal object HerdCareNotifications {
     private const val PREFS = "mawashi_herd_care_v27"
     private const val KEY = "scheduled_care"
+    private const val IDS_KEY = "scheduled_care_alarm_ids"
     private const val CHANNEL = "herd_care_reminders"
 
     internal fun triggerAt(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Long =
@@ -27,6 +28,20 @@ internal object HerdCareNotifications {
 
     fun scheduleAll(context: Context, reminders: List<HerdCareNotificationData>) {
         val manager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val currentIds = reminders.map { it.id }.toSet()
+        val previousIds = prefs.getStringSet(IDS_KEY, emptySet()).orEmpty()
+        (previousIds - currentIds).forEach { removedId ->
+            val removedIntent = Intent(context, HerdCareAlarmReceiver::class.java).apply {
+                action = "dz.mawashi.HERD_CARE_REMINDER"
+                putExtra("id", removedId)
+            }
+            val removedPending = PendingIntent.getBroadcast(context, removedId.hashCode() and 0x7fffffff,
+                removedIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            manager.cancel(removedPending)
+            removedPending.cancel()
+            NotificationManagerCompat.from(context).cancel(removedId.hashCode())
+        }
         reminders.forEach { item ->
             val id = item.id.hashCode() and 0x7fffffff
             val intent = Intent(context, HerdCareAlarmReceiver::class.java).apply {
@@ -47,6 +62,7 @@ internal object HerdCareNotifications {
                 else manager.cancel(pending)
             }
         }
+        prefs.edit().putStringSet(IDS_KEY, currentIds).apply()
     }
 
     fun rescheduleFromStorage(context: Context) {
