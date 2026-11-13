@@ -7,8 +7,8 @@ android {
     namespace = "dz.mawashi.app"
     compileSdk = 35
     defaultConfig {
-        // Independent package and isolated local data for v32 completion audit.
-        applicationId = "dz.mawashi.app.independent.v32"
+        // Final production application ID approved for Mawashi.
+        applicationId = "dz.mawashi.app"
         minSdk = 26
         targetSdk = 35
         versionCode = 32
