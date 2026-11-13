@@ -36,3 +36,7 @@ Both POST endpoints require `Authorization: Bearer <Firebase ID token>`.
 ## Important rollout order
 
 Do not switch the Android app away from Firebase email-link verification until this Worker has been deployed, its secrets and D1 binding have been configured, and the send/verify flow has been tested end-to-end. The Android client integration is a separate follow-up change.
+
+## Git-based deployment
+
+Cloudflare Workers builds are configured to deploy this Worker from the `develop/final-package-id` branch, using this directory as the project root and `npx wrangler deploy` as the deploy command. A commit to this branch triggers the configured build.
