@@ -241,6 +241,9 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   Row(Modifier.padding(15.dp),verticalAlignment=Alignment.CenterVertically){Surface(color=Color(0xFFEAF1E9),shape=RoundedCornerShape(15.dp)){Box(Modifier.padding(8.dp).size(39.dp),contentAlignment=Alignment.Center){ iconContent() }};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(title,fontSize=15.sp,fontWeight=FontWeight.ExtraBold,color=FinInk);Text(subtitle,fontSize=10.sp,color=FinGreen,fontWeight=FontWeight.SemiBold);Text(description,fontSize=10.sp,color=FinMuted)};Column(horizontalAlignment=Alignment.End){Text(metric,fontSize=11.sp,fontWeight=FontWeight.Bold,color=FinGreen);Icon(Icons.Outlined.ChevronLeft,null,tint=FinMuted)}}
  }
 }
+@Composable private fun PurchaseCategoryCard(title:String,subtitle:String,description:String,icon:androidx.compose.ui.graphics.vector.ImageVector,metric:String,onClick:()->Unit){
+ PurchaseCategoryCard(title,subtitle,description,{ Icon(icon,null,tint=FinGreen,modifier=Modifier.size(29.dp)) },metric,onClick)
+}
 @Composable private fun SaleDialog(c:Context,herd:List<HerdAnimal>,feed:Map<FeedKind,Double>,medicine:Map<String,Double>,wool:Double,dismiss:()->Unit,done:(String)->Unit){
  val activeHerd=activeHerdAnimals(herd)
  var type by remember{mutableStateOf(SaleType.ANIMAL)};var buyer by rememberSaveable{mutableStateOf("")};var item by rememberSaveable{mutableStateOf(activeHerd.firstOrNull()?.tag?:"")};var qty by rememberSaveable{mutableStateOf("1")};var price by rememberSaveable{mutableStateOf("")};var error by remember{mutableStateOf("")}
