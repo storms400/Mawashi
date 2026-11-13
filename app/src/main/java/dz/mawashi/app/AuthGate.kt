@@ -91,6 +91,7 @@ private fun SignInScreen(
             ) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(if (isRegister) "حساب جديد" else "تسجيل الدخول", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("يُستخدم بريدك لتأكيد الحساب واستعادة كلمة المرور.")
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
