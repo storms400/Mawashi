@@ -277,17 +277,10 @@ private fun OtpVerificationScreen(
     onSignOut: () -> Unit
 ) {
     var code by rememberSaveable { mutableStateOf("") }
-    var message by remember { mutableStateOf("أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى ${user.email ?: "بريدك الإلكتروني"}.") }
+    var message by remember { mutableStateOf("اضغط على «إرسال رمز التحقق» لإرسال رمز من 6 أرقام إلى ${user.email ?: "بريدك الإلكتروني"}.") }
     var busy by remember { mutableStateOf(false) }
 
-    LaunchedEffect(user.uid) {
-        // On app restart, send a fresh code so the user can continue the pending registration.
-        busy = true
-        callOtpApi(user, "/v1/otp/send") { result ->
-            busy = false
-            message = result.message
-        }
-    }
+    // OTP delivery is explicit: opening or restarting the app must not send repeated emails.
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
@@ -336,7 +329,7 @@ private fun OtpVerificationScreen(
                     }
                 },
                 enabled = !busy
-            ) { Text("إعادة إرسال الرمز") }
+            ) { Text("إرسال / إعادة إرسال الرمز") }
             TextButton(onClick = onSignOut, enabled = !busy) { Text("تسجيل الخروج") }
         }
     }
