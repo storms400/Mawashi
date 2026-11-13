@@ -152,7 +152,7 @@ async function adminStats(request, env) {
   const users = await listFirebaseUsers(env);
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
-  const active7d = users.filter(u => u.lastLoginAt && now - Date.parse(u.lastLoginAt) <= 7 * day).length;
+  const active7d = users.filter(u => u.lastLoginAt && now - Number(u.lastLoginAt) <= 7 * day).length;
   const created7d = users.filter(u => u.createdAt && now - Number(u.createdAt) <= 7 * day).length;
   const created30d = users.filter(u => u.createdAt && now - Number(u.createdAt) <= 30 * day).length;
   return response({
@@ -315,7 +315,7 @@ export default {
     if (request.method === "GET" && url.pathname === "/health") {
       return response({ service: "mawashi-otp-api", status: "ok" });
     }
-    if (request.method !== "POST") return response({ error: "method_not_allowed" }, 405);
+    if (request.method !== "POST" && !(request.method === "GET" && url.pathname === "/v1/admin/stats")) return response({ error: "method_not_allowed" }, 405);
     try {
       if (url.pathname === "/v1/admin/stats" && request.method === "GET") return await adminStats(request, env);
       if (url.pathname === "/v1/admin/users/status" && request.method === "POST") return await adminSetDisabled(request, env);
