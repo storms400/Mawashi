@@ -146,8 +146,14 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
         if (uri != null) {
             try {
                 val output = context.contentResolver.openOutputStream(uri) ?: error("تعذر فتح ملف الحفظ")
-                output.use { MawashiBackup.export(context, it, backupPassword) }
-                Toast.makeText(context, "تم إنشاء النسخة الاحتياطية بنجاح", Toast.LENGTH_LONG).show()
+                val password = backupPassword.takeIf { it.isNotBlank() }
+                output.use { MawashiBackup.export(context, it, password) }
+                Toast.makeText(
+                    context,
+                    if (password == null) "تم إنشاء نسخة احتياطية بدون كلمة مرور" else "تم إنشاء نسخة احتياطية محمية بكلمة مرور",
+                    Toast.LENGTH_LONG
+                ).show()
+                backupPassword = ""
             } catch (failure: Exception) {
                 Toast.makeText(context, "تعذر إنشاء النسخة: ${failure.message ?: "خطأ غير معروف"}", Toast.LENGTH_LONG).show()
             }
@@ -166,7 +172,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                 } else {
                     pendingBackup = MawashiBackup.prepareRestore(bytes)
                     restoreDialog = true
-                    Toast.makeText(context, "هذه نسخة قديمة غير مشفّرة. استعدها ثم أنشئ نسخة جديدة محمية بكلمة مرور.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "هذه نسخة بدون كلمة مرور. يمكنك استعادتها مباشرة.", Toast.LENGTH_LONG).show()
                 }
             } catch (failure: Exception) {
                 Toast.makeText(context, "لم تتم الاستعادة: ${failure.message ?: "ملف غير صالح"}", Toast.LENGTH_LONG).show()
@@ -317,7 +323,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         if (backupAction == "export")
-                            "أنشئ كلمة مرور قوية من 12 حرفاً على الأقل. ستحتاج إليها عند استعادة الملف على أي جهاز."
+                            "كلمة المرور اختيارية. اترك الحقل فارغاً لحفظ نسخة عادية، أو أضف كلمة مرور لحماية الملف. ستحتاج إليها عند الاستعادة."
                         else
                             "أدخل كلمة المرور التي استُخدمت عند إنشاء هذه النسخة."
                     )
@@ -325,12 +331,12 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                         value = backupPassword,
                         onValueChange = { backupPassword = it },
                         singleLine = true,
-                        label = { Text("كلمة مرور النسخة") },
+                        label = { Text(if (backupAction == "export") "كلمة المرور (اختياري)" else "كلمة مرور النسخة") },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth()
                     )
                     if (backupAction == "export") {
-                        Text("لا تحفظ كلمة المرور داخل التطبيق أو الملف. احتفظ بها في مكان آمن.", color = Muted, fontSize = 11.sp)
+                        Text("بدون كلمة مرور: يمكن فتح الملف مباشرة، لكنه غير مشفّر. مع كلمة مرور: يصبح الملف مشفّراً ولا يُفتح دونها.", color = Muted, fontSize = 11.sp)
                     }
                 }
             },
@@ -338,9 +344,14 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                 TextButton(onClick = {
                     try {
                         if (backupAction == "export") {
-                            require(backupPassword.length >= 12) { "كلمة المرور يجب أن تتكون من 12 حرفاً على الأقل" }
+                            require(backupPassword.isBlank() || backupPassword.length >= 12) {
+                                "إذا اخترت كلمة مرور، فيجب أن تتكون من 12 حرفاً على الأقل"
+                            }
                             showBackupPasswordDialog = false
-                            createBackupLauncher.launch("Mawashi-Backup-v32-encrypted.json")
+                            createBackupLauncher.launch(
+                                if (backupPassword.isBlank()) "Mawashi-Backup-v32.json"
+                                else "Mawashi-Backup-v32-encrypted.json"
+                            )
                         } else {
                             val bytes = pendingRestoreBytes ?: error("ملف الاستعادة غير متاح")
                             pendingBackup = MawashiBackup.prepareRestore(bytes, backupPassword)

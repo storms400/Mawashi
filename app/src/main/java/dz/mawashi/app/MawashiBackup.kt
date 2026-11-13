@@ -42,8 +42,11 @@ internal object MawashiBackup {
         "mawashi_herd_care_v27"
     )
 
-    fun export(context: Context, output: OutputStream, passphrase: String) {
-        require(passphrase.length >= 12) { "استخدم كلمة مرور من 12 حرفاً على الأقل" }
+    fun export(context: Context, output: OutputStream, passphrase: String? = null) {
+        val password = passphrase?.takeIf { it.isNotBlank() }
+        require(password == null || password.length >= 12) {
+            "كلمة المرور يجب أن تتكون من 12 حرفاً على الأقل"
+        }
         val storesJson = JSONObject()
         storeNames.forEach { name ->
             val values = context.getSharedPreferences(name, Context.MODE_PRIVATE).all
@@ -55,22 +58,34 @@ internal object MawashiBackup {
             .put("app_family", "mawashi-v32")
             .put("stores", storesJson)
             .toString()
-        val salt = ByteArray(SALT_BYTES).also(random::nextBytes)
-        val nonce = ByteArray(NONCE_BYTES).also(random::nextBytes)
-        val key = deriveKey(passphrase, salt, KDF_ITERATIONS)
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, nonce))
-        cipher.updateAAD(aad())
-        val encrypted = cipher.doFinal(payloadText.toByteArray(Charsets.UTF_8))
-        val envelope = JSONObject()
-            .put("format", FORMAT)
-            .put("schema_version", SCHEMA_VERSION)
-            .put("created_at", System.currentTimeMillis())
-            .put("kdf", KDF_NAME)
-            .put("iterations", KDF_ITERATIONS)
-            .put("salt", Base64.encodeToString(salt, Base64.NO_WRAP))
-            .put("nonce", Base64.encodeToString(nonce, Base64.NO_WRAP))
-            .put("ciphertext", Base64.encodeToString(encrypted, Base64.NO_WRAP))
+
+        val envelope = if (password == null) {
+            // Password protection is optional. Keep the established v1 checksum format
+            // for a portable backup that can be restored without entering a password.
+            JSONObject()
+                .put("format", FORMAT)
+                .put("schema_version", LEGACY_SCHEMA_VERSION)
+                .put("created_at", System.currentTimeMillis())
+                .put("payload", payloadText)
+                .put("sha256", sha256(payloadText))
+        } else {
+            val salt = ByteArray(SALT_BYTES).also(random::nextBytes)
+            val nonce = ByteArray(NONCE_BYTES).also(random::nextBytes)
+            val key = deriveKey(password, salt, KDF_ITERATIONS)
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, nonce))
+            cipher.updateAAD(aad())
+            val encrypted = cipher.doFinal(payloadText.toByteArray(Charsets.UTF_8))
+            JSONObject()
+                .put("format", FORMAT)
+                .put("schema_version", SCHEMA_VERSION)
+                .put("created_at", System.currentTimeMillis())
+                .put("kdf", KDF_NAME)
+                .put("iterations", KDF_ITERATIONS)
+                .put("salt", Base64.encodeToString(salt, Base64.NO_WRAP))
+                .put("nonce", Base64.encodeToString(nonce, Base64.NO_WRAP))
+                .put("ciphertext", Base64.encodeToString(encrypted, Base64.NO_WRAP))
+        }
         val backupBytes = envelope.toString(2).toByteArray(Charsets.UTF_8)
         require(backupBytes.size <= MAX_BACKUP_BYTES) {
             "حجم النسخة الاحتياطية يتجاوز الحد المسموح (25 ميغابايت)؛ لم يتم تصدير ملف"

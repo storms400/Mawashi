@@ -66,6 +66,31 @@ class MawashiBackupTest {
     }
 
     @Test
+    fun exportWithoutPasswordCanBeRestoredDirectly() {
+        val prefs = context.getSharedPreferences(stores.first(), Context.MODE_PRIVATE)
+        prefs.edit().putString("farmer-note", "my flock").commit()
+        val output = ByteArrayOutputStream()
+        MawashiBackup.export(context, output)
+        val bytes = output.toByteArray()
+        assertFalse(MawashiBackup.requiresPassword(bytes))
+        val prepared = MawashiBackup.prepareRestore(ByteArrayInputStream(bytes))
+        assertTrue(prepared.isLegacyUnencrypted)
+        prefs.edit().clear().commit()
+        MawashiBackup.restore(context, prepared)
+        assertEquals("my flock", prefs.getString("farmer-note", null))
+    }
+
+    @Test
+    fun blankPasswordExportsWithoutEncryptionAndShortPasswordIsRejected() {
+        val output = ByteArrayOutputStream()
+        MawashiBackup.export(context, output, "")
+        assertFalse(MawashiBackup.requiresPassword(output.toByteArray()))
+        assertThrows(IllegalArgumentException::class.java) {
+            MawashiBackup.export(context, ByteArrayOutputStream(), "short")
+        }
+    }
+
+    @Test
     fun wrongPasswordIsRejectedBeforeAnyPreferenceIsChanged() {
         val prefs = context.getSharedPreferences(stores.first(), Context.MODE_PRIVATE)
         prefs.edit().putString("keep", "original").commit()
