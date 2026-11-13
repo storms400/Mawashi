@@ -193,7 +193,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                     Text("رفيقك الذكي لإدارة المزرعة", color = Muted, fontSize = 12.sp)
                 }
                 Surface(shape = CircleShape, color = Ivory, shadowElevation = 3.dp) {
-                    IconButton(onClick = { }) {
+                    IconButton(onClick = { onSection(2) }) {
                         Icon(Icons.Outlined.NotificationsNone, contentDescription = "التنبيهات", tint = Forest)
                     }
                 }
