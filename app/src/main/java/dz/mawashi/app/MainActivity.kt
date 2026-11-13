@@ -52,7 +52,7 @@ private data class Section(
 )
 
 private val sections = listOf(
-    Section("القطيع", "الحيوانات والمواليد", Icons.Outlined.Pets, Emerald, "0", "حيوان مسجل"),
+    Section("القطيع", "الحيوانات والمواليد", Icons.Outlined.Agriculture, Emerald, "0", "حيوان مسجل"),
     Section("الأدوية والتطعيمات", "العلاجات ومواعيد التحصين", Icons.Outlined.Vaccines, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة"),
     Section("مخزون العلف", "الكميات والاستهلاك", Icons.Outlined.Inventory2, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة"),
     Section("المالية", "الإيرادات والمصاريف", Icons.Outlined.AccountBalanceWallet, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة")
@@ -91,7 +91,7 @@ private fun MawashiApp() {
                     ) {
                         val navItems = listOf(
                             Triple("الرئيسية", Icons.Outlined.Home, 0),
-                            Triple("القطيع", Icons.Outlined.Pets, 1),
+                            Triple("القطيع", Icons.Outlined.Agriculture, 1),
                             Triple("الأدوية", Icons.Outlined.MedicalServices, 2),
                             Triple("مخزون العلف", Icons.Outlined.Inventory2, 3),
                             Triple("المالية", Icons.Outlined.AccountBalanceWallet, 4)

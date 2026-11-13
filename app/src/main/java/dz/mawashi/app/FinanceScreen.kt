@@ -158,7 +158,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("متجر المزرعة","تسوّق احتياجات المزرعة",Icons.Outlined.Storefront,Modifier.weight(1f)){page=FinancePage.PURCHASES};FinAction("المبيعات","القطيع والصوف والمخزون",Icons.Outlined.PointOfSale,Modifier.weight(1f)){sale=true}}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinAction("الفواتير",list.size.toString()+" فاتورة",Icons.Outlined.ReceiptLong,Modifier.weight(1f)){page=FinancePage.INVOICES};FinAction("التقارير","تحليل النشاط",Icons.Outlined.BarChart,Modifier.weight(1f)){page=FinancePage.REPORTS}}}
     item{Text("المخزون المرتبط تلقائياً",fontSize=15.sp,fontWeight=FontWeight.Bold,color=FinInk)}
-    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("رؤوس القطيع",activeHerdAnimals(herd).size.toString()+" رأس",Icons.Outlined.Pets,Modifier.weight(1f));FinMetric("مخزون العلف",String.format(Locale.US,"%.1f كغ",feeds.values.sum()),Icons.Outlined.Inventory2,Modifier.weight(1f))}}
+    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){EweMetric("رؤوس القطيع",activeHerdAnimals(herd).size.toString()+" رأس",Modifier.weight(1f));FinMetric("مخزون العلف",String.format(Locale.US,"%.1f كغ",feeds.values.sum()),Icons.Outlined.Inventory2,Modifier.weight(1f))}}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FinMetric("أصناف الأدوية",meds.size.toString(),Icons.Outlined.MedicalServices,Modifier.weight(1f));FinMetric("الصوف",String.format(Locale.US,"%.1f كغ",wool),Icons.Outlined.Spa,Modifier.weight(1f))}}
     item{Text("عمليات مالية أخرى",fontSize=14.sp,fontWeight=FontWeight.Bold,color=FinInk)}
     item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={otherType="income"},modifier=Modifier.weight(1f)){Text("إضافة إيراد")};OutlinedButton(onClick={otherType="expense"},modifier=Modifier.weight(1f)){Text("إضافة مصروف")}}}
@@ -201,7 +201,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   item{Surface(color=FinGreen,shape=RoundedCornerShape(22.dp)){Row(Modifier.fillMaxWidth().padding(17.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("متجر مزرعتك في مكان واحد",fontSize=19.sp,fontWeight=FontWeight.ExtraBold,color=Color.White);Text("اختر القسم ثم أضف مشترياتك إلى سجل المزرعة",fontSize=10.sp,color=Color.White.copy(alpha=.88f))};Icon(Icons.Outlined.ShoppingBasket,null,tint=Color.White,modifier=Modifier.size(38.dp))}}}
   item{Text(if(type==null)"تصفح أقسام المتجر" else "تفاصيل الشراء",fontSize=16.sp,fontWeight=FontWeight.Bold,color=FinInk)}
   if(type==null){
-   item{PurchaseCategoryCard("القطيع","شراء رؤوس الأغنام","نعاج • كباش • حملان",Icons.Outlined.Pets,activeHerdAnimals(herd).size.toString()+" رأس"){type=PurchaseType.ANIMAL;item="نعجة"}}
+   item{PurchaseCategoryCard("القطيع","شراء رؤوس الأغنام","نعاج • كباش • حملان",{ EweLogo(29) },activeHerdAnimals(herd).size.toString()+" رأس"){type=PurchaseType.ANIMAL;item="نعجة"}}
    item{PurchaseCategoryCard("الأعلاف","شراء الأعلاف","تُضاف الكمية مباشرة إلى مخزون العلف",Icons.Outlined.Inventory2,String.format(Locale.US,"%.1f كغ",feeds.values.sum())){type=PurchaseType.FEED;item=feedNames.first()}}
    item{PurchaseCategoryCard("الأدوية واللقاحات","المستلزمات البيطرية","تسجيل التشغيلة وتاريخ الصلاحية",Icons.Outlined.Vaccines,meds.size.toString()+" صنف"){type=PurchaseType.MEDICINE;item=drugs.first()}}
    item{Surface(color=Color.White,shape=RoundedCornerShape(17.dp),border=BorderStroke(1.dp,FinLine)){Column(Modifier.padding(14.dp)){Text("سلة المشتريات",fontWeight=FontWeight.Bold,color=FinInk);Text("بعد اختيار القسم، أدخل المورد والكمية والسعر. سيظهر الإجمالي قبل تأكيد الفاتورة.",fontSize=11.sp,color=FinMuted,lineHeight=17.sp)}}}
@@ -236,9 +236,9 @@ fun FinanceScreen(modifier:Modifier=Modifier){
   }
  }
 }
-@Composable private fun PurchaseCategoryCard(title:String,subtitle:String,description:String,icon:androidx.compose.ui.graphics.vector.ImageVector,metric:String,onClick:()->Unit){
+@Composable private fun PurchaseCategoryCard(title:String,subtitle:String,description:String,iconContent:@Composable () -> Unit,metric:String,onClick:()->Unit){
  Surface(color=Color.White,shape=RoundedCornerShape(19.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable(onClick=onClick)){
-  Row(Modifier.padding(15.dp),verticalAlignment=Alignment.CenterVertically){Surface(color=Color(0xFFEAF1E9),shape=RoundedCornerShape(15.dp)){Icon(icon,null,tint=FinGreen,modifier=Modifier.padding(13.dp).size(29.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(title,fontSize=15.sp,fontWeight=FontWeight.ExtraBold,color=FinInk);Text(subtitle,fontSize=10.sp,color=FinGreen,fontWeight=FontWeight.SemiBold);Text(description,fontSize=10.sp,color=FinMuted)};Column(horizontalAlignment=Alignment.End){Text(metric,fontSize=11.sp,fontWeight=FontWeight.Bold,color=FinGreen);Icon(Icons.Outlined.ChevronLeft,null,tint=FinMuted)}}
+  Row(Modifier.padding(15.dp),verticalAlignment=Alignment.CenterVertically){Surface(color=Color(0xFFEAF1E9),shape=RoundedCornerShape(15.dp)){Box(Modifier.padding(8.dp).size(39.dp),contentAlignment=Alignment.Center){ iconContent() }};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(title,fontSize=15.sp,fontWeight=FontWeight.ExtraBold,color=FinInk);Text(subtitle,fontSize=10.sp,color=FinGreen,fontWeight=FontWeight.SemiBold);Text(description,fontSize=10.sp,color=FinMuted)};Column(horizontalAlignment=Alignment.End){Text(metric,fontSize=11.sp,fontWeight=FontWeight.Bold,color=FinGreen);Icon(Icons.Outlined.ChevronLeft,null,tint=FinMuted)}}
  }
 }
 @Composable private fun SaleDialog(c:Context,herd:List<HerdAnimal>,feed:Map<FeedKind,Double>,medicine:Map<String,Double>,wool:Double,dismiss:()->Unit,done:(String)->Unit){
@@ -409,7 +409,7 @@ private fun herdAgeLabel(a:HerdAnimal):String{
    Text("متابعة القطيع",fontWeight=FontWeight.ExtraBold,color=FinGreen,fontSize=15.sp)
   }
   Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
-   FinMetric("إجمالي الرؤوس",animals.size.toString(),Icons.Outlined.Pets,Modifier.weight(1f))
+   EweMetric("إجمالي الرؤوس",animals.size.toString(),Modifier.weight(1f))
    FinMetric("مواعيد مسجلة",openReminders.size.toString(),Icons.Outlined.Event,Modifier.weight(1f))
   }
   if(openReminders.isNotEmpty()){
@@ -427,7 +427,7 @@ private fun herdAgeLabel(a:HerdAnimal):String{
     items(animals,key={it.id}){a->
      Surface(color=Color.White,shape=RoundedCornerShape(14.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable{selectedTag=a.tag}){
       Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){
-       Icon(Icons.Outlined.Pets,null,tint=FinGreen,modifier=Modifier.size(26.dp))
+       EweLogo(26)
        Spacer(Modifier.width(10.dp))
        Column(Modifier.weight(1f)){Text(a.tag+" • "+a.kind,fontWeight=FontWeight.Bold,color=FinInk,fontSize=12.sp);Text("العمر: "+herdAgeLabel(a)+"  |  الوزن: "+(a.weightKg?.let{"%.1f كغ".format(Locale.US,it)}?:"غير مسجل"),fontSize=10.sp,color=FinMuted);Text("الحالة: "+a.health+" • "+a.productionState,fontSize=10.sp,color=FinGreen)}
        Icon(Icons.Outlined.ChevronLeft,null,tint=FinMuted)
@@ -536,7 +536,7 @@ private fun herdAgeLabel(a:HerdAnimal):String{
   if(!showHerdMonitor){
    Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable{showHerdMonitor=true}){
     Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically){
-     Surface(color=Color(0xFFEAF0E8),shape=RoundedCornerShape(12.dp)){Icon(Icons.Outlined.Pets,null,tint=FinGreen,modifier=Modifier.padding(10.dp).size(25.dp))}
+     Surface(color=Color(0xFFEAF0E8),shape=RoundedCornerShape(12.dp)){EweLogo(25)}
      Spacer(Modifier.width(10.dp))
      Column(Modifier.weight(1f)){Text("القطيع",fontWeight=FontWeight.ExtraBold,color=FinInk,fontSize=15.sp);Text("متابعة صحية وإنتاجية وتغذوية لكل رأس ومواعيده القادمة",fontSize=10.sp,color=FinMuted)}
      Icon(Icons.Outlined.ChevronLeft,null,tint=FinGreen)
@@ -669,6 +669,7 @@ private fun herdAgeLabel(a:HerdAnimal):String{
  }
 }
 
+@Composable private fun EweMetric(title:String,value:String,modifier:Modifier=Modifier){Surface(modifier,color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){Row(Modifier.padding(11.dp),verticalAlignment=Alignment.CenterVertically){EweLogo(25);Spacer(Modifier.width(8.dp));Column(Modifier.weight(1f)){Text(value,color=FinGreen,fontWeight=FontWeight.ExtraBold,fontSize=15.sp);Text(title,color=FinMuted,fontSize=9.sp)}}}}
 @Composable private fun FinMetric(title:String,value:String,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier=Modifier){Surface(modifier,color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){Row(Modifier.padding(11.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,tint=FinGreen,modifier=Modifier.size(23.dp));Spacer(Modifier.width(8.dp));Column(Modifier.weight(1f)){Text(value,color=FinGreen,fontWeight=FontWeight.ExtraBold,fontSize=15.sp);Text(title,color=FinMuted,fontSize=9.sp)}}}}
 @Composable private fun FinAction(title:String,subtitle:String,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier=Modifier,onClick:()->Unit){Surface(modifier.clickable(onClick=onClick),color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,FinLine)){Column(Modifier.padding(13.dp)){Icon(icon,null,tint=FinGreen,modifier=Modifier.size(24.dp));Spacer(Modifier.height(6.dp));Text(title,fontWeight=FontWeight.Bold,color=FinInk,fontSize=13.sp);Text(subtitle,color=FinMuted,fontSize=9.sp)}}}
 @Composable private fun InvoiceRow(v:FinanceInvoice,onPrint:()->Unit){Surface(color=Color.White,shape=RoundedCornerShape(15.dp),border=BorderStroke(1.dp,FinLine)){Row(Modifier.fillMaxWidth().padding(11.dp),verticalAlignment=Alignment.CenterVertically){Icon(if(v.type=="sale")Icons.Outlined.TrendingUp else Icons.Outlined.ShoppingCart,null,tint=FinGreen);Spacer(Modifier.width(9.dp));Column(Modifier.weight(1f)){Text(v.id,fontWeight=FontWeight.Bold,color=FinInk,fontSize=11.sp);Text(v.category+" • "+v.item,fontSize=10.sp,color=FinMuted);Text(v.party+" • "+invoiceTime(v.timestamp),fontSize=9.sp,color=FinMuted)};Column(horizontalAlignment=Alignment.End){Text(dinar(v.total),fontWeight=FontWeight.Bold,color=FinGreen,fontSize=11.sp);TextButton(onClick=onPrint){Icon(Icons.Outlined.Print,null);Text("طباعة",fontSize=9.sp)}}}}}

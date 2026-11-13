@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -233,7 +232,7 @@ internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pastur
     item{
      Surface(color=Color(0xFFEAF1E9),shape=RoundedCornerShape(15.dp),modifier=Modifier.fillMaxWidth().clickable{showConsumption=true}){
       Row(Modifier.padding(15.dp),verticalAlignment=Alignment.CenterVertically){
-       Icon(Icons.Outlined.Pets,null,tint=FeedGreen,modifier=Modifier.size(27.dp))
+       EweLogo(27)
        Spacer(Modifier.width(10.dp))
        Column(Modifier.weight(1f)){
         Text("الاستهلاك",fontWeight=FontWeight.Bold,color=FeedGreen,fontSize=15.sp)
@@ -261,7 +260,7 @@ internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pastur
       Column(Modifier.padding(13.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
        Row(verticalAlignment=Alignment.CenterVertically){
         Surface(color=Color(0xFFEAF1E9),shape=RoundedCornerShape(13.dp)){
-         Icon(Icons.Outlined.Pets,null,tint=FeedGreen,modifier=Modifier.padding(9.dp).size(25.dp))
+         EweLogo(25)
         }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)){
