@@ -38,27 +38,42 @@ import com.google.firebase.auth.FirebaseUser
 fun AuthGate(onAuthenticated: @Composable () -> Unit) {
     val auth = remember { FirebaseAuth.getInstance() }
     var user by remember { mutableStateOf(auth.currentUser) }
+    var isVerified by remember { mutableStateOf(auth.currentUser?.isEmailVerified == true) }
 
-    if (user?.isEmailVerified == true) {
+    if (isVerified) {
         onAuthenticated()
     } else if (user != null) {
         EmailVerificationScreen(
             user = user!!,
             onRefresh = {
-                user?.reload()?.addOnCompleteListener {
-                    user = auth.currentUser
+                val current = auth.currentUser
+                if (current == null) {
+                    user = null
+                    isVerified = false
+                } else {
+                    current.reload().addOnCompleteListener { result ->
+                        if (result.isSuccessful) {
+                            val refreshed = auth.currentUser
+                            isVerified = refreshed?.isEmailVerified == true
+                            user = refreshed
+                        }
+                    }
                 }
             },
             onResend = { onResult -> user?.sendEmailVerification()?.addOnCompleteListener { onResult(it.isSuccessful, it.exception?.localizedMessage) } },
             onSignOut = {
                 auth.signOut()
                 user = null
+                isVerified = false
             }
         )
     } else {
         SignInScreen(
             auth = auth,
-            onSignedIn = { user = auth.currentUser }
+            onSignedIn = {
+                user = auth.currentUser
+                isVerified = auth.currentUser?.isEmailVerified == true
+            }
         )
     }
 }
@@ -214,10 +229,9 @@ private fun EmailVerificationScreen(
             Button(
                 onClick = {
                     busy = true
-                    user.reload().addOnCompleteListener {
-                        busy = false
-                        onRefresh()
-                    }
+                    onRefresh()
+                    // The parent refreshes Firebase exactly once and updates Compose state.
+                    busy = false
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !busy
