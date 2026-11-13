@@ -15,6 +15,7 @@ import android.print.pdf.PrintedPdfDocument
 import java.io.FileOutputStream
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
@@ -212,8 +213,22 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
 }
 
 @Composable fun EweLogo(size:Int){
- Box(Modifier.size(size.dp).background(Color(0xFFE8EDE5),CircleShape),contentAlignment=Alignment.Center){
-  Text("🐑",fontSize=(size*.55f).sp)
+ val s=size.toFloat()
+ Box(
+  Modifier.size(size.dp)
+   .background(Color(0xFFFFF8E8),CircleShape)
+   .border(1.5.dp,Color(0xFF526B55),CircleShape)
+ ){
+  // Fleece: a compact, consistent sheep mark rather than a device-dependent emoji.
+  Box(Modifier.align(Alignment.Center).offset(x=(-s*.07f).dp,y=(s*.02f).dp).size((s*.57f).dp).background(Color.White,CircleShape))
+  Box(Modifier.align(Alignment.Center).offset(x=(-s*.08f).dp,y=(-s*.20f).dp).size((s*.27f).dp).background(Color.White,CircleShape))
+  Box(Modifier.align(Alignment.Center).offset(x=(-s*.27f).dp,y=(-s*.04f).dp).size((s*.25f).dp).background(Color.White,CircleShape))
+  Box(Modifier.align(Alignment.Center).offset(x=(s*.13f).dp,y=(-s*.04f).dp).size((s*.29f).dp,(s*.36f).dp).background(Color(0xFFFFE5CA),RoundedCornerShape(50)))
+  Box(Modifier.align(Alignment.Center).offset(x=(s*.07f).dp,y=(-s*.01f).dp).size((s*.045f).dp).background(Color(0xFF27332A),CircleShape))
+  Box(Modifier.align(Alignment.Center).offset(x=(s*.19f).dp,y=(-s*.01f).dp).size((s*.045f).dp).background(Color(0xFF27332A),CircleShape))
+  Box(Modifier.align(Alignment.Center).offset(x=(s*.13f).dp,y=(s*.10f).dp).size((s*.08f).dp,(s*.045f).dp).background(Color(0xFFE7A88F),RoundedCornerShape(50)))
+  Box(Modifier.align(Alignment.Center).offset(x=(-s*.18f).dp,y=(s*.29f).dp).size((s*.07f).dp,(s*.19f).dp).background(Color(0xFF526B55),RoundedCornerShape(50)))
+  Box(Modifier.align(Alignment.Center).offset(x=(s*.02f).dp,y=(s*.29f).dp).size((s*.07f).dp,(s*.19f).dp).background(Color(0xFF526B55),RoundedCornerShape(50)))
  }
 }
 @Composable private fun HerdStat(label:String,value:String,modifier:Modifier=Modifier){Surface(modifier,color=Color.White,shape=RoundedCornerShape(15.dp),border=BorderStroke(1.dp,HerdLine)){Column(Modifier.padding(10.dp)){Text(value,color=HerdGreen,fontWeight=FontWeight.ExtraBold,fontSize=20.sp);Text(label,color=HerdMuted,fontSize=9.sp,maxLines=1)}}}
