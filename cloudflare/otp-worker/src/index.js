@@ -112,12 +112,17 @@ async function sendOtp(request, env) {
   if (!user) return response({ error: "unauthorized" }, 401);
   if (user.emailVerified) return response({ status: "already_verified" });
 
-  // Resend's shared onboarding sender is test-only. Restrict it to the verified
-  // mailbox configured by the owner until a custom sending domain is verified.
+  // A verified custom Resend sender enables delivery to every user's email.
+  // Without it, keep the shared onboarding sender restricted to the test mailbox.
+  const configuredSender = String(env.RESEND_FROM_EMAIL || "").trim();
   const testRecipient = String(env.TEST_RECIPIENT_EMAIL || "").trim().toLowerCase();
-  if (!testRecipient || user.email !== testRecipient) {
-    return response({ error: "test_recipient_only", message: "Email delivery is limited to the configured test recipient until a sending domain is verified." }, 403);
+  if (!configuredSender && (!testRecipient || user.email !== testRecipient)) {
+    return response({
+      error: "sending_domain_not_configured",
+      message: "A verified custom sending domain must be configured before sending to new users."
+    }, 503);
   }
+  const fromAddress = configuredSender || "Mawashi <onboarding@resend.dev>";
 
   const now = Math.floor(Date.now() / 1000);
   const existing = await env.OTP_DB.prepare(
@@ -141,7 +146,7 @@ async function sendOtp(request, env) {
       "content-type": "application/json"
     },
     body: JSON.stringify({
-      from: "Mawashi <onboarding@resend.dev>",
+      from: fromAddress,
       to: [user.email],
       subject: "رمز التحقق من حساب مواشي",
       html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>مرحباً بك في مواشي</h2><p>رمز التحقق الخاص بك:</p><p style="font-size:32px;font-weight:bold;letter-spacing:8px">${code}</p><p>تنتهي صلاحية الرمز خلال 10 دقائق. لا تشارك هذا الرمز مع أي شخص.</p></div>`
