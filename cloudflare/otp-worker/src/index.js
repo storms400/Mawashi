@@ -148,9 +148,20 @@ async function sendOtp(request, env) {
     })
   });
   if (!mail.ok) {
+    const providerError = await mail.text().catch(() => "");
+    console.error("Resend email delivery failed", JSON.stringify({
+      status: mail.status,
+      recipient: user.email,
+      response: providerError.slice(0, 500)
+    }));
     await env.OTP_DB.prepare("DELETE FROM email_otps WHERE uid = ?").bind(user.uid).run();
-    return response({ error: "email_delivery_failed" }, 502);
+    return response({ error: "email_delivery_failed", provider_status: mail.status }, 502);
   }
+  const mailResult = await mail.json().catch(() => ({}));
+  console.log("Resend email accepted", JSON.stringify({
+    recipient: user.email,
+    email_id: mailResult.id || null
+  }));
   return response({ status: "sent", expires_in: OTP_TTL_SECONDS, resend_after: RESEND_COOLDOWN_SECONDS });
 }
 
