@@ -116,7 +116,7 @@ private fun SignInScreen(
             ) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(if (isRegister) "حساب جديد" else "تسجيل الدخول", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(if (isRegister) "بعد إنشاء الحساب اضغط زر إرسال رابط التأكيد ليصلك بريد إلكتروني." else "سجّل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.")
+                    Text(if (isRegister) "بعد إنشاء الحساب اضغط زر إرسال رابط التأكيد. إذا لم تجد الرسالة في الوارد، افحص مجلد الرسائل غير المرغوب فيها (Spam) وابحث عن رسالة Firebase." else "سجّل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.")
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -240,7 +240,7 @@ private fun EmailVerificationScreen(
     onSignOut: () -> Unit
 ) {
     var message by remember(user.uid) {
-        mutableStateOf("اضغط «إرسال رابط التأكيد» لإرسال رسالة إلى ${user.email ?: "بريدك الإلكتروني"}، ثم افتح الرابط في الرسالة. بعد التأكيد ارجع إلى التطبيق واضغط «تحققت من بريدي».")
+        mutableStateOf("اضغط «إرسال رابط التأكيد» لإرسال رسالة إلى ${user.email ?: "بريدك الإلكتروني"}، ثم افتح الرابط في الرسالة. إذا لم تجدها في الوارد، افحص Spam / الرسائل غير المرغوب فيها أو ابحث عن Firebase. بعد التأكيد ارجع إلى التطبيق واضغط «تحققت من بريدي».")
     }
     var busy by remember { mutableStateOf(false) }
 
@@ -263,7 +263,7 @@ private fun EmailVerificationScreen(
                     user.sendEmailVerification().addOnCompleteListener { result ->
                         busy = false
                         message = if (result.isSuccessful) {
-                            "تم إرسال رابط التأكيد. افحص صندوق الوارد والرسائل غير المرغوب فيها، ثم اضغط الرابط وارجع إلى التطبيق."
+                            "تم إرسال طلب رسالة التأكيد. افحص الوارد، وإذا لم تجدها فافحص Spam / الرسائل غير المرغوب فيها وابحث عن Firebase، ثم افتح الرابط وارجع إلى التطبيق."
                         } else {
                             result.exception?.localizedMessage ?: "تعذر إرسال رابط التأكيد. تحقق من اتصال الإنترنت ثم أعد المحاولة."
                         }
