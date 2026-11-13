@@ -1,7 +1,5 @@
 package dz.mawashi.app
 
-import android.os.Handler
-import android.os.Looper
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +18,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,79 +27,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.runtime.CompositionLocalProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
-
-private const val OTP_API_BASE = "https://mawashi-otp-api.mmsmimo16.workers.dev"
-
-private data class OtpResult(val ok: Boolean, val message: String)
-
-private fun callOtpApi(user: FirebaseUser, path: String, code: String? = null, callback: (OtpResult) -> Unit) {
-    user.getIdToken(true)
-        .addOnSuccessListener { tokenResult ->
-            val idToken = tokenResult.token
-            if (idToken.isNullOrBlank()) {
-                callback(OtpResult(false, "تعذر الحصول على جلسة تسجيل الدخول. أعد المحاولة."))
-                return@addOnSuccessListener
-            }
-            Thread {
-                val result = try {
-                    val connection = (URL(OTP_API_BASE + path).openConnection() as HttpURLConnection).apply {
-                        requestMethod = "POST"
-                        connectTimeout = 15000
-                        readTimeout = 15000
-                        doOutput = true
-                        setRequestProperty("Authorization", "Bearer $idToken")
-                        setRequestProperty("Content-Type", "application/json; charset=utf-8")
-                    }
-                    val payload = if (code == null) JSONObject() else JSONObject().put("code", code)
-                    connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
-                    val status = connection.responseCode
-                    val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-                    val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                    connection.disconnect()
-                    val json = runCatching { JSONObject(body) }.getOrNull()
-                    if (status in 200..299) {
-                        when (json?.optString("status")) {
-                            "sent" -> OtpResult(true, "أرسلنا رمز التحقق إلى بريدك. تحقق من صندوق الوارد والرسائل غير المرغوب فيها.")
-                            "verified", "already_verified" -> OtpResult(true, "تم التحقق من الحساب بنجاح.")
-                            else -> OtpResult(true, "تم تنفيذ الطلب بنجاح.")
-                        }
-                    } else {
-                        val error = json?.optString("error").orEmpty()
-                        val message = when (error) {
-                            "unauthorized" -> "انتهت جلسة الدخول. سجّل الدخول مجدداً."
-                            "test_recipient_only" -> "الإرسال متاح حالياً للبريد التجريبي المحدد فقط."
-                            "sending_domain_not_configured" -> "إرسال الرموز إلى المستخدمين الجدد يحتاج إلى توثيق نطاق البريد في إعدادات الخدمة."
-                            "too_many_requests" -> "انتظر قليلاً قبل طلب رمز جديد."
-                            "incorrect_code" -> "الرمز غير صحيح. حاول مرة أخرى."
-                            "code_expired" -> "انتهت صلاحية الرمز. اطلب رمزاً جديداً."
-                            "code_not_found" -> "لا يوجد رمز صالح. اطلب إرسال رمز جديد."
-                            "too_many_attempts" -> "تجاوزت عدد المحاولات. اطلب رمزاً جديداً."
-                            "email_delivery_failed" -> "تعذر إرسال البريد حالياً. حاول لاحقاً."
-                            else -> "تعذر إكمال الطلب (HTTP $status). حاول مرة أخرى."
-                        }
-                        OtpResult(false, message)
-                    }
-                } catch (_: Exception) {
-                    OtpResult(false, "تعذر الاتصال بخدمة التحقق. تحقق من الإنترنت ثم أعد المحاولة.")
-                }
-                Handler(Looper.getMainLooper()).post { callback(result) }
-            }.start()
-        }
-        .addOnFailureListener {
-            callback(OtpResult(false, "تعذر تأكيد جلسة الحساب. سجّل الدخول مجدداً."))
-        }
-}
 
 @Composable
 fun AuthGate(onAuthenticated: @Composable () -> Unit) {
@@ -113,13 +43,13 @@ fun AuthGate(onAuthenticated: @Composable () -> Unit) {
 
     if (isVerified) {
         val signedIn = auth.currentUser
-        if (signedIn?.email.equals(MAWASHI_OWNER_EMAIL, ignoreCase = true) && signedIn != null) {
+        if (signedIn != null && signedIn.email.equals(MAWASHI_OWNER_EMAIL, ignoreCase = true) && showOwnerDashboard) {
             OwnerDashboardScreen(user = signedIn, onContinue = { showOwnerDashboard = false })
         } else {
             onAuthenticated()
         }
     } else if (user != null) {
-        OtpVerificationScreen(
+        EmailVerificationScreen(
             user = user!!,
             onVerified = {
                 val current = auth.currentUser
@@ -176,7 +106,7 @@ private fun SignInScreen(
             ) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(if (isRegister) "حساب جديد" else "تسجيل الدخول", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("سنرسل رمز تحقق من 6 أرقام إلى بريدك الإلكتروني.")
+                    Text(if (isRegister) "بعد إنشاء الحساب سنرسل رابط تأكيد إلى بريدك الإلكتروني." else "سجّل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.")
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -239,7 +169,7 @@ private fun SignInScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !busy
                     ) {
-                        if (busy) CircularProgressIndicator() else Text(if (isRegister) "إنشاء الحساب وإرسال الرمز" else "دخول")
+                        if (busy) CircularProgressIndicator() else Text(if (isRegister) "إنشاء الحساب" else "دخول")
                     }
                     if (!isRegister) {
                         TextButton(
@@ -273,16 +203,15 @@ private fun SignInScreen(
 }
 
 @Composable
-private fun OtpVerificationScreen(
+private fun EmailVerificationScreen(
     user: FirebaseUser,
     onVerified: () -> Unit,
     onSignOut: () -> Unit
 ) {
-    var code by rememberSaveable { mutableStateOf("") }
-    var message by remember { mutableStateOf("اضغط على «إرسال رمز التحقق» لإرسال رمز من 6 أرقام إلى ${user.email ?: "بريدك الإلكتروني"}.") }
+    var message by remember(user.uid) {
+        mutableStateOf("أرسل رابط التأكيد إلى ${user.email ?: "بريدك الإلكتروني"}، ثم افتح الرابط في الرسالة. بعد التأكيد ارجع إلى التطبيق واضغط «تحققت من بريدي».")
+    }
     var busy by remember { mutableStateOf(false) }
-
-    // OTP delivery is explicit: opening or restarting the app must not send repeated emails.
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
@@ -290,48 +219,51 @@ private fun OtpVerificationScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("التحقق من البريد الإلكتروني", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text("تأكيد البريد الإلكتروني", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(12.dp))
-            Text("أدخل الرمز المكوّن من 6 أرقام الذي وصلك إلى ${user.email ?: "بريدك الإلكتروني"}. تنتهي صلاحيته خلال 10 دقائق.")
+            Text(user.email ?: "بريدك الإلكتروني")
+            Spacer(Modifier.height(8.dp))
+            Text(message)
             Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
-                value = code,
-                onValueChange = { value -> code = value.filter { it.isDigit() }.take(6) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                label = { Text("رمز التحقق") }
-            )
-            message?.let { Text(it, color = if (it.contains("بنجاح")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error) }
-            Spacer(Modifier.height(12.dp))
             Button(
                 onClick = {
-                    if (code.length != 6) {
-                        message = "أدخل الرمز المكوّن من 6 أرقام."
-                    } else {
-                        busy = true
-                        callOtpApi(user, "/v1/otp/verify", code) { result ->
-                            busy = false
-                            message = result.message
-                            if (result.ok) onVerified()
+                    busy = true
+                    message = ""
+                    user.sendEmailVerification().addOnCompleteListener { result ->
+                        busy = false
+                        message = if (result.isSuccessful) {
+                            "تم إرسال رابط التأكيد. افحص صندوق الوارد والرسائل غير المرغوب فيها، ثم اضغط الرابط وارجع إلى التطبيق."
+                        } else {
+                            result.exception?.localizedMessage ?: "تعذر إرسال رابط التأكيد. تحقق من اتصال الإنترنت ثم أعد المحاولة."
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !busy
             ) {
-                if (busy) CircularProgressIndicator() else Text("تأكيد الرمز")
+                if (busy) CircularProgressIndicator() else Text("إرسال رابط التأكيد / إعادة الإرسال")
             }
-            TextButton(
+            Button(
                 onClick = {
                     busy = true
-                    callOtpApi(user, "/v1/otp/send") { result ->
+                    user.reload().addOnCompleteListener { result ->
                         busy = false
-                        message = result.message
+                        if (result.isSuccessful && FirebaseAuth.getInstance().currentUser?.isEmailVerified == true) {
+                            onVerified()
+                        } else {
+                            message = if (result.isSuccessful) {
+                                "لم يتم تأكيد البريد بعد. افتح رابط التأكيد الذي وصلك ثم حاول مجدداً."
+                            } else {
+                                "تعذر تحديث حالة الحساب. تحقق من الإنترنت وحاول مجدداً."
+                            }
+                        }
                     }
                 },
+                modifier = Modifier.fillMaxWidth(),
                 enabled = !busy
-            ) { Text("إرسال / إعادة إرسال الرمز") }
+            ) {
+                if (busy) CircularProgressIndicator() else Text("تحققت من بريدي")
+            }
             TextButton(onClick = onSignOut, enabled = !busy) { Text("تسجيل الخروج") }
         }
     }
