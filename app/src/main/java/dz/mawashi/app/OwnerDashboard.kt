@@ -156,7 +156,7 @@ private fun setManagedUserDisabled(user: FirebaseUser, uid: String, disabled: Bo
 }
 
 @Composable
-fun OwnerDashboardScreen(user: FirebaseUser, onContinue: @Composable () -> Unit) {
+fun OwnerDashboardScreen(user: FirebaseUser, onContinue: () -> Unit) {
     var report by remember { mutableStateOf<OwnerReport?>(null) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
