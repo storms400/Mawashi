@@ -107,6 +107,95 @@ function randomCode() {
   return String(bytes[0] % 1000000).padStart(6, "0");
 }
 
+
+async function requireOwner(request, env) {
+  const user = await authenticatedUser(request, env);
+  const ownerEmail = String(env.OWNER_EMAIL || "").trim().toLowerCase();
+  if (!user || !user.emailVerified || !ownerEmail || user.email !== ownerEmail) return null;
+  return user;
+}
+
+async function listFirebaseUsers(env) {
+  const adminToken = await getGoogleAccessToken(env);
+  const account = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  const users = [];
+  let pageToken = "";
+  for (let page = 0; page < 100; page++) {
+    const query = new URLSearchParams({ maxResults: "1000" });
+    if (pageToken) query.set("nextPageToken", pageToken);
+    const result = await fetch(
+      "https://identitytoolkit.googleapis.com/v1/projects/" + encodeURIComponent(account.project_id) + "/accounts:batchGet?" + query.toString(),
+      { headers: { authorization: "Bearer " + adminToken } }
+    );
+    if (!result.ok) throw new Error("Firebase user listing failed: " + result.status);
+    const data = await result.json();
+    users.push(...(data.users || []));
+    pageToken = data.nextPageToken || "";
+    if (!pageToken) break;
+  }
+  return users;
+}
+
+function safeUserRecord(user) {
+  return {
+    uid: user.localId || "",
+    email: user.email || "",
+    emailVerified: user.emailVerified === true,
+    disabled: user.disabled === true,
+    createdAt: user.createdAt || null,
+    lastSignInAt: user.lastLoginAt || null
+  };
+}
+
+async function adminStats(request, env) {
+  if (!await requireOwner(request, env)) return response({ error: "forbidden" }, 403);
+  const users = await listFirebaseUsers(env);
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+  const active7d = users.filter(u => u.lastLoginAt && now - Date.parse(u.lastLoginAt) <= 7 * day).length;
+  const created7d = users.filter(u => u.createdAt && now - Number(u.createdAt) <= 7 * day).length;
+  const created30d = users.filter(u => u.createdAt && now - Number(u.createdAt) <= 30 * day).length;
+  return response({
+    generated_at: new Date().toISOString(),
+    total_users: users.length,
+    verified_users: users.filter(u => u.emailVerified === true).length,
+    pending_verification: users.filter(u => u.emailVerified !== true && u.disabled !== true).length,
+    disabled_users: users.filter(u => u.disabled === true).length,
+    active_last_7_days: active7d,
+    new_last_7_days: created7d,
+    new_last_30_days: created30d,
+    users: users.map(safeUserRecord).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+  });
+}
+
+async function adminSetDisabled(request, env) {
+  const owner = await requireOwner(request, env);
+  if (!owner) return response({ error: "forbidden" }, 403);
+  let body;
+  try { body = await request.json(); } catch { return response({ error: "invalid_json" }, 400); }
+  const uid = String(body.uid || "").trim();
+  if (!uid || typeof body.disabled !== "boolean") return response({ error: "invalid_request" }, 400);
+  const users = await listFirebaseUsers(env);
+  const target = users.find(user => user.localId === uid);
+  if (!target) return response({ error: "user_not_found" }, 404);
+  if (String(target.email || "").toLowerCase() === String(env.OWNER_EMAIL || "").trim().toLowerCase()) {
+    return response({ error: "owner_protected" }, 403);
+  }
+  const adminToken = await getGoogleAccessToken(env);
+  const account = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  const update = await fetch(
+    "https://identitytoolkit.googleapis.com/v1/projects/" + encodeURIComponent(account.project_id) + "/accounts:update",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer " + adminToken, "content-type": "application/json" },
+      body: JSON.stringify({ localId: uid, disableUser: body.disabled, returnSecureToken: false })
+    }
+  );
+  if (!update.ok) return response({ error: "user_update_failed" }, 502);
+  console.log("Admin user status changed", JSON.stringify({ owner: owner.email, target_uid: uid, disabled: body.disabled }));
+  return response({ status: "updated", uid, disabled: body.disabled });
+}
+
 async function sendOtp(request, env) {
   const user = await authenticatedUser(request, env);
   if (!user) return response({ error: "unauthorized" }, 401);
@@ -228,6 +317,8 @@ export default {
     }
     if (request.method !== "POST") return response({ error: "method_not_allowed" }, 405);
     try {
+      if (url.pathname === "/v1/admin/stats" && request.method === "GET") return await adminStats(request, env);
+      if (url.pathname === "/v1/admin/users/status" && request.method === "POST") return await adminSetDisabled(request, env);
       if (url.pathname === "/v1/otp/send") return await sendOtp(request, env);
       if (url.pathname === "/v1/otp/verify") return await verifyOtp(request, env);
       return response({ error: "not_found" }, 404);
