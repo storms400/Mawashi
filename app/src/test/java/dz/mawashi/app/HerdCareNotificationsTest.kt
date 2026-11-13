@@ -6,6 +6,14 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 class HerdCareNotificationsTest {
+    @Test fun deletedOrCompletedReminderCannotShowNotification() {
+        val active = HerdCareNotificationData("a", "A1", "تطعيم", "2026-11-14", false)
+        val completed = active.copy(id = "b", completed = true)
+        assertEquals(true, isActiveHerdCareReminder(listOf(active, completed), "a"))
+        assertEquals(false, isActiveHerdCareReminder(listOf(active, completed), "b"))
+        assertEquals(false, isActiveHerdCareReminder(listOf(active, completed), "deleted"))
+    }
+
     @Test fun schedulesReminderAtNineInLocalTime() {
         val zone = ZoneId.of("Africa/Algiers")
         val date = LocalDate.of(2026, 11, 14)

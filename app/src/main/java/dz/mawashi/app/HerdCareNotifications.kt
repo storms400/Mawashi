@@ -17,6 +17,9 @@ import java.time.ZoneId
 
 internal data class HerdCareNotificationData(val id:String,val tag:String,val title:String,val date:String,val completed:Boolean)
 
+internal fun isActiveHerdCareReminder(reminders: List<HerdCareNotificationData>, id: String): Boolean =
+    reminders.any { it.id == id && !it.completed }
+
 internal object HerdCareNotifications {
     private const val PREFS = "mawashi_herd_care_v27"
     private const val KEY = "scheduled_care"
@@ -86,6 +89,17 @@ internal object HerdCareNotifications {
     internal fun show(context: Context, intent: Intent) {
         val id = intent.getStringExtra("id") ?: return
         if (intent.getBooleanExtra("completed", false)) return
+        // An alarm can race with deletion/completion; trust the latest saved reminder, not stale extras.
+        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "[]") ?: "[]"
+        val saved = runCatching { JSONArray(raw) }.getOrNull() ?: return
+        val current = (0 until saved.length()).mapNotNull { index ->
+            runCatching {
+                val item = saved.getJSONObject(index)
+                HerdCareNotificationData(item.optString("id"), item.optString("tag"),
+                    item.optString("title"), item.optString("date"), item.optBoolean("completed"))
+            }.getOrNull()
+        }
+        if (!isActiveHerdCareReminder(current, id)) return
         val tag = intent.getStringExtra("tag").orEmpty()
         val title = intent.getStringExtra("title").orEmpty()
         val date = intent.getStringExtra("date").orEmpty()
