@@ -187,7 +187,7 @@ async function verifyOtp(request, env) {
   const adminToken = await getGoogleAccessToken(env);
   const account = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON);
   const update = await fetch(
-    "https://identitytoolkit.googleapis.com/v1/accounts:update?key=" + encodeURIComponent(env.FIREBASE_API_KEY),
+    "https://identitytoolkit.googleapis.com/v1/projects/" + encodeURIComponent(account.project_id) + "/accounts:update",
     {
       method: "POST",
       headers: {
