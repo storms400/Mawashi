@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -137,11 +138,15 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
     val weighedAnimals = herd.mapNotNull { it.weightKg }.filter { it > 0.0 }
     var pendingBackup by remember { mutableStateOf<PreparedMawashiBackup?>(null) }
     var restoreDialog by remember { mutableStateOf(false) }
+    var showBackupPasswordDialog by remember { mutableStateOf(false) }
+    var backupAction by remember { mutableStateOf("export") }
+    var backupPassword by remember { mutableStateOf("") }
+    var pendingRestoreBytes by remember { mutableStateOf<ByteArray?>(null) }
     val createBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {
             try {
                 val output = context.contentResolver.openOutputStream(uri) ?: error("تعذر فتح ملف الحفظ")
-                output.use { MawashiBackup.export(context, it) }
+                output.use { MawashiBackup.export(context, it, backupPassword) }
                 Toast.makeText(context, "تم إنشاء النسخة الاحتياطية بنجاح", Toast.LENGTH_LONG).show()
             } catch (failure: Exception) {
                 Toast.makeText(context, "تعذر إنشاء النسخة: ${failure.message ?: "خطأ غير معروف"}", Toast.LENGTH_LONG).show()
@@ -152,8 +157,17 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
         if (uri != null) {
             try {
                 val input = context.contentResolver.openInputStream(uri) ?: error("تعذر قراءة الملف")
-                pendingBackup = MawashiBackup.prepareRestore(input)
-                restoreDialog = true
+                val bytes = MawashiBackup.readBackupBytes(input)
+                if (MawashiBackup.requiresPassword(bytes)) {
+                    pendingRestoreBytes = bytes
+                    backupAction = "restore"
+                    backupPassword = ""
+                    showBackupPasswordDialog = true
+                } else {
+                    pendingBackup = MawashiBackup.prepareRestore(bytes)
+                    restoreDialog = true
+                    Toast.makeText(context, "هذه نسخة قديمة غير مشفّرة. استعدها ثم أنشئ نسخة جديدة محمية بكلمة مرور.", Toast.LENGTH_LONG).show()
+                }
             } catch (failure: Exception) {
                 Toast.makeText(context, "لم تتم الاستعادة: ${failure.message ?: "ملف غير صالح"}", Toast.LENGTH_LONG).show()
             }
@@ -266,7 +280,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         Button(
-                            onClick = { createBackupLauncher.launch("Mawashi-Backup-v32.json") },
+                            onClick = { backupAction = "export"; backupPassword = ""; showBackupPasswordDialog = true },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Forest),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
@@ -286,14 +300,71 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                         }
                     }
                     Text("الاستعادة تستبدل بيانات التطبيق الحالية بعد التحقق من الملف. احتفظ بنسخة حديثة قبل الاستعادة.", color = Muted, fontSize = 9.sp)
-                    Text("تنبيه: ملف النسخة الاحتياطية غير مشفّر؛ احفظه في مكان خاص وآمن ولا تشاركه.", color = Color(0xFFB18443), fontSize = 9.sp)
+                    Text("تُشفّر النسخ الجديدة بكلمة مرور تختارها. احتفظ بها؛ لا يمكن استعادة الملف من دونها.", color = Emerald, fontSize = 9.sp)
                 }
             }
         }
     }
+    if (showBackupPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showBackupPasswordDialog = false
+                backupPassword = ""
+                pendingRestoreBytes = null
+            },
+            title = { Text(if (backupAction == "export") "حماية النسخة الاحتياطية" else "فتح النسخة الاحتياطية", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        if (backupAction == "export")
+                            "أنشئ كلمة مرور قوية من 12 حرفاً على الأقل. ستحتاج إليها عند استعادة الملف على أي جهاز."
+                        else
+                            "أدخل كلمة المرور التي استُخدمت عند إنشاء هذه النسخة."
+                    )
+                    OutlinedTextField(
+                        value = backupPassword,
+                        onValueChange = { backupPassword = it },
+                        singleLine = true,
+                        label = { Text("كلمة مرور النسخة") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (backupAction == "export") {
+                        Text("لا تحفظ كلمة المرور داخل التطبيق أو الملف. احتفظ بها في مكان آمن.", color = Muted, fontSize = 11.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    try {
+                        if (backupAction == "export") {
+                            require(backupPassword.length >= 12) { "كلمة المرور يجب أن تتكون من 12 حرفاً على الأقل" }
+                            showBackupPasswordDialog = false
+                            createBackupLauncher.launch("Mawashi-Backup-v32-encrypted.json")
+                        } else {
+                            val bytes = pendingRestoreBytes ?: error("ملف الاستعادة غير متاح")
+                            pendingBackup = MawashiBackup.prepareRestore(bytes, backupPassword)
+                            pendingRestoreBytes = null
+                            showBackupPasswordDialog = false
+                            restoreDialog = true
+                        }
+                    } catch (failure: Exception) {
+                        Toast.makeText(context, failure.message ?: "تعذر تنفيذ العملية", Toast.LENGTH_LONG).show()
+                    }
+                }) { Text(if (backupAction == "export") "متابعة الحفظ" else "فتح النسخة", color = Forest) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showBackupPasswordDialog = false
+                    backupPassword = ""
+                    pendingRestoreBytes = null
+                }) { Text("إلغاء") }
+            }
+        )
+    }
     if (restoreDialog && pendingBackup != null) {
         AlertDialog(
-            onDismissRequest = { restoreDialog = false; pendingBackup = null },
+            onDismissRequest = { restoreDialog = false; pendingBackup = null; backupPassword = "" },
             title = { Text("تأكيد استعادة البيانات", fontWeight = FontWeight.Bold) },
             text = { Text("سيتم استبدال بيانات القطيع والعلف والمالية والرعاية الصحية بالبيانات الموجودة في النسخة الاحتياطية. هل تريد المتابعة؟") },
             confirmButton = {
@@ -310,10 +381,11 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                     }
                     restoreDialog = false
                     pendingBackup = null
+                    backupPassword = ""
                 }) { Text("استعادة البيانات", color = Forest) }
             },
             dismissButton = {
-                TextButton(onClick = { restoreDialog = false; pendingBackup = null }) { Text("إلغاء") }
+                TextButton(onClick = { restoreDialog = false; pendingBackup = null; backupPassword = "" }) { Text("إلغاء") }
             }
         )
     }

@@ -2,22 +2,39 @@ package dz.mawashi.app
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.InputStream
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.io.OutputStream
 import java.security.MessageDigest
+import java.security.SecureRandom
+import javax.crypto.AEADBadTagException
+import javax.crypto.Cipher
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.PBEKeySpec
+import javax.crypto.spec.SecretKeySpec
 
 internal data class PreparedMawashiBackup(
     val createdAt: String,
+    val isLegacyUnencrypted: Boolean,
     internal val stores: Map<String, Map<String, Any?>>
 )
 
 internal object MawashiBackup {
     private const val FORMAT = "mawashi-data-backup"
-    private const val SCHEMA_VERSION = 1
+    private const val LEGACY_SCHEMA_VERSION = 1
+    private const val SCHEMA_VERSION = 2
     private const val MAX_BACKUP_BYTES = 25 * 1024 * 1024
+    private const val KDF_ITERATIONS = 210_000
+    private const val KEY_BITS = 256
+    private const val SALT_BYTES = 16
+    private const val NONCE_BYTES = 12
+    private const val GCM_TAG_BITS = 128
+    private const val KDF_NAME = "PBKDF2WithHmacSHA256"
+    private val random = SecureRandom()
     private val storeNames = listOf(
         "mawashi_herd_local",
         "mawashi_feed_stock",
@@ -25,7 +42,8 @@ internal object MawashiBackup {
         "mawashi_herd_care_v27"
     )
 
-    fun export(context: Context, output: OutputStream) {
+    fun export(context: Context, output: OutputStream, passphrase: String) {
+        require(passphrase.length >= 12) { "استخدم كلمة مرور من 12 حرفاً على الأقل" }
         val storesJson = JSONObject()
         storeNames.forEach { name ->
             val values = context.getSharedPreferences(name, Context.MODE_PRIVATE).all
@@ -37,12 +55,22 @@ internal object MawashiBackup {
             .put("app_family", "mawashi-v32")
             .put("stores", storesJson)
             .toString()
+        val salt = ByteArray(SALT_BYTES).also(random::nextBytes)
+        val nonce = ByteArray(NONCE_BYTES).also(random::nextBytes)
+        val key = deriveKey(passphrase, salt, KDF_ITERATIONS)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, nonce))
+        cipher.updateAAD(aad())
+        val encrypted = cipher.doFinal(payloadText.toByteArray(Charsets.UTF_8))
         val envelope = JSONObject()
             .put("format", FORMAT)
             .put("schema_version", SCHEMA_VERSION)
             .put("created_at", System.currentTimeMillis())
-            .put("payload", payloadText)
-            .put("sha256", sha256(payloadText))
+            .put("kdf", KDF_NAME)
+            .put("iterations", KDF_ITERATIONS)
+            .put("salt", Base64.encodeToString(salt, Base64.NO_WRAP))
+            .put("nonce", Base64.encodeToString(nonce, Base64.NO_WRAP))
+            .put("ciphertext", Base64.encodeToString(encrypted, Base64.NO_WRAP))
         val backupBytes = envelope.toString(2).toByteArray(Charsets.UTF_8)
         require(backupBytes.size <= MAX_BACKUP_BYTES) {
             "حجم النسخة الاحتياطية يتجاوز الحد المسموح (25 ميغابايت)؛ لم يتم تصدير ملف"
@@ -51,33 +79,81 @@ internal object MawashiBackup {
         output.flush()
     }
 
-    fun prepareRestore(input: InputStream): PreparedMawashiBackup {
-        val bytes = input.use { stream ->
-            val output = ByteArrayOutputStream()
-            val buffer = ByteArray(8192)
-            var total = 0
-            while (true) {
-                val count = stream.read(buffer)
-                if (count < 0) break
-                total += count
-                require(total <= MAX_BACKUP_BYTES) { "حجم ملف النسخة الاحتياطية أكبر من الحد المسموح" }
-                output.write(buffer, 0, count)
-            }
-            val result = output.toByteArray()
-            require(result.isNotEmpty()) { "ملف النسخة الاحتياطية فارغ" }
-            result
-        }
+    fun requiresPassword(bytes: ByteArray): Boolean {
+        require(bytes.isNotEmpty() && bytes.size <= MAX_BACKUP_BYTES) { "حجم ملف النسخة الاحتياطية غير صالح" }
         val envelope = JSONObject(String(bytes, Charsets.UTF_8))
         require(envelope.optString("format") == FORMAT) { "هذا الملف ليس نسخة احتياطية من تطبيق مواشي" }
-        require(envelope.optInt("schema_version", -1) == SCHEMA_VERSION) { "إصدار ملف النسخة الاحتياطية غير مدعوم" }
-        val payloadText = envelope.optString("payload")
-        require(payloadText.isNotBlank()) { "محتوى النسخة الاحتياطية غير موجود" }
-        require(sha256(payloadText) == envelope.optString("sha256")) { "فشل التحقق من سلامة النسخة الاحتياطية؛ لم يتم تغيير بياناتك" }
+        return when (envelope.optInt("schema_version", -1)) {
+            LEGACY_SCHEMA_VERSION -> false
+            SCHEMA_VERSION -> true
+            else -> error("إصدار ملف النسخة الاحتياطية غير مدعوم")
+        }
+    }
+
+    fun readBackupBytes(input: InputStream): ByteArray = input.use { stream ->
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        var total = 0
+        while (true) {
+            val count = stream.read(buffer)
+            if (count < 0) break
+            total += count
+            require(total <= MAX_BACKUP_BYTES) { "حجم ملف النسخة الاحتياطية أكبر من الحد المسموح" }
+            output.write(buffer, 0, count)
+        }
+        output.toByteArray().also { require(it.isNotEmpty()) { "ملف النسخة الاحتياطية فارغ" } }
+    }
+
+    fun prepareRestore(input: InputStream, passphrase: String? = null): PreparedMawashiBackup =
+        prepareRestore(readBackupBytes(input), passphrase)
+
+    fun prepareRestore(bytes: ByteArray, passphrase: String? = null): PreparedMawashiBackup {
+        require(bytes.isNotEmpty() && bytes.size <= MAX_BACKUP_BYTES) { "حجم ملف النسخة الاحتياطية غير صالح" }
+        val envelope = JSONObject(String(bytes, Charsets.UTF_8))
+        require(envelope.optString("format") == FORMAT) { "هذا الملف ليس نسخة احتياطية من تطبيق مواشي" }
+        val version = envelope.optInt("schema_version", -1)
+        val payloadText: String
+        val legacy: Boolean
+        when (version) {
+            LEGACY_SCHEMA_VERSION -> {
+                payloadText = envelope.optString("payload")
+                require(payloadText.isNotBlank()) { "محتوى النسخة الاحتياطية غير موجود" }
+                require(sha256(payloadText) == envelope.optString("sha256")) {
+                    "فشل التحقق من سلامة النسخة الاحتياطية؛ لم يتم تغيير بياناتك"
+                }
+                legacy = true
+            }
+            SCHEMA_VERSION -> {
+                require(!passphrase.isNullOrBlank()) { "أدخل كلمة مرور النسخة الاحتياطية" }
+                require(envelope.optString("kdf") == KDF_NAME) { "طريقة حماية النسخة الاحتياطية غير مدعومة" }
+                val iterations = envelope.optInt("iterations", -1)
+                require(iterations in 100_000..500_000) { "إعدادات حماية الملف غير صالحة" }
+                val salt = decodeBase64(envelope.optString("salt"), SALT_BYTES, "salt")
+                val nonce = decodeBase64(envelope.optString("nonce"), NONCE_BYTES, "nonce")
+                val ciphertext = try {
+                    Base64.decode(envelope.getString("ciphertext"), Base64.NO_WRAP)
+                } catch (_: Exception) {
+                    error("بيانات الملف المشفّر غير صالحة")
+                }
+                require(ciphertext.size >= 16 && ciphertext.size <= MAX_BACKUP_BYTES) { "حجم المحتوى المشفّر غير صالح" }
+                try {
+                    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                    cipher.init(Cipher.DECRYPT_MODE, deriveKey(passphrase, salt, iterations), GCMParameterSpec(GCM_TAG_BITS, nonce))
+                    cipher.updateAAD(aad())
+                    payloadText = String(cipher.doFinal(ciphertext), Charsets.UTF_8)
+                } catch (_: AEADBadTagException) {
+                    throw IllegalArgumentException("كلمة المرور غير صحيحة أو تم العبث بملف النسخة الاحتياطية")
+                } catch (failure: Exception) {
+                    throw IllegalArgumentException("تعذر فك تشفير النسخة الاحتياطية", failure)
+                }
+                legacy = false
+            }
+            else -> error("إصدار ملف النسخة الاحتياطية غير مدعوم")
+        }
 
         val payload = JSONObject(payloadText)
         require(payload.optString("app_family") == "mawashi-v32") { "النسخة الاحتياطية لا تخص إصدار مواشي v32" }
         val stores = payload.optJSONObject("stores") ?: error("بيانات الأقسام غير موجودة في النسخة الاحتياطية")
-        val storeNames = listOf("mawashi_herd_local", "mawashi_feed_stock", "mawashi_finance_v24", "mawashi_herd_care_v27")
         val decoded = linkedMapOf<String, Map<String, Any?>>()
         storeNames.forEach { name ->
             val store = stores.optJSONObject(name) ?: error("النسخة الاحتياطية ناقصة: $name")
@@ -91,11 +167,10 @@ internal object MawashiBackup {
             }
             decoded[name] = values
         }
-        return PreparedMawashiBackup(envelope.optLong("created_at").toString(), decoded)
+        return PreparedMawashiBackup(envelope.optLong("created_at").toString(), legacy, decoded)
     }
 
     fun restore(context: Context, backup: PreparedMawashiBackup) {
-        val storeNames = listOf("mawashi_herd_local", "mawashi_feed_stock", "mawashi_finance_v24", "mawashi_herd_care_v27")
         require(backup.stores.keys.containsAll(storeNames)) { "النسخة الاحتياطية لا تحتوي جميع أقسام التطبيق" }
         val originals = storeNames.associateWith { name ->
             context.getSharedPreferences(name, Context.MODE_PRIVATE).all.toMap()
@@ -126,11 +201,28 @@ internal object MawashiBackup {
                     rollbackFailures.joinToString("، ") +
                     ". أوقف استخدام التطبيق وأنشئ نسخة من البيانات المتاحة قبل أي محاولة أخرى."
             }
-            throw IllegalStateException(
-                "تعذرت الاستعادة. $rollbackMessage " + (failure.message ?: ""),
-                failure
-            )
+            throw IllegalStateException("تعذرت الاستعادة. $rollbackMessage " + (failure.message ?: ""), failure)
         }
+    }
+
+    private fun deriveKey(passphrase: String, salt: ByteArray, iterations: Int): SecretKeySpec {
+        val spec = PBEKeySpec(passphrase.toCharArray(), salt, iterations, KEY_BITS)
+        return try {
+            val bytes = SecretKeyFactory.getInstance(KDF_NAME).generateSecret(spec).encoded
+            SecretKeySpec(bytes, "AES")
+        } finally {
+            spec.clearPassword()
+        }
+    }
+
+    private fun aad(): ByteArray = "$FORMAT|$SCHEMA_VERSION".toByteArray(Charsets.UTF_8)
+
+    private fun decodeBase64(value: String, expectedSize: Int, label: String): ByteArray {
+        val decoded = try { Base64.decode(value, Base64.NO_WRAP) } catch (_: Exception) {
+            error("بيانات $label غير صالحة")
+        }
+        require(decoded.size == expectedSize) { "حجم $label غير صالح" }
+        return decoded
     }
 
     private fun encodeValue(value: Any?): JSONObject {
