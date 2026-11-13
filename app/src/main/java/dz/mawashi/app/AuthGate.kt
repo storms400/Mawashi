@@ -106,7 +106,7 @@ private fun SignInScreen(
             ) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(if (isRegister) "حساب جديد" else "تسجيل الدخول", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(if (isRegister) "بعد إنشاء الحساب سنرسل رابط تأكيد إلى بريدك الإلكتروني." else "سجّل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.")
+                    Text(if (isRegister) "بعد إنشاء الحساب اضغط زر إرسال رابط التأكيد ليصلك بريد إلكتروني." else "سجّل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.")
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -209,7 +209,7 @@ private fun EmailVerificationScreen(
     onSignOut: () -> Unit
 ) {
     var message by remember(user.uid) {
-        mutableStateOf("أرسل رابط التأكيد إلى ${user.email ?: "بريدك الإلكتروني"}، ثم افتح الرابط في الرسالة. بعد التأكيد ارجع إلى التطبيق واضغط «تحققت من بريدي».")
+        mutableStateOf("اضغط «إرسال رابط التأكيد» لإرسال رسالة إلى ${user.email ?: "بريدك الإلكتروني"}، ثم افتح الرابط في الرسالة. بعد التأكيد ارجع إلى التطبيق واضغط «تحققت من بريدي».")
     }
     var busy by remember { mutableStateOf(false) }
 
