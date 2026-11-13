@@ -111,7 +111,12 @@ fun AuthGate(onAuthenticated: @Composable () -> Unit) {
     var isVerified by remember { mutableStateOf(auth.currentUser?.isEmailVerified == true) }
 
     if (isVerified) {
-        onAuthenticated()
+        val signedIn = auth.currentUser
+        if (signedIn?.email.equals(MAWASHI_OWNER_EMAIL, ignoreCase = true) && signedIn != null) {
+            OwnerDashboardScreen(user = signedIn, onContinue = onAuthenticated)
+        } else {
+            onAuthenticated()
+        }
     } else if (user != null) {
         OtpVerificationScreen(
             user = user!!,
