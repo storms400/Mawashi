@@ -82,6 +82,7 @@ private fun callOtpApi(user: FirebaseUser, path: String, code: String? = null, c
                         val message = when (error) {
                             "unauthorized" -> "انتهت جلسة الدخول. سجّل الدخول مجدداً."
                             "test_recipient_only" -> "الإرسال متاح حالياً للبريد التجريبي المحدد فقط."
+                            "sending_domain_not_configured" -> "إرسال الرموز إلى المستخدمين الجدد يحتاج إلى توثيق نطاق البريد في إعدادات الخدمة."
                             "too_many_requests" -> "انتظر قليلاً قبل طلب رمز جديد."
                             "incorrect_code" -> "الرمز غير صحيح. حاول مرة أخرى."
                             "code_expired" -> "انتهت صلاحية الرمز. اطلب رمزاً جديداً."
