@@ -56,10 +56,15 @@ internal object HerdCareNotifications {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             if (item.completed) {
                 manager.cancel(pending)
+                NotificationManagerCompat.from(context).cancel(id)
             } else {
-                val due = runCatching { triggerAt(LocalDate.parse(item.date)) }.getOrNull() ?: return@forEach
-                if (due > System.currentTimeMillis()) manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pending)
-                else manager.cancel(pending)
+                val due = runCatching { triggerAt(LocalDate.parse(item.date)) }.getOrNull()
+                if (due != null && due > System.currentTimeMillis()) {
+                    manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pending)
+                } else {
+                    manager.cancel(pending)
+                    NotificationManagerCompat.from(context).cancel(id)
+                }
             }
         }
         prefs.edit().putStringSet(IDS_KEY, currentIds).apply()
