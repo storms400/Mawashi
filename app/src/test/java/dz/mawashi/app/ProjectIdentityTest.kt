@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ProjectIdentityTest {
-    @Test fun debugApplicationIdentityIsIndependentV32() {
-        assertEquals("dz.mawashi.app.independent.v32.debug", BuildConfig.APPLICATION_ID)
+    @Test fun debugApplicationIdentityUsesFinalPackageId() {
+        assertEquals("dz.mawashi.app.debug", BuildConfig.APPLICATION_ID)
     }
 }
