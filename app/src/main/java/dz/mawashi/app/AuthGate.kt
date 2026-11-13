@@ -292,7 +292,7 @@ private fun OtpVerificationScreen(
         ) {
             Text("التحقق من البريد الإلكتروني", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(12.dp))
-            Text("أرسلنا رمزاً من 6 أرقام إلى ${user.email ?: "بريدك الإلكتروني"}. تنتهي صلاحيته خلال 10 دقائق.")
+            Text("أدخل الرمز المكوّن من 6 أرقام الذي وصلك إلى ${user.email ?: "بريدك الإلكتروني"}. تنتهي صلاحيته خلال 10 دقائق.")
             Spacer(Modifier.height(16.dp))
             OutlinedTextField(
                 value = code,
