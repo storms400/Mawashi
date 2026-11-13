@@ -71,4 +71,33 @@ class HerdLifecycleTest {
     fun rejectsUnknownExitReason() {
         archiveHerdAnimal(animal, "2026-11-10", "سبب غير معروف", LocalDate.parse("2026-11-10"))
     }
+    
+    @Test
+    fun derivesLambAgeFromBirthDateAndFallsBackForLegacyOrInvalidDates() {
+        val today = LocalDate.parse("2026-11-10")
+        assertEquals(6, ageMonthsFromBirthDate("2026-05-10", 0, today))
+        assertEquals(0, ageMonthsFromBirthDate("2026-11-10", 0, today))
+        assertEquals(8, ageMonthsFromBirthDate("invalid", 8, today))
+        assertEquals(8, ageMonthsFromBirthDate("2026-11-11", 8, today))
+    }
+
+    @Test
+    fun acceptsOnlyRegisteredEweAsMotherAndRejectsSelfOrOtherKinds() {
+        val ewe = animal.copy(id = "mother", tag = "E-1", kind = "نعجة")
+        val ram = animal.copy(id = "ram", tag = "R-1", kind = "كبش")
+        val lamb = animal.copy(id = "lamb", tag = "L-1", kind = "حمل/رخلة")
+        assertTrue(isValidMotherTag("E-1", listOf(ewe, lamb), lamb.id))
+        assertFalse(isValidMotherTag("R-1", listOf(ram, lamb), lamb.id))
+        assertFalse(isValidMotherTag("missing", listOf(ewe, lamb), lamb.id))
+        assertFalse(isValidMotherTag("L-1", listOf(lamb), lamb.id))
+    }
+
+    @Test
+    fun validatesProductionStateAgainstAnimalKind() {
+        assertTrue(isValidProductionState("نعجة", "نعجة حامل"))
+        assertTrue(isValidProductionState("كبش", "كبش"))
+        assertTrue(isValidProductionState("حمل/رخلة", "حمل يرضع"))
+        assertFalse(isValidProductionState("كبش", "نعجة حامل"))
+        assertFalse(isValidProductionState("حمل/رخلة", "نعجة مرضعة"))
+    }
 }

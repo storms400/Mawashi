@@ -70,7 +70,7 @@ jobs:
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='32' versionName='1.0.32-debug'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='33' versionName='1.0.33-debug'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Build release APK (unsigned validation)
@@ -81,7 +81,7 @@ jobs:
           APK="app/build/outputs/apk/release/app-release-unsigned.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='32' versionName='1.0.32'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='33' versionName='1.0.33'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Build standalone test APK when its Firebase config is available
@@ -93,14 +93,14 @@ jobs:
         run: |
           APK="app/build/outputs/apk/standalone/app-standalone.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.test'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.test2'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Upload standalone test APK
         if: ${{ hashFiles('app/src/standalone/google-services.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Standalone-Test-v32
+          name: Mawashi-Standalone-Test-v33
           path: app/build/outputs/apk/standalone/app-standalone.apk
           if-no-files-found: error
           retention-days: 14
@@ -108,7 +108,7 @@ jobs:
       - name: Upload unsigned release validation APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Release-Unsigned-v32
+          name: Mawashi-Release-Unsigned-v33
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 14
@@ -116,7 +116,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Debug-APK-v32
+          name: Mawashi-Debug-APK-v33
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14

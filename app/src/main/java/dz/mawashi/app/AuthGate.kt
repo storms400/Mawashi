@@ -9,10 +9,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -27,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -87,6 +93,8 @@ private fun SignInScreen(
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var confirmation by rememberSaveable { mutableStateOf("") }
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var confirmationVisible by rememberSaveable { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
 
@@ -96,6 +104,8 @@ private fun SignInScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            EweLogo(52)
+            Spacer(Modifier.height(8.dp))
             Text("مواشي", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
             Spacer(Modifier.height(8.dp))
             Text(if (isRegister) "أنشئ حسابك للبدء" else "سجّل الدخول إلى حسابك")
@@ -106,7 +116,7 @@ private fun SignInScreen(
             ) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(if (isRegister) "حساب جديد" else "تسجيل الدخول", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(if (isRegister) "بعد إنشاء الحساب اضغط زر إرسال رابط التأكيد ليصلك بريد إلكتروني." else "سجّل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.")
+                    Text(if (isRegister) "بعد إنشاء الحساب اضغط زر إرسال رابط التأكيد. إذا لم تجد الرسالة في الوارد، افحص مجلد الرسائل غير المرغوب فيها (Spam) وابحث عن رسالة Firebase." else "سجّل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.")
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -119,7 +129,15 @@ private fun SignInScreen(
                         onValueChange = { password = it },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                    contentDescription = if (passwordVisible) "إخفاء كلمة المرور" else "إظهار كلمة المرور"
+                                )
+                            }
+                        },
                         label = { Text("كلمة المرور") }
                     )
                     if (isRegister) {
@@ -128,7 +146,15 @@ private fun SignInScreen(
                             onValueChange = { confirmation = it },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            visualTransformation = PasswordVisualTransformation(),
+                            visualTransformation = if (confirmationVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { confirmationVisible = !confirmationVisible }) {
+                                    Icon(
+                                        imageVector = if (confirmationVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                        contentDescription = if (confirmationVisible) "إخفاء تأكيد كلمة المرور" else "إظهار تأكيد كلمة المرور"
+                                    )
+                                }
+                            },
                             label = { Text("تأكيد كلمة المرور") }
                         )
                     }
@@ -154,9 +180,6 @@ private fun SignInScreen(
                                             if (current == null) {
                                                 busy = false
                                                 message = "تعذر تحميل الحساب بعد تسجيل الدخول."
-                                            } else if (current.isEmailVerified) {
-                                                busy = false
-                                                onSignedIn(current)
                                             } else {
                                                 busy = false
                                                 onSignedIn(current)
@@ -190,7 +213,12 @@ private fun SignInScreen(
                         ) { Text("نسيت كلمة المرور؟") }
                     }
                     TextButton(
-                        onClick = { isRegister = !isRegister; message = null },
+                        onClick = {
+                            isRegister = !isRegister
+                            passwordVisible = false
+                            confirmationVisible = false
+                            message = null
+                        },
                         modifier = Modifier.align(Alignment.CenterHorizontally),
                         enabled = !busy
                     ) {
@@ -198,6 +226,9 @@ private fun SignInScreen(
                     }
                 }
             }
+            Spacer(Modifier.height(20.dp))
+            Text("اتصل بنا", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(MAWASHI_OWNER_EMAIL, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -209,7 +240,7 @@ private fun EmailVerificationScreen(
     onSignOut: () -> Unit
 ) {
     var message by remember(user.uid) {
-        mutableStateOf("اضغط «إرسال رابط التأكيد» لإرسال رسالة إلى ${user.email ?: "بريدك الإلكتروني"}، ثم افتح الرابط في الرسالة. بعد التأكيد ارجع إلى التطبيق واضغط «تحققت من بريدي».")
+        mutableStateOf("اضغط «إرسال رابط التأكيد» لإرسال رسالة إلى ${user.email ?: "بريدك الإلكتروني"}، ثم افتح الرابط في الرسالة. إذا لم تجدها في الوارد، افحص Spam / الرسائل غير المرغوب فيها أو ابحث عن Firebase. بعد التأكيد ارجع إلى التطبيق واضغط «تحققت من بريدي».")
     }
     var busy by remember { mutableStateOf(false) }
 
@@ -232,7 +263,7 @@ private fun EmailVerificationScreen(
                     user.sendEmailVerification().addOnCompleteListener { result ->
                         busy = false
                         message = if (result.isSuccessful) {
-                            "تم إرسال رابط التأكيد. افحص صندوق الوارد والرسائل غير المرغوب فيها، ثم اضغط الرابط وارجع إلى التطبيق."
+                            "تم إرسال طلب رسالة التأكيد. افحص الوارد، وإذا لم تجدها فافحص Spam / الرسائل غير المرغوب فيها وابحث عن Firebase، ثم افتح الرابط وارجع إلى التطبيق."
                         } else {
                             result.exception?.localizedMessage ?: "تعذر إرسال رابط التأكيد. تحقق من اتصال الإنترنت ثم أعد المحاولة."
                         }

@@ -12,8 +12,8 @@ android {
         applicationId = "dz.mawashi.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 32
-        versionName = "1.0.32"
+        versionCode = 33
+        versionName = "1.0.33"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -22,8 +22,8 @@ android {
         // registration and app/src/standalone/google-services.json.
         create("standalone") {
             initWith(getByName("debug"))
-            applicationIdSuffix = ".test"
-            versionNameSuffix = "-test"
+            applicationIdSuffix = ".test2"
+            versionNameSuffix = "-test2"
             matchingFallbacks += listOf("debug")
         }
         release {
