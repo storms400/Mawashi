@@ -1,6 +1,10 @@
 package dz.mawashi.app
 
 import android.content.Context
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.graphics.Bitmap
 import android.graphics.Color as AColor
 import android.os.Bundle
@@ -381,6 +385,7 @@ private fun readHerdCare(c:Context):List<HerdCareReminder>{
 private fun saveHerdCare(c:Context,list:List<HerdCareReminder>){
  val a=JSONArray();list.forEach{x->a.put(JSONObject().put("id",x.id).put("tag",x.tag).put("kind",x.kind).put("title",x.title).put("date",x.date).put("notes",x.notes).put("completed",x.completed))}
  check(c.getSharedPreferences(HERD_CARE_PREFS,0).edit().putString(HERD_CARE_KEY,a.toString()).commit())
+ HerdCareNotifications.scheduleAll(c, list.map { HerdCareNotificationData(it.id,it.tag,it.title,it.date,it.completed) })
 }
 private fun herdAgeLabel(a:HerdAnimal):String{
  val months=runCatching{if(a.birthDate.isNotBlank())ChronoUnit.MONTHS.between(LocalDate.parse(a.birthDate),LocalDate.now()).toInt().coerceAtLeast(0) else a.ageMonths}.getOrDefault(a.ageMonths)
@@ -515,7 +520,7 @@ private fun herdAgeLabel(a:HerdAnimal):String{
    val valid=runCatching{LocalDate.parse(date);true}.getOrDefault(false)
    if(title.isNotBlank()&&valid){
     val item=HerdCareReminder(UUID.randomUUID().toString(),selected!!.tag,kind,title.trim(),date,notes.trim())
-    reminders=reminders+item;saveHerdCare(context,reminders);dialog=false
+    reminders=reminders+item;saveHerdCare(context,reminders);if(Build.VERSION.SDK_INT>=33)notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS);dialog=false
    }
   }){Text("حفظ")}},dismissButton={TextButton(onClick={dialog=false}){Text("إلغاء")}})
  }
