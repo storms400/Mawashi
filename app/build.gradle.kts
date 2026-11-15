@@ -18,7 +18,7 @@ android {
     }
     buildTypes {
         debug { versionNameSuffix = "-debug" }
-        // Independently installable test package. Its application ID is intentionally
+        // Independently installable test package. Stable post-build signing is applied before delivery. Its application ID is intentionally
         // distinct from production and all earlier test package IDs.
         create("standalone") {
             initWith(getByName("debug"))
