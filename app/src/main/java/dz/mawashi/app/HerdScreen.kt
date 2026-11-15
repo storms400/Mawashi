@@ -2,6 +2,8 @@ package dz.mawashi.app
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
 import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import android.os.CancellationSignal
@@ -41,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -200,7 +203,7 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
   }
   if(visible.isEmpty()){
    Column(Modifier.fillMaxWidth().weight(1f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-    EweLogo(76);Spacer(Modifier.height(12.dp));Text(if(animals.isEmpty())"ابدأ بتسجيل حيوانات القطيع" else "لا توجد نتائج مطابقة",color=HerdInk,fontWeight=FontWeight.Bold)
+    EwePhoto(76);Spacer(Modifier.height(12.dp));Text(if(animals.isEmpty())"ابدأ بتسجيل حيوانات القطيع" else "لا توجد نتائج مطابقة",color=HerdInk,fontWeight=FontWeight.Bold)
     Text(if(animals.isEmpty())"امنح كل حيوان رقم تعريف لتسهيل متابعته" else "جرّب تغيير البحث أو نوع الحيوان",color=HerdMuted,fontSize=11.sp)
     if(animals.isEmpty()){Spacer(Modifier.height(12.dp));Button(onClick={batchDialog=true},colors=ButtonDefaults.buttonColors(containerColor=HerdGreen)){Icon(Icons.Outlined.QrCode2,null);Text("ترقيم مجموعة")}}
    }
@@ -231,6 +234,13 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
   }},confirmButton={Row{TextButton(onClick={printHerdQr(context,listOf(a))}){Icon(Icons.Outlined.Print,null);Text("طباعة QR")};TextButton(onClick={editor=true}){Icon(Icons.Outlined.Edit,null);Text("تعديل")}}},dismissButton={TextButton(onClick={selected=null}){Text("إغلاق")}})
  }
  deleting?.let{a->AlertDialog(onDismissRequest={deleting=null},title={Text("إخراج الحيوان من القطيع")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Text("سيُنقل ${a.tag} إلى الأرشيف مع الاحتفاظ بجميع بياناته وسجلاته.");Text("سبب الخروج");Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){listOf("بيع","نفوق","استبعاد").forEach{FilterChip(exitReason==it,{exitReason=it},label={Text(it,fontSize=11.sp)},colors=FilterChipDefaults.filterChipColors(containerColor=Color.White,selectedContainerColor=Color.White,labelColor=HerdInk,selectedLabelColor=HerdGreen))}};OutlinedTextField(exitDate,{exitDate=it;exitError=null},label={Text("تاريخ الخروج YYYY-MM-DD")},singleLine=true);exitError?.let{Text(it,color=MaterialTheme.colorScheme.error,fontSize=11.sp)};Text("لن يُحذف سجل الحيوان نهائياً.",color=HerdMuted,fontSize=11.sp)}},confirmButton={TextButton(onClick={if(!isValidHerdExitDate(exitDate)){exitError="أدخل تاريخاً صحيحاً بصيغة YYYY-MM-DD، ولا يمكن أن يكون في المستقبل."}else{val i=animals.indexOfFirst{it.id==a.id};if(i>=0){animals[i]=archiveHerdAnimal(a,exitDate,exitReason);saveHerd(context,animals.toList())};deleting=null}}){Text("تأكيد الأرشفة",color=HerdGreen)}},dismissButton={TextButton(onClick={deleting=null}){Text("إلغاء")}})}
+}
+
+private const val EWE_PHOTO_BASE64 = "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"
+
+@Composable private fun EwePhoto(size:Int){
+ val bitmap = remember { val bytes=Base64.decode(EWE_PHOTO_BASE64,Base64.DEFAULT); BitmapFactory.decodeByteArray(bytes,0,bytes.size) }
+ bitmap?.let { Image(bitmap=it.asImageBitmap(),contentDescription="صورة النعجة",modifier=Modifier.size(size.dp),contentScale=ContentScale.Fit) }
 }
 
 @Composable fun EweLogo(size:Int){
