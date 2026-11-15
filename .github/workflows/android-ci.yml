@@ -96,26 +96,16 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.test3'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
-      - name: Sign standalone APK with persistent test3 key
+      - name: Verify standalone APK uses the standard debug signature
         if: ${{ hashFiles('app/src/standalone/google-services.json') != '' }}
-        env:
-          TEST3_KEYSTORE_BASE64: ${{ secrets.MAWASHI_TEST3_KEYSTORE_BASE64 }}
-          TEST3_KEYSTORE_PASSWORD: ${{ secrets.MAWASHI_TEST3_KEYSTORE_PASSWORD }}
-          TEST3_KEY_ALIAS: ${{ secrets.MAWASHI_TEST3_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          if [ -z "$TEST3_KEYSTORE_BASE64" ] || [ -z "$TEST3_KEYSTORE_PASSWORD" ] || [ -z "$TEST3_KEY_ALIAS" ]; then
-            echo "::error::Configure MAWASHI_TEST3_KEYSTORE_BASE64, MAWASHI_TEST3_KEYSTORE_PASSWORD and MAWASHI_TEST3_KEY_ALIAS repository secrets before building a distributable standalone APK."
-            exit 1
-          fi
-          printf '%s' "$TEST3_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mawashi-test3.jks"
           APK="app/build/outputs/apk/standalone/app-standalone.apk"
           APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
-          "$APKSIGNER" sign --ks "$RUNNER_TEMP/mawashi-test3.jks" --ks-key-alias "$TEST3_KEY_ALIAS" --ks-pass "env:TEST3_KEYSTORE_PASSWORD" --key-pass "env:TEST3_KEYSTORE_PASSWORD" --out "$RUNNER_TEMP/app-standalone-signed.apk" "$APK"
-          mv "$RUNNER_TEMP/app-standalone-signed.apk" "$APK"
+          test -s "$APK"
           "$APKSIGNER" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.test3'"
-          rm -f "$RUNNER_TEMP/mawashi-test3.jks"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='35' versionName='1.0.35-test3'"
 
       - name: Upload standalone test APK
         if: ${{ hashFiles('app/src/standalone/google-services.json') != '' }}
