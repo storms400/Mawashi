@@ -47,25 +47,6 @@
       "client_info": {
         "mobilesdk_app_id": "1:1015102317393:android:b23a97093f8967ba3ce970",
         "android_client_info": {
-          "package_name": "dz.mawashi.app.test2"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:1015102317393:android:b23a97093f8967ba3ce970",
-        "android_client_info": {
           "package_name": "dz.mawashi.app.test3"
         }
       },
