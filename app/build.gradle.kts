@@ -8,7 +8,6 @@ android {
     namespace = "dz.mawashi.app"
     compileSdk = 35
     defaultConfig {
-        // Final production application ID approved for Mawashi.
         applicationId = "dz.mawashi.app"
         minSdk = 26
         targetSdk = 35
@@ -18,12 +17,11 @@ android {
     }
     buildTypes {
         debug { versionNameSuffix = "-debug" }
-        // Independently installable test package. Stable post-build signing is applied before delivery. Its application ID is intentionally
-        // distinct from production and all earlier test package IDs.
+        // New unique package identity: installs alongside production and earlier test builds.
         create("standalone") {
             initWith(getByName("debug"))
-            applicationIdSuffix = ".test3"
-            versionNameSuffix = "-test3"
+            applicationIdSuffix = ".independent.v35"
+            versionNameSuffix = "-independent-v35"
             matchingFallbacks += listOf("debug")
         }
         release {
