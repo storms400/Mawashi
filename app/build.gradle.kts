@@ -12,18 +12,18 @@ android {
         applicationId = "dz.mawashi.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 33
-        versionName = "1.0.33"
+        versionCode = 34
+        versionName = "1.0.34"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         debug { versionNameSuffix = "-debug" }
-        // Separate installable test app; requires its own Firebase Android app
-        // registration and app/src/standalone/google-services.json.
+        // Independently installable test package. Its application ID is intentionally
+        // distinct from production and all earlier test package IDs.
         create("standalone") {
             initWith(getByName("debug"))
-            applicationIdSuffix = ".test2"
-            versionNameSuffix = "-test2"
+            applicationIdSuffix = ".test3"
+            versionNameSuffix = "-test3"
             matchingFallbacks += listOf("debug")
         }
         release {
