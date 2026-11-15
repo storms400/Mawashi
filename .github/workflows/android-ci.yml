@@ -93,7 +93,7 @@ jobs:
         run: |
           APK="app/build/outputs/apk/standalone/app-standalone.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.test3'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v35'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Verify standalone APK uses the standard debug signature
@@ -105,13 +105,13 @@ jobs:
           test -s "$APK"
           "$APKSIGNER" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.test3'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='35' versionName='1.0.35-test3'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='35' versionName='1.0.35-independent-v35'"
 
       - name: Upload standalone test APK
         if: ${{ hashFiles('app/src/standalone/google-services.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Standalone-Test-v35
+          name: Mawashi-Standalone-Independent-v35
           path: app/build/outputs/apk/standalone/app-standalone.apk
           if-no-files-found: error
           retention-days: 14
