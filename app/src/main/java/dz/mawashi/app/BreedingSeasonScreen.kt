@@ -284,7 +284,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
         }
     }
     if (selectedTag != null && active != null) {
-        ScanOutcomeDialog(selectedTag!!, active.repeatScan[selectedTag!!].orEmpty(), active.scan, active.removal, onDismiss = { selectedTag = null }) { outcome, days, fetusCount, repeat, actualScanDate ->
+        ScanOutcomeDialog(selectedTag!!, active.repeatScan[selectedTag!!].orEmpty(), active.scan, active.removal, onDismiss = { selectedTag = null }) { outcome, days, fetusCount, repeat, actualScanDate, offspringSex ->
             val updated = active.copy(
                 results = active.results + (selectedTag!! to outcome),
                 gestation = if (outcome == "حامل" && days > 0) active.gestation + (selectedTag!! to days) else active.gestation - selectedTag!!,
@@ -293,7 +293,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                 scanDates = active.scanDates + (selectedTag!! to actualScanDate)
             )
             val profileSaved = savePregnancyScanToHerd(
-                context, selectedTag!!, outcome, actualScanDate, days, fetusCount, repeat
+                context, selectedTag!!, outcome, actualScanDate, days, fetusCount, repeat, offspringSex
             )
             save(seasons.dropLast(1) + updated)
             if (!profileSaved) {
@@ -386,12 +386,13 @@ private fun CreateSeasonDialog(ewes: List<HerdAnimal>, rams: List<HerdAnimal>, o
 }
 
 @Composable
-private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scheduledScanDate: String, removalDate: String, onDismiss: () -> Unit, onSave: (String, Int, Int, String, String) -> Unit) {
-    var result by rememberSaveable { mutableStateOf("") }
-    var actualScanDate by rememberSaveable { mutableStateOf(scheduledScanDate) }
-    var days by rememberSaveable { mutableStateOf("60") }
-    var fetus by rememberSaveable { mutableStateOf("1") }
-    var repeat by rememberSaveable { mutableStateOf(oldRepeat) }
+private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scheduledScanDate: String, removalDate: String, onDismiss: () -> Unit, onSave: (String, Int, Int, String, String, String) -> Unit) {
+    var result by rememberSaveable(tag) { mutableStateOf("") }
+    var actualScanDate by rememberSaveable(tag) { mutableStateOf(scheduledScanDate) }
+    var days by rememberSaveable(tag) { mutableStateOf("60") }
+    var fetus by rememberSaveable(tag) { mutableStateOf("1") }
+    var repeat by rememberSaveable(tag) { mutableStateOf(oldRepeat) }
+    var offspringSex by rememberSaveable(tag) { mutableStateOf("") }
     var validationMessage by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -411,6 +412,16 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scheduledScanDate:
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf("1", "2", "3").forEach { v -> FilterChip(selected = fetus == v, onClick = { fetus = v }, label = { Text(v) }) }
                     }
+                    Text("جنس الحمل", color = SeasonForest, fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        listOf("ذكر", "أنثى").forEach { sex ->
+                            FilterChip(selected = offspringSex == sex, onClick = { offspringSex = sex; validationMessage = null }, label = { Text(sex) })
+                        }
+                        if (fetus.toIntOrNull()?.let { it > 1 } == true) {
+                            FilterChip(selected = offspringSex == "مختلط", onClick = { offspringSex = "مختلط"; validationMessage = null }, label = { Text("مختلط") })
+                        }
+                    }
+                    Text("اختر الجنس للحمل المسجل؛ في حالة التوأم أو الثلاثة يمكن اختيار مختلط.", color = SeasonMuted, fontSize = 10.sp)
                     Text("يُحسب الموعد التقديري من عمر الحمل في تاريخ السونار وبمتوسط 147 يوماً.", color = SeasonMuted, fontSize = 10.sp)
                 }
                 if (result == "غير حاسم") {
@@ -431,10 +442,12 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scheduledScanDate:
                     result.isBlank() -> "اختر نتيجة السونار أولاً."
                     !validActualScanDate -> "تاريخ السونار الفعلي يجب أن يكون بعد 40 يوماً على الأقل من إخراج الكبش وألا يكون في المستقبل."
                     result == "حامل" && age !in 1..145 -> "أدخل عمر حمل صحيحاً بين يوم و145 يوماً."
+                    result == "حامل" && offspringSex !in setOf("ذكر", "أنثى", "مختلط") -> "اختر جنس الحمل: ذكر أو أنثى."
+                    result == "حامل" && fetus.toIntOrNull() == 1 && offspringSex == "مختلط" -> "خيار مختلط متاح فقط عند وجود توأم أو ثلاثة أجنة."
                     result == "غير حاسم" && !validRepeat -> "اختر موعد إعادة فحص بعد تاريخ السونار."
                     else -> null
                 }
-                if (validationMessage == null) onSave(result, age, fetus.toIntOrNull() ?: 1, repeat, actualScanDate)
+                if (validationMessage == null) onSave(result, age, fetus.toIntOrNull() ?: 1, repeat, actualScanDate, offspringSex)
             }) { Text("حفظ النتيجة", color = SeasonForest) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } }
