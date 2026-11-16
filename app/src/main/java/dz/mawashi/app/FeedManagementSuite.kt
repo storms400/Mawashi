@@ -454,7 +454,7 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
     )
     val suggested = rationResult.uses.associateBy { it.kind }
     val selectedIds = groupAnimals.map { it.id }
-    LaunchedEffect(group, pasture, selectedIds, stock, purchasePrices) {
+    LaunchedEffect(group, pasture, selectedIds, needs, stock, purchasePrices) {
         amounts.clear()
         feedKinds.forEach { kind ->
             amounts[kind] = if (kind.isMineral) "0" else
@@ -654,11 +654,37 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
                         require(value.isFinite() && value >= 0.0) { "الكمية غير صالحة: " + kind.label }
                         value
                     }
+                    require(rationResult.feasible) { rationResult.message }
+                    val enteredBulk = bulkFeedKinds.mapNotNull { kind ->
+                        val quantity = values[kind] ?: 0.0
+                        val profile = FeedProfileCatalog.profiles[kind] ?: return@mapNotNull null
+                        if (quantity <= 0.0) null else Triple(kind, quantity * profile.dryMatterFraction, profile)
+                    }
+                    val enteredDm = enteredBulk.sumOf { it.second }
+                    val enteredEnergy = enteredBulk.sumOf { it.second * it.third.meMjPerKgDm }
+                    val enteredProtein = enteredBulk.sumOf { it.second * it.third.crudeProteinFraction }
+                    val enteredForage = enteredBulk.filter { it.third.forage }.sumOf { it.second }
+                    val enteredStarch = enteredBulk.sumOf { it.second * it.third.starchFraction }
+                    require(kotlin.math.abs(enteredDm - totalSupplement) <= maxOf(0.02, totalSupplement * 0.02)) {
+                        "الكمية المعدلة لا تطابق المادة الجافة التي حسبها المحرك؛ راجع كميات العلف."
+                    }
+                    require(enteredEnergy + 0.02 >= needs.sumOf { it.supplementEnergyMj }) {
+                        "الخلطة المعدلة لا تحقق الحد الأدنى للطاقة؛ لم يتم تسجيل الاستهلاك."
+                    }
+                    require(enteredProtein + 0.001 >= needs.sumOf { it.supplementCrudeProteinKg }) {
+                        "الخلطة المعدلة لا تحقق الحد الأدنى للبروتين؛ لم يتم تسجيل الاستهلاك."
+                    }
+                    require(enteredForage + 0.001 >= totalSupplement * supplementForageFloor) {
+                        "الخلطة المعدلة لا تحقق حد الأعلاف الخشنة المطلوب؛ لم يتم تسجيل الاستهلاك."
+                    }
+                    require(enteredStarch <= totalSupplement * 0.30 + 0.001) {
+                        "نسبة النشا في المكمل تجاوزت الحد الاحترازي؛ خفّض الحبوب وراجع الخلطة."
+                    }
                     val result = fsConsume(c, values, note.ifBlank { "استهلاك " + groupAnimals.size + " حيواناً • " + group })
                     fsPasture(c, pastureKg, groupAnimals.size.toString() + " حيواناً • " + group)
                     saved(result + ". سُجلت مساهمة المرعى منفصلة دون خصم من المخزون.")
                 }.onFailure { android.widget.Toast.makeText(c, it.message ?: "تعذر التسجيل", android.widget.Toast.LENGTH_LONG).show() }
-            }, Modifier.fillMaxWidth(), enabled = groupAnimals.isNotEmpty() && inputs.isNotEmpty(),
+            }, Modifier.fillMaxWidth(), enabled = groupAnimals.isNotEmpty() && inputs.isNotEmpty() && rationResult.feasible,
                 colors = ButtonDefaults.buttonColors(containerColor = FS_GREEN)) {
                 Text("تأكيد الاستهلاك وحفظ العملية", fontWeight = FontWeight.Bold)
             }
