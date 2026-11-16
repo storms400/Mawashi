@@ -7,6 +7,14 @@ import org.junit.Test
 
 class HerdProfileRulesTest {
     @Test
+    fun lambSexMustBeExplicitlyMaleOrFemale() {
+        assertTrue(isValidLambSex("ذكر"))
+        assertTrue(isValidLambSex("أنثى"))
+        assertFalse(isValidLambSex(""))
+        assertFalse(isValidLambSex("غير محدد"))
+    }
+
+    @Test
     fun ageLabelShowsExactDaysForYoungLamb() {
         val animal = HerdAnimal(
             id = "lamb-1",
