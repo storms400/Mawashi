@@ -284,7 +284,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
         }
     }
     if (selectedTag != null && active != null) {
-        ScanOutcomeDialog(selectedTag!!, active.repeatScan[selectedTag!!].orEmpty(), active.scan, onDismiss = { selectedTag = null }) { outcome, days, fetusCount, repeat, actualScanDate ->
+        ScanOutcomeDialog(selectedTag!!, active.repeatScan[selectedTag!!].orEmpty(), active.scan, active.removal, onDismiss = { selectedTag = null }) { outcome, days, fetusCount, repeat, actualScanDate ->
             val updated = active.copy(
                 results = active.results + (selectedTag!! to outcome),
                 gestation = if (outcome == "حامل" && days > 0) active.gestation + (selectedTag!! to days) else active.gestation - selectedTag!!,
@@ -386,7 +386,7 @@ private fun CreateSeasonDialog(ewes: List<HerdAnimal>, rams: List<HerdAnimal>, o
 }
 
 @Composable
-private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scheduledScanDate: String, onDismiss: () -> Unit, onSave: (String, Int, Int, String, String) -> Unit) {
+private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scheduledScanDate: String, removalDate: String, onDismiss: () -> Unit, onSave: (String, Int, Int, String, String) -> Unit) {
     var result by rememberSaveable { mutableStateOf("") }
     var actualScanDate by rememberSaveable { mutableStateOf(scheduledScanDate) }
     var days by rememberSaveable { mutableStateOf("60") }
@@ -423,9 +423,13 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scheduledScanDate:
         confirmButton = {
             TextButton(onClick = {
                 val age = days.toIntOrNull() ?: 0
+                val parsedScanDate = runCatching { LocalDate.parse(actualScanDate) }.getOrNull()
+                val minimumScanDate = runCatching { LocalDate.parse(removalDate).plusDays(40) }.getOrNull()
+                val validActualScanDate = parsedScanDate != null && !parsedScanDate.isAfter(LocalDate.now()) && minimumScanDate != null && !parsedScanDate.isBefore(minimumScanDate)
                 val validRepeat = result != "غير حاسم" || runCatching { LocalDate.parse(repeat).isAfter(LocalDate.parse(actualScanDate)) }.getOrDefault(false)
                 validationMessage = when {
                     result.isBlank() -> "اختر نتيجة السونار أولاً."
+                    !validActualScanDate -> "تاريخ السونار الفعلي يجب أن يكون بعد 40 يوماً على الأقل من إخراج الكبش وألا يكون في المستقبل."
                     result == "حامل" && age !in 1..145 -> "أدخل عمر حمل صحيحاً بين يوم و145 يوماً."
                     result == "غير حاسم" && !validRepeat -> "اختر موعد إعادة فحص بعد تاريخ السونار."
                     else -> null
