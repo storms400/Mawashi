@@ -98,7 +98,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
             items(ewes, key = { it.id }) { ewe ->
                 Surface(color = Color.White, shape = RoundedCornerShape(15.dp)) {
                     Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                        EweLogo(42)
+                        EwePhoto(42)
                         Spacer(Modifier.width(9.dp))
                         Column(Modifier.weight(1f)) {
                             Text("النعجة رقم " + ewe.tag, color = SeasonForest, fontWeight = FontWeight.Bold, fontSize = 13.sp)
