@@ -1,11 +1,10 @@
 package dz.mawashi.app
 
-import kotlin.math.max
 import kotlin.math.pow
 
 internal enum class FeedKind(val label:String, val dryMatter:Double, val meMjPerKgDm:Double, val crudeProteinPercent:Double, val roughage:Boolean=false) {
     BARLEY("الشعير المجروش",0.89,12.5,11.5),
-    BRAN("النخالة (القمح المطحون)",0.89,10.5,16.0),
+    BRAN("نخالة القمح",0.89,10.5,16.0),
     MAIZE("الذرة الصفراء",0.89,13.5,9.0),
     WHEAT("القمح",0.89,13.0,12.0),
     SOY("كسبة الصويا",0.89,12.0,44.0),
@@ -27,64 +26,90 @@ internal data class FeedAnimalInput(
 
 internal fun feedInputsForAnimals(animals:List<HerdAnimal>):List<FeedAnimalInput> =
     activeHerdAnimals(animals).mapNotNull { animal ->
-        val weight=animal.weightKg?.takeIf { it>0.0 } ?: return@mapNotNull null
+        val weight=animal.weightKg?.takeIf { it.isFinite() && it>0.0 } ?: return@mapNotNull null
         FeedAnimalInput(animal.tag,weight,animal.productionState,animal.pregnancyStage,animal.fetusCount,animal.nursingLambs,animal.ageMonths)
     }
+
 internal data class DailyNeed(
-    val dryMatterKg:Double, val meMj:Double, val crudeProteinKg:Double,
-    val pastureShare:Double, val supplementDryMatterKg:Double
+    val dryMatterKg:Double,
+    val meMj:Double,
+    val crudeProteinKg:Double,
+    val pastureShare:Double,
+    val supplementDryMatterKg:Double,
+    val pastureDryMatterKg:Double=0.0,
+    val pastureEnergyMj:Double=0.0,
+    val pastureCrudeProteinKg:Double=0.0,
+    val supplementEnergyMj:Double=0.0,
+    val supplementCrudeProteinKg:Double=0.0,
+    val referenceNote:String="تقدير مرجعي يحتاج معايرة محلية"
 )
 
+internal data class PastureProfile(
+    val dryMatterShare:Double,
+    val meMjPerKgDm:Double,
+    val crudeProteinFraction:Double,
+    val referenceNote:String
+)
+
+/**
+ * Pasture quality bands are working estimates only. A pasture label (weak/medium/good)
+ * cannot replace measuring actual intake, botanical composition or laboratory analysis.
+ */
+internal object PastureNutrition {
+    fun profile(level:String):PastureProfile = when(level) {
+        "ضعيف" -> PastureProfile(0.20,7.0,0.06,"مرعى ضعيف: قيمة تقديرية غير محللة")
+        "جيد" -> PastureProfile(0.60,10.0,0.16,"مرعى جيد: قيمة تقديرية غير محللة")
+        else -> PastureProfile(0.40,8.5,0.10,"مرعى متوسط: قيمة تقديرية غير محللة")
+    }
+}
+
+/**
+ * Mature-ewe baseline adapted from OSU Extension tables adapted from NRC (1985).
+ * The 110-lb reference row is scaled by live weight. TDN is converted approximately
+ * to ME (TDN kg x 15.13 MJ). Ram and lamb factors remain estimates pending local calibration.
+ */
 internal object SheepNutrition {
-    fun pastureShare(level:String):Double = when(level) {
-        "ضعيف" -> 0.20
-        "متوسط" -> 0.40
-        "جيد" -> 0.60
-        else -> 0.40
+    private data class Stage(val dmiFraction:Double,val tdnFraction:Double,val cpFraction:Double)
+    private fun stage(a:FeedAnimalInput):Stage {
+        val twin=a.fetusCount>=2
+        val nursingTwins=a.nursingLambs>=2
+        return when {
+            a.state=="نعجة مرضعة" && nursingTwins -> Stage(0.0482,0.6415,0.1623)
+            a.state=="نعجة مرضعة" -> Stage(0.0418,0.6522,0.1457)
+            a.state=="نعجة حامل" && a.pregnancyStage=="الأربعة أسابيع الأخيرة" && twin -> Stage(0.0336,0.6486,0.1162)
+            a.state=="نعجة حامل" && a.pregnancyStage=="الأربعة أسابيع الأخيرة" -> Stage(0.0318,0.6000,0.1086)
+            a.state=="نعجة حامل" && a.pregnancyStage=="منتصف الحمل" -> Stage(0.0236,0.5769,0.0962)
+            a.state=="نعجة حامل" -> Stage(0.0236,0.5769,0.0962)
+            a.state=="كبش" -> Stage(0.0230,0.5750,0.1050)
+            a.state=="حمل يرضع" -> Stage(0.0180,0.6500,0.1600)
+            a.state=="خروف" -> if(a.ageMonths<6) Stage(0.0400,0.7240,0.1450) else Stage(0.0320,0.7000,0.1200)
+            else -> Stage(0.0200,0.5455,0.0955)
+        }
     }
 
-    fun calculate(a:FeedAnimalInput, pastureLevel:String):DailyNeed {
+    fun calculate(a:FeedAnimalInput,pastureLevel:String):DailyNeed {
         val w=a.weightKg.coerceIn(2.0,180.0)
-        val pregnant=a.state=="نعجة حامل"
-        val lactating=a.state=="نعجة مرضعة"
-        val dry=a.state=="نعجة جافة"
-        val ram=a.state=="كبش"
-        val suckling=a.state=="حمل يرضع"
-        val lamb=a.state=="خروف"
-        val twin= a.fetusCount>=2
-        val nursingTwins=a.nursingLambs>=2
-
-        val dmiPct=when {
-            lactating -> if(nursingTwins) 0.032 else 0.028
-            pregnant && a.pregnancyStage=="الأربعة أسابيع الأخيرة" -> if(twin) 0.027 else 0.024
-            pregnant && a.pregnancyStage=="منتصف الحمل" -> 0.022
-            pregnant -> 0.020
-            suckling -> 0.018
-            lamb -> if(a.ageMonths<6) 0.035 else 0.030
-            ram -> 0.020
-            dry -> 0.020
-            else -> 0.020
-        }
-        val dmi=w*dmiPct
-        val maintenanceMe=0.42*w.pow(0.75)*1.15 // grazing activity allowance
-        val meFactor=when {
-            lactating -> if(nursingTwins) 2.05 else 1.75
-            pregnant && a.pregnancyStage=="الأربعة أسابيع الأخيرة" -> if(twin) 1.65 else 1.40
-            pregnant && a.pregnancyStage=="منتصف الحمل" -> 1.15
-            pregnant -> 1.05
-            ram -> 1.15
-            lamb || suckling -> 1.45
-            else -> 1.0
-        }
-        val cpPercent=when {
-            lactating -> if(nursingTwins) 0.16 else 0.14
-            pregnant && a.pregnancyStage=="الأربعة أسابيع الأخيرة" -> if(twin) 0.13 else 0.11
-            pregnant -> 0.10
-            lamb || suckling -> 0.16
-            else -> 0.08
-        }
-        val pasture=pastureShare(pastureLevel)
-        return DailyNeed(dmi,maintenanceMe*meFactor,dmi*cpPercent,pasture,dmi*(1.0-pasture))
+        val s=stage(a)
+        val dmi=w*s.dmiFraction
+        val energy=dmi*s.tdnFraction*15.13
+        val protein=dmi*s.cpFraction
+        val p=PastureNutrition.profile(pastureLevel)
+        val pastureDm=dmi*p.dryMatterShare
+        val pastureEnergy=pastureDm*p.meMjPerKgDm
+        val pastureProtein=pastureDm*p.crudeProteinFraction
+        return DailyNeed(
+            dryMatterKg=dmi,
+            meMj=energy,
+            crudeProteinKg=protein,
+            pastureShare=p.dryMatterShare,
+            supplementDryMatterKg=(dmi-pastureDm).coerceAtLeast(0.0),
+            pastureDryMatterKg=pastureDm,
+            pastureEnergyMj=pastureEnergy,
+            pastureCrudeProteinKg=pastureProtein,
+            supplementEnergyMj=(energy-pastureEnergy).coerceAtLeast(0.0),
+            supplementCrudeProteinKg=(protein-pastureProtein).coerceAtLeast(0.0),
+            referenceNote="احتياجات مرجعية مستمدة من جداول OSU/NRC مع تقدير للمرعى؛ ليست تحليلاً مخبرياً"
+        )
     }
 }
 
