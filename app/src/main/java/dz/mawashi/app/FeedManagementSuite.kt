@@ -513,7 +513,7 @@ private fun FsMoveCard(m: FsMove) {
     Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, FS_LINE)) {
         Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row { Text(m.kind.label, Modifier.weight(1f), color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 10.sp); Text(m.type, color = FS_GREEN, fontSize = 9.sp) }
-            Text(m.date + " • " + String.format(Locale.US, "%.2f", m.quantity) + if (m.kind == FeedKind.MINERALS) " وحدة" else " كغ", color = FS_MUTED, fontSize = 9.sp)
+            Text(m.date + " • " + String.format(Locale.US, "%.2f", m.quantity) + if (m.kind.isMineral) " قطعة" else " كغ", color = FS_MUTED, fontSize = 9.sp)
             Text("قبل: " + String.format(Locale.US, "%.2f", m.before) + " • بعد: " + String.format(Locale.US, "%.2f", m.after), color = FS_MUTED, fontSize = 9.sp)
             if (m.invoice.isNotBlank()) Text("فاتورة: " + m.invoice, color = FS_GREEN, fontSize = 9.sp)
             if (m.note.isNotBlank()) Text(m.note, color = FS_MUTED, fontSize = 9.sp)
