@@ -11,12 +11,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -35,7 +40,6 @@ internal fun MawashiDatePickerField(
     onDateSelected: (String) -> Unit,
     label: String,
     modifier: Modifier = Modifier,
-    allowClear: Boolean = false
 ) {
     var showPicker by remember { mutableStateOf(false) }
     val parsedDate = remember(value) { runCatching { LocalDate.parse(value) }.getOrNull() }
@@ -57,10 +61,13 @@ internal fun MawashiDatePickerField(
     )
 
     if (showPicker) {
+        val baseConfiguration = LocalConfiguration.current
+        val arabicConfiguration = remember(baseConfiguration) { Configuration(baseConfiguration).apply { setLocale(Locale("ar", "DZ")) } }
         val initialMillis = remember(value) { mawashiDateMillis(value) }
         val pickerState = rememberDatePickerState(
             initialSelectedDateMillis = initialMillis ?: LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         )
+        CompositionLocalProvider(LocalConfiguration provides arabicConfiguration, LocalLayoutDirection provides LayoutDirection.Rtl) {
         DatePickerDialog(
             onDismissRequest = { showPicker = false },
             confirmButton = {
@@ -76,6 +83,7 @@ internal fun MawashiDatePickerField(
             }
         ) {
             DatePicker(state = pickerState, showModeToggle = false)
+        }
         }
     }
 }
