@@ -1,6 +1,17 @@
 package dz.mawashi.app
 
 import android.content.Context
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import android.print.PageRange
+import android.print.PrintAttributes
+import android.print.PrintDocumentAdapter
+import android.print.PrintDocumentInfo
+import android.print.PrintManager
+import android.os.CancellationSignal
+import android.os.ParcelFileDescriptor
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +39,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Locale
 import java.util.UUID
+import java.io.FileOutputStream
 
 private const val FS_PREFS = "mawashi_feed_suite_v41"
 private const val FS_INVOICES = "purchase_invoices"
@@ -130,7 +142,7 @@ private fun fsReverse(c: Context, m: FsMove): String {
     return "تم تسجيل تصحيح عكسي مع الاحتفاظ بالحركة الأصلية"
 }
 
-private enum class FsPage(val title: String) { STOCK("المخزون"), PURCHASE("إضافة مخزون"), CONSUME("الاستهلاك"), CALC("الحاسبة"), LEDGER("السجل") }
+private enum class FsPage(val title: String) { STOCK("المخزون"), PURCHASE("إضافة مخزون"), INVOICES("الفواتير"), CONSUME("الاستهلاك"), CALC("الحاسبة"), LEDGER("السجل") }
 
 @Composable
 fun FeedManagementSuiteScreen(modifier: Modifier = Modifier) {
@@ -168,6 +180,7 @@ fun FeedManagementSuiteScreen(modifier: Modifier = Modifier) {
         when (page) {
             FsPage.STOCK -> FsStock(c, stock, moves, herd.size, { page = it })
             FsPage.PURCHASE -> FsPurchase(c) { message = it; revision++; page = FsPage.STOCK }
+            FsPage.INVOICES -> FsInvoiceArchive(c, invoices)
             FsPage.CONSUME -> FsConsume(c, herd, stock) { message = it; revision++ }
             FsPage.CALC -> FsCalculator(stock, { page = it })
             FsPage.LEDGER -> FsLedger(c, moves) { message = it; revision++ }
@@ -243,7 +256,7 @@ private fun FsPurchase(c: Context, saved: (String) -> Unit) {
             val q = qty.replace(',', '.').toDoubleOrNull(); val p = price.replace(',', '.').toDoubleOrNull()
             if (q != null && q > 0 && p != null && p >= 0) { lines.add(FsLine(kind, q, p)); qty = ""; price = "" }
         }, Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Add, null); Text("إضافة بند") } }
-        item { Text("بنود الفاتورة: " + lines.size, color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        item { Row(verticalAlignment = Alignment.CenterVertically) { Text("بنود الفاتورة: " + lines.size, color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 12.sp); Spacer(Modifier.weight(1f)); TextButton(onClick = { saved("افتح تبويب الفواتير لمراجعة الأرشيف وحفظ PDF.") }) { Text("الأرشيف", fontSize = 9.sp) } } }
         items(lines.toList()) { l -> Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, FS_LINE)) {
             Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { Text(l.kind.label, color = FS_INK, fontSize = 10.sp, fontWeight = FontWeight.Bold); Text(l.quantity.toString() + " × " + l.unitPrice + " دج", color = FS_MUTED, fontSize = 9.sp) }
@@ -305,14 +318,14 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
         item { OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), label = { Text("ملاحظات / المجموعة") }) }
         item { Button(onClick = {
             runCatching {
-                val values = suggested.associate { u -> u.kind to (amounts[u.kind] ?: String.format(Locale.US, "%.3f", u.asFedKg)).replace(',', '.').toDouble() }
+                val values = suggested.associate { u -> u.kind to (amounts[u.kind] ?: String.format(Locale.US, "%.3f", u.asFedKg)).replace(',', '.').toDouble() } + FeedKind.values().filter { k -> suggested.none { it.kind == k } }.associate { k -> k to (amounts[k] ?: "0").replace(',', '.').toDouble() }
                 val result = fsConsume(c, values, note.ifBlank { "استهلاك " + selected.size + " حيوان" })
                 val pastureKg = needs.sumOf { it.dryMatterKg * it.pastureShare }
                 fsPasture(c, pastureKg, selected.size.toString() + " حيوان")
                 saved(result + ". مساهمة المرعى المقدرة " + String.format(Locale.US, "%.2f كغ", pastureKg) + " سجلت منفصلة دون خصم.")
             }.onFailure { android.widget.Toast.makeText(c, it.message ?: "تعذر التسجيل", android.widget.Toast.LENGTH_LONG).show() }
         }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = FS_GREEN)) { Text("تأكيد الاستهلاك والخصم") } }
-        item { Text("لا يتم الخصم إلا بعد التأكيد، ويُرفض التسجيل إذا تجاوزت الكمية الرصيد المتاح. راجع العليقة مع مختص تغذية.", color = FS_MUTED, fontSize = 9.sp) }
+        item { Text("يمكن إضافة كمية يدوية لأي صنف آخر، بما في ذلك الأملاح المعدنية. لا يتم الخصم إلا بعد التأكيد، ويُرفض التسجيل إذا تجاوزت الكمية الرصيد المتاح.", color = FS_MUTED, fontSize = 9.sp) }
     }
 }
 
@@ -392,5 +405,77 @@ private fun FsMoveCard(m: FsMove) {
             if (m.invoice.isNotBlank()) Text("فاتورة: " + m.invoice, color = FS_GREEN, fontSize = 9.sp)
             if (m.note.isNotBlank()) Text(m.note, color = FS_MUTED, fontSize = 9.sp)
         }
+    }
+}
+
+
+@Composable
+private fun FsInvoiceArchive(c: Context, invoices: List<FsInvoice>) {
+    var selected by remember { mutableStateOf<FsInvoice?>(null) }
+    val savePdf = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        val invoice = selected
+        if (uri != null && invoice != null) runCatching {
+            val output = c.contentResolver.openOutputStream(uri) ?: error("تعذر إنشاء ملف PDF")
+            val pdf = PdfDocument()
+            val page = pdf.startPage(PdfDocument.PageInfo.Builder(595, 842, 1).create())
+            val canvas = page.canvas
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 18f; color = android.graphics.Color.rgb(39, 51, 42); textAlign = Paint.Align.RIGHT }
+            var y = 55f
+            paint.textSize = 25f; paint.isFakeBoldText = true; paint.color = android.graphics.Color.rgb(82, 107, 85)
+            canvas.drawText("MAWASHI | مواشي", 545f, y, paint); y += 42f
+            paint.textSize = 20f; canvas.drawText("فاتورة شراء أعلاف", 545f, y, paint); y += 38f
+            paint.textSize = 13f; paint.isFakeBoldText = false; paint.color = android.graphics.Color.BLACK
+            listOf("رقم الفاتورة: " + invoice.id, "التاريخ: " + invoice.date,
+                "المورد: " + invoice.supplier.ifBlank { "غير محدد" }).forEach { canvas.drawText(it, 545f, y, paint); y += 25f }
+            y += 12f
+            paint.isFakeBoldText = true
+            canvas.drawText("الصنف", 545f, y, paint); canvas.drawText("الكمية", 390f, y, paint)
+            canvas.drawText("سعر الوحدة", 250f, y, paint); canvas.drawText("الإجمالي", 100f, y, paint); y += 22f
+            paint.isFakeBoldText = false
+            invoice.lines.forEach { line ->
+                canvas.drawText(line.kind.label, 545f, y, paint)
+                canvas.drawText(String.format(Locale.US, "%.2f", line.quantity), 390f, y, paint)
+                canvas.drawText(String.format(Locale.US, "%.0f دج", line.unitPrice), 250f, y, paint)
+                canvas.drawText(String.format(Locale.US, "%.0f دج", line.total), 100f, y, paint)
+                y += 23f
+            }
+            y += 18f; paint.isFakeBoldText = true
+            canvas.drawText("الإجمالي: " + String.format(Locale.US, "%.0f دج", invoice.total), 545f, y, paint); y += 26f
+            paint.isFakeBoldText = false
+            canvas.drawText("المدفوع: " + String.format(Locale.US, "%.0f دج", invoice.paid), 545f, y, paint); y += 24f
+            canvas.drawText("المتبقي: " + String.format(Locale.US, "%.0f دج", (invoice.total - invoice.paid).coerceAtLeast(0.0)), 545f, y, paint); y += 28f
+            if (invoice.notes.isNotBlank()) canvas.drawText("ملاحظات: " + invoice.notes.take(65), 545f, y, paint)
+            pdf.finishPage(page)
+            output.use { pdf.writeTo(it) }
+            pdf.close()
+            android.widget.Toast.makeText(c, "تم حفظ الفاتورة بصيغة PDF", android.widget.Toast.LENGTH_LONG).show()
+        }.onFailure { android.widget.Toast.makeText(c, it.message ?: "تعذر إنشاء PDF", android.widget.Toast.LENGTH_LONG).show() }
+    }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { Text("أرشيف فواتير العلف", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
+        items(invoices, key = { it.id }) { invoice ->
+            Surface(color = Color.White, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(invoice.id, Modifier.weight(1f), color = FS_GREEN, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        Text(invoice.date, color = FS_MUTED, fontSize = 9.sp)
+                    }
+                    Text("المورد: " + invoice.supplier.ifBlank { "غير محدد" }, color = FS_INK, fontSize = 10.sp)
+                    Text(invoice.lines.joinToString("، ") { it.kind.label }, color = FS_MUTED, fontSize = 9.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("الإجمالي " + String.format(Locale.US, "%.0f دج", invoice.total), color = FS_GREEN, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text("مدفوع " + String.format(Locale.US, "%.0f", invoice.paid) + " • متبقٍ " +
+                                String.format(Locale.US, "%.0f دج", (invoice.total - invoice.paid).coerceAtLeast(0.0)),
+                                color = FS_MUTED, fontSize = 9.sp)
+                        }
+                        TextButton(onClick = { selected = invoice; savePdf.launch(invoice.id + ".pdf") }) {
+                            Icon(Icons.Outlined.PictureAsPdf, null); Text("حفظ PDF", fontSize = 9.sp)
+                        }
+                    }
+                }
+            }
+        }
+        if (invoices.isEmpty()) item { Text("لا توجد فواتير محفوظة بعد.", color = FS_MUTED, fontSize = 10.sp) }
     }
 }
