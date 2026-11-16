@@ -218,8 +218,8 @@ fun FinanceScreen(modifier:Modifier=Modifier){
     Box{OutlinedButton(onClick={open=true},modifier=Modifier.fillMaxWidth()){Text(item);Spacer(Modifier.weight(1f));Icon(Icons.Outlined.ExpandMore,null)};DropdownMenu(open,{open=false}){options.forEach{o->DropdownMenuItem(text={Text(o)},onClick={item=o;open=false})}}}
     OutlinedTextField(qty,{qty=it.filter{ch->ch in "0123456789.,"}},label={Text(if(type==PurchaseType.ANIMAL)"عدد الرؤوس" else "الكمية")},keyboardOptions=KeyboardOptions(keyboardType=if(type==PurchaseType.ANIMAL)KeyboardType.Number else KeyboardType.Decimal),modifier=Modifier.fillMaxWidth(),singleLine=true)
     OutlinedTextField(price,{price=it.filter{ch->ch in "0123456789.,"}},label={Text("سعر الوحدة بالدينار الجزائري")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth(),singleLine=true)
-    if(type==PurchaseType.ANIMAL){Divider(color=FinLine);Text("بيانات الحيوان",fontWeight=FontWeight.Bold,color=FinInk);OutlinedTextField(weight,{weight=it},label={Text("الوزن بالكيلوغرام")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth());if(item=="حمل/رخلة"){OutlinedTextField(birthDate,{birthDate=it},label={Text("تاريخ الميلاد YYYY-MM-DD")},modifier=Modifier.fillMaxWidth());OutlinedTextField(birthWeight,{birthWeight=it},label={Text("وزن الميلاد لكل حمل بالكيلوغرام")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())}else OutlinedTextField(age,{age=it},label={Text("العمر بالأشهر")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth());Text("الحالة الصحية",fontSize=11.sp,color=FinMuted);Row{listOf("جيدة","متوسطة","تحتاج متابعة").forEach{FilterChip(health==it,{health=it},label={Text(it,fontSize=9.sp)})}};Text("الحالة الإنتاجية",fontSize=11.sp,color=FinMuted);Column{listOf("نعجة جافة","نعجة حامل","نعجة مرضعة","كبش","خروف").forEach{FilterChip(state==it,{state=it},label={Text(it,fontSize=10.sp)})}}}
-    if(type==PurchaseType.MEDICINE){Divider(color=FinLine);Text("بيانات الدواء",fontWeight=FontWeight.Bold,color=FinInk);OutlinedTextField(batch,{batch=it},label={Text("رقم التشغيلة")},modifier=Modifier.fillMaxWidth());OutlinedTextField(expiry,{expiry=it},label={Text("تاريخ الصلاحية YYYY-MM-DD")},modifier=Modifier.fillMaxWidth())}
+    if(type==PurchaseType.ANIMAL){Divider(color=FinLine);Text("بيانات الحيوان",fontWeight=FontWeight.Bold,color=FinInk);OutlinedTextField(weight,{weight=it},label={Text("الوزن بالكيلوغرام")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth());if(item=="حمل/رخلة"){MawashiDatePickerField(birthDate,{birthDate=it},"تاريخ الميلاد",Modifier.fillMaxWidth());OutlinedTextField(birthWeight,{birthWeight=it},label={Text("وزن الميلاد لكل حمل بالكيلوغرام")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())}else OutlinedTextField(age,{age=it},label={Text("العمر بالأشهر")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth());Text("الحالة الصحية",fontSize=11.sp,color=FinMuted);Row{listOf("جيدة","متوسطة","تحتاج متابعة").forEach{FilterChip(health==it,{health=it},label={Text(it,fontSize=9.sp)})}};Text("الحالة الإنتاجية",fontSize=11.sp,color=FinMuted);Column{listOf("نعجة جافة","نعجة حامل","نعجة مرضعة","كبش","خروف").forEach{FilterChip(state==it,{state=it},label={Text(it,fontSize=10.sp)})}}}
+    if(type==PurchaseType.MEDICINE){Divider(color=FinLine);Text("بيانات الدواء",fontWeight=FontWeight.Bold,color=FinInk);OutlinedTextField(batch,{batch=it},label={Text("رقم التشغيلة")},modifier=Modifier.fillMaxWidth());MawashiDatePickerField(expiry,{expiry=it},"تاريخ الصلاحية",Modifier.fillMaxWidth())}
    }}}
    item{val q=qty.replace(',','.').toDoubleOrNull()?:0.0;val p=price.replace(',','.').toDoubleOrNull()?:0.0;Surface(color=Color(0xFFEAF1E9),shape=RoundedCornerShape(16.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("إجمالي السلة",fontSize=11.sp,color=FinMuted);Text(dinar(q*p),fontSize=22.sp,fontWeight=FontWeight.ExtraBold,color=FinGreen)};Icon(Icons.Outlined.ReceiptLong,null,tint=FinGreen,modifier=Modifier.size(28.dp))}}}
    if(error.isNotBlank())item{Text(error,color=Color(0xFFB54D42),fontSize=11.sp)}
@@ -378,8 +378,8 @@ private fun medicineInfo(name:String,group:String):MedicineInfo{
 
 private const val HERD_CARE_PREFS="mawashi_herd_care_v27"
 private const val HERD_CARE_KEY="scheduled_care"
-private data class HerdCareReminder(val id:String,val tag:String,val kind:String,val title:String,val date:String,val notes:String,val completed:Boolean=false)
-private fun readHerdCare(c:Context):List<HerdCareReminder>{
+internal data class HerdCareReminder(val id:String,val tag:String,val kind:String,val title:String,val date:String,val notes:String,val completed:Boolean=false)
+internal fun readHerdCare(c:Context):List<HerdCareReminder>{
  val a=JSONArray(c.getSharedPreferences(HERD_CARE_PREFS,0).getString(HERD_CARE_KEY,"[]")?:"[]")
  return (0 until a.length()).mapNotNull{i->runCatching{val x=a.getJSONObject(i);HerdCareReminder(x.optString("id"),x.optString("tag"),x.optString("kind"),x.optString("title"),x.optString("date"),x.optString("notes"),x.optBoolean("completed"))}.getOrNull()}
 }
@@ -388,10 +388,7 @@ private fun saveHerdCare(c:Context,list:List<HerdCareReminder>){
  check(c.getSharedPreferences(HERD_CARE_PREFS,0).edit().putString(HERD_CARE_KEY,a.toString()).commit())
  HerdCareNotifications.scheduleAll(c, list.map { HerdCareNotificationData(it.id,it.tag,it.title,it.date,it.completed) })
 }
-private fun herdAgeLabel(a:HerdAnimal):String{
- val months=runCatching{if(a.birthDate.isNotBlank())ChronoUnit.MONTHS.between(LocalDate.parse(a.birthDate),LocalDate.now()).toInt().coerceAtLeast(0) else a.ageMonths}.getOrDefault(a.ageMonths)
- return if(months<1)"أقل من شهر" else if(months<12)"$months شهر" else "\${months/12} سنة و \${months%12} شهر"
-}
+private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
 @Composable private fun HerdHealthMonitor(onBack:()->Unit){
  val context=LocalContext.current
  val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (!granted) Toast.makeText(context, "يمكنك تفعيل الإشعارات من إعدادات الهاتف لتصلك مواعيد المتابعة", Toast.LENGTH_LONG).show() }
@@ -515,7 +512,7 @@ private fun herdAgeLabel(a:HerdAnimal):String{
      FilterChip(selected=kind=="وزن",onClick={kind="وزن"},label={Text("وزن")})
     }
     OutlinedTextField(title,{title=it},label={Text("اسم التطعيم أو المتابعة")},singleLine=true)
-    OutlinedTextField(date,{date=it},label={Text("التاريخ YYYY-MM-DD")},singleLine=true)
+    MawashiDatePickerField(date,{date=it},"تاريخ المتابعة",Modifier.fillMaxWidth())
     OutlinedTextField(notes,{notes=it},label={Text("ملاحظات الطبيب / التشغيلة / الجرعة الموصوفة")},minLines=2)
    }
   },confirmButton={TextButton(onClick={
