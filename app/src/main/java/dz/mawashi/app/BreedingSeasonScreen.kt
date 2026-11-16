@@ -282,7 +282,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
         }
     }
     if (selectedTag != null && active != null) {
-        ScanOutcomeDialog(selectedTag!!, active.repeatScan[selectedTag!!].orEmpty(), onDismiss = { selectedTag = null }) { outcome, days, fetusCount, repeat ->
+        ScanOutcomeDialog(selectedTag!!, active.repeatScan[selectedTag!!].orEmpty(), active.scan, onDismiss = { selectedTag = null }) { outcome, days, fetusCount, repeat ->
             val updated = active.copy(
                 results = active.results + (selectedTag!! to outcome),
                 gestation = if (outcome == "حامل" && days > 0) active.gestation + (selectedTag!! to days) else active.gestation - selectedTag!!,
@@ -293,7 +293,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                 context, selectedTag!!, outcome, active.scan, days, fetusCount, repeat
             )
             save(seasons.dropLast(1) + updated)
-            if (!profileSaved && outcome != "غير حاسم") {
+            if (!profileSaved) {
                 android.widget.Toast.makeText(context, "حُفظت نتيجة الموسم لكن تعذر تحديث ملف النعجة في القطيع", android.widget.Toast.LENGTH_LONG).show()
             }
             selectedTag = null
@@ -383,7 +383,7 @@ private fun CreateSeasonDialog(ewes: List<HerdAnimal>, rams: List<HerdAnimal>, o
 }
 
 @Composable
-private fun ScanOutcomeDialog(tag: String, oldRepeat: String, onDismiss: () -> Unit, onSave: (String, Int, Int, String) -> Unit) {
+private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scanDate: String, onDismiss: () -> Unit, onSave: (String, Int, Int, String) -> Unit) {
     var result by rememberSaveable { mutableStateOf("") }
     var days by rememberSaveable { mutableStateOf("60") }
     var fetus by rememberSaveable { mutableStateOf("1") }
@@ -417,7 +417,7 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, onDismiss: () -> U
             TextButton(onClick = {
                 val age = days.toIntOrNull() ?: 0
                 val valid = result.isNotBlank() && (result != "حامل" || age in 1..145)
-                val validRepeat = result != "غير حاسم" || runCatching { LocalDate.parse(repeat); true }.getOrDefault(false)
+                val validRepeat = result != "غير حاسم" || runCatching { LocalDate.parse(repeat).isAfter(LocalDate.parse(scanDate)) }.getOrDefault(false)
                 if (valid && validRepeat) onSave(result, age, fetus.toIntOrNull() ?: 1, repeat)
             }) { Text("حفظ النتيجة", color = SeasonForest) }
         },
