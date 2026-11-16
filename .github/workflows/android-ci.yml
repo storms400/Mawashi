@@ -91,7 +91,7 @@ jobs:
           test -s "$APK"
           "$APKSIGNER" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v41'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='40' versionName='1.0.41-test3'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='41' versionName='1.0.41-test3'"
 
       - name: Upload independently installable APK
         uses: actions/upload-artifact@v4
