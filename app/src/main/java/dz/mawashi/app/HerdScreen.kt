@@ -140,12 +140,13 @@ internal fun savePregnancyScanToHerd(
   "غير حاسم" -> repeatScanDate
   else -> ""
  }
- if(reminderDate.isNotBlank() && runCatching{LocalDate.parse(reminderDate);true}.getOrDefault(false)) {
+ val reminderSaved = if(reminderDate.isNotBlank() && runCatching{LocalDate.parse(reminderDate);true}.getOrDefault(false)) {
   val note = if(outcome=="حامل") "موعد تقديري محسوب من السونار؛ راقب النعجة واستعد للولادة." else "نتيجة السونار غير حاسمة؛ أعد الفحص في هذا الموعد."
-  if(runCatching { saveHerdCare(c, retained + HerdCareReminder(UUID.randomUUID().toString(), updated.tag, "متابعة", reminderTitle, reminderDate, note, false)) }.isFailure) return false
+  runCatching { saveHerdCare(c, retained + HerdCareReminder(UUID.randomUUID().toString(), updated.tag, "متابعة", reminderTitle, reminderDate, note, false)) }.isSuccess
  } else {
-  if(runCatching { saveHerdCare(c, retained) }.isFailure) return false
+  runCatching { saveHerdCare(c, retained) }.isSuccess
  }
+ if(!reminderSaved) android.widget.Toast.makeText(c, "تم حفظ بيانات النعجة لكن تعذرت جدولة التنبيه.", android.widget.Toast.LENGTH_LONG).show()
  true
 }
 
