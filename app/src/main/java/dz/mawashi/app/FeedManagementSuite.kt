@@ -142,6 +142,7 @@ private fun fsPasture(c: Context, kg: Double, group: String) {
 private fun fsReverse(c: Context, m: FsMove): String {
     require(m.type != "تصحيح عكسي") { "هذه حركة تصحيح" }
     val stock = loadFeedStocks(c).toMutableMap(); val before = stock[m.kind] ?: 0.0
+    require(m.type != "مساهمة المرعى") { "مساهمة المرعى لا تُعكس كحركة مخزون" }
     val after = if (m.type == "استهلاك") before + m.quantity else before - m.quantity
     require(after >= -1e-8) { "الرصيد الحالي لا يسمح بعكس هذه الحركة" }
     stock[m.kind] = after.coerceAtLeast(0.0); saveFeedStocks(c, stock)
@@ -177,7 +178,7 @@ fun FeedManagementSuiteScreen(modifier: Modifier = Modifier) {
             Column(Modifier.fillMaxWidth().padding(13.dp)) {
                 Text("إجمالي المخزون المتوفر", color = Color.White.copy(alpha = .85f), fontSize = 11.sp)
                 Text(String.format(Locale.US, "%.1f كغ / وحدة", stock.values.sum()), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-                Text("9 أصناف • " + herd.size + " حيواناً في القطيع • " + invoices.size + " فاتورة شراء",
+                Text("11 صنفاً • " + herd.size + " حيواناً في القطيع • " + invoices.size + " فاتورة شراء",
                     color = Color.White, fontSize = 10.sp)
             }
         }
@@ -398,47 +399,214 @@ private fun FsPurchase(c: Context, saved: (String) -> Unit) {
 
 @Composable
 private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, Double>, saved: (String) -> Unit) {
-    val selected = remember { mutableStateListOf<String>().apply { addAll(herd.map { it.tag }) } }
-    val amounts = remember { mutableStateMapOf<FeedKind, String>() }
-    var pasture by rememberSaveable { mutableStateOf("متوسط") }; var groupMode by rememberSaveable { mutableStateOf(false) }
+    val groups = listOf(
+        "النعاج الجافة" to "🐑", "النعاج الحوامل" to "🐑",
+        "النعاج المرضعة" to "🐑", "الكباش" to "🐏",
+        "الحملان" to "🐑", "القطيع المختلط" to "🐏🐑"
+    )
+    var group by rememberSaveable { mutableStateOf("القطيع المختلط") }
+    var pasture by rememberSaveable { mutableStateOf("متوسط") }
     var note by rememberSaveable { mutableStateOf("") }
-    val animals = herd.filter { it.tag in selected }; val needs = feedInputsForAnimals(animals).map { SheepNutrition.calculate(it, pasture) }
-    val ratios = mapOf(FeedKind.BARLEY to 40.0, FeedKind.BRAN to 20.0, FeedKind.ALFALFA to 25.0, FeedKind.STRAW to 10.0, FeedKind.SOY to 5.0)
-    val suggested = calculateSupplementUses(needs, ratios.map { (k, v) -> FeedStock(k, stock[k] ?: 0.0, v) })
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        item { Text("تسجيل الاستهلاك", color = FS_INK, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
-        item { Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("تسجيل سريع / كل القطيع", color = FS_INK, fontSize = 10.sp); Spacer(Modifier.weight(1f))
-            Switch(groupMode, { groupMode = it })
-            Text(selected.size.toString() + " من " + herd.size, color = FS_GREEN, fontSize = 10.sp)
-        } }
-        if (groupMode) items(herd, key = { it.id }) { animal ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(animal.tag in selected, { if (it) selected.add(animal.tag) else selected.remove(animal.tag) })
-                Text(animal.tag + " • " + animal.kind, color = FS_INK, fontSize = 10.sp)
+    var expandedTag by rememberSaveable { mutableStateOf("") }
+    val amounts = remember { mutableStateMapOf<FeedKind, String>() }
+    val groupAnimals = when (group) {
+        "النعاج الجافة" -> herd.filter { it.productionState == "نعجة جافة" }
+        "النعاج الحوامل" -> herd.filter { it.productionState == "نعجة حامل" }
+        "النعاج المرضعة" -> herd.filter { it.productionState == "نعجة مرضعة" }
+        "الكباش" -> herd.filter { it.productionState == "كبش" }
+        "الحملان" -> herd.filter { it.productionState == "حمل يرضع" || it.productionState == "خروف" }
+        else -> herd
+    }
+    val inputs = feedInputsForAnimals(groupAnimals)
+    val needsByAnimal = inputs.map { input -> input to SheepNutrition.calculate(input, pasture) }
+    val needs = needsByAnimal.map { it.second }
+    val ratios = linkedMapOf(
+        FeedKind.BARLEY to 40.0, FeedKind.BRAN to 20.0,
+        FeedKind.ALFALFA to 25.0, FeedKind.STRAW to 10.0, FeedKind.SOY to 5.0
+    )
+    val feedKinds = FeedKind.values().filter { it != FeedKind.MINERALS }
+    val suggested = calculateSupplementUses(
+        needs, ratios.map { (kind, share) -> FeedStock(kind, stock[kind] ?: 0.0, share) }
+    ).associateBy { it.kind }
+    val selectedIds = groupAnimals.map { it.id }
+    LaunchedEffect(group, pasture, selectedIds) {
+        amounts.clear()
+        feedKinds.forEach { kind ->
+            amounts[kind] = if (kind.isMineral) "0" else String.format(Locale.US, "%.3f", suggested[kind]?.asFedKg ?: 0.0)
+        }
+    }
+    val totalDryMatter = needs.sumOf { it.dryMatterKg }
+    val totalSupplement = needs.sumOf { it.supplementDryMatterKg }
+    val pastureKg = needs.sumOf { it.dryMatterKg * it.pastureShare }
+    val missingWeight = groupAnimals.size - inputs.size
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp, horizontal = 1.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        item {
+            Text("تسجيل الاستهلاك", color = FS_INK, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("خلطة كل رأس أولاً، ثم تجميع احتياجات الفئة", color = FS_MUTED, fontSize = 10.sp)
+        }
+        item {
+            Surface(color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("1. اختيار فئة القطيع", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    groups.chunked(2).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            row.forEach { pair ->
+                                FilterChip(selected = group == pair.first, onClick = { group = pair.first; expandedTag = "" },
+                                    label = { Text(pair.second + " " + pair.first, fontSize = 9.sp) }, modifier = Modifier.weight(1f))
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("الرؤوس في الفئة", color = FS_MUTED, fontSize = 10.sp)
+                        Text(groupAnimals.size.toString() + " رأس", color = FS_GREEN, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                    if (groupAnimals.isEmpty()) Text("لا توجد حيوانات مسجلة ضمن هذه الفئة حالياً.", color = Color(0xFF9A6720), fontSize = 10.sp)
+                }
             }
         }
-        item { Text("مساهمة المرعى", color = FS_INK, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-        item { Row { listOf("ضعيف", "متوسط", "جيد").forEach { v -> FilterChip(pasture == v, { pasture = v }, label = { Text(v, fontSize = 9.sp) }) } } }
-        item { Text("الكميات المقترحة من الحاسبة، ويمكن تعديلها", color = FS_INK, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-        items(suggested) { use ->
-            val value = amounts[use.kind] ?: String.format(Locale.US, "%.3f", use.asFedKg)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text(use.kind.label, color = FS_INK, fontSize = 10.sp); Text("متاح " + (stock[use.kind] ?: 0.0) + " كغ", color = FS_MUTED, fontSize = 9.sp) }
-                OutlinedTextField(value, { amounts[use.kind] = it }, Modifier.width(112.dp), label = { Text("كمية كغ", fontSize = 8.sp) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+        item {
+            Surface(color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("2. الخلطة الغذائية المحسوبة", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("يحسب النظام الاحتياج لكل حيوان له وزن مسجل، مع مراعاة حالته ومرحلة الحمل وعدد الأجنة أو الحملان.", color = FS_MUTED, fontSize = 10.sp, lineHeight = 15.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("الحيوانات المحسوبة", color = FS_MUTED, fontSize = 10.sp)
+                        Text(inputs.size.toString() + " من " + groupAnimals.size, color = FS_GREEN, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("المادة الجافة المطلوبة", color = FS_MUTED, fontSize = 10.sp)
+                        Text(String.format(Locale.US, "%.2f كغ/يوم", totalDryMatter), color = FS_INK, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("المكمل التقديري", color = FS_MUTED, fontSize = 10.sp)
+                        Text(String.format(Locale.US, "%.2f كغ مادة جافة/يوم", totalSupplement), color = FS_GREEN, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    if (missingWeight > 0) Text("تنبيه: " + missingWeight + " حيواناً لا يملك وزناً صالحاً؛ لن يدخل في الحساب حتى تسجيل وزنه.", color = Color(0xFF9A6720), fontSize = 10.sp)
+                }
             }
         }
-        item { OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), label = { Text("ملاحظات / المجموعة") }) }
-        item { Button(onClick = {
-            runCatching {
-                val values = suggested.associate { u -> u.kind to (amounts[u.kind] ?: String.format(Locale.US, "%.3f", u.asFedKg)).replace(',', '.').toDouble() } + FeedKind.values().filter { k -> suggested.none { it.kind == k } }.associate { k -> k to (amounts[k] ?: "0").replace(',', '.').toDouble() }
-                val result = fsConsume(c, values, note.ifBlank { "استهلاك " + selected.size + " حيوان" })
-                val pastureKg = needs.sumOf { it.dryMatterKg * it.pastureShare }
-                fsPasture(c, pastureKg, selected.size.toString() + " حيوان")
-                saved(result + ". مساهمة المرعى المقدرة " + String.format(Locale.US, "%.2f كغ", pastureKg) + " سجلت منفصلة دون خصم.")
-            }.onFailure { android.widget.Toast.makeText(c, it.message ?: "تعذر التسجيل", android.widget.Toast.LENGTH_LONG).show() }
-        }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = FS_GREEN)) { Text("تأكيد الاستهلاك والخصم") } }
-        item { Text("يمكن إضافة كمية يدوية لأي صنف آخر، بما في ذلك الأملاح المعدنية. لا يتم الخصم إلا بعد التأكيد، ويُرفض التسجيل إذا تجاوزت الكمية الرصيد المتاح.", color = FS_MUTED, fontSize = 9.sp) }
+        item {
+            Text("تفاصيل الخلطات الفردية", color = FS_INK, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text("افتح بطاقة الحيوان لمراجعة احتياجه وكمية كل مكوّن تقديرية.", color = FS_MUTED, fontSize = 9.sp)
+        }
+        items(needsByAnimal, key = { it.first.tag }) { pair ->
+            val input = pair.first
+            val need = pair.second
+            val expanded = expandedTag == input.tag
+            Surface(color = Color.White, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, FS_LINE),
+                modifier = Modifier.fillMaxWidth().clickable { expandedTag = if (expanded) "" else input.tag }) {
+                Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (input.state == "كبش") "🐏" else "🐑", fontSize = 22.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(input.tag, color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text(input.weightKg.toString() + " كغ • " + input.state, color = FS_MUTED, fontSize = 9.sp)
+                        }
+                        Text(if (expanded) "إخفاء" else "الخلطة", color = FS_GREEN, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text("المادة الجافة: " + String.format(Locale.US, "%.0f غ/يوم", need.dryMatterKg * 1000) +
+                        " • المكمل: " + String.format(Locale.US, "%.0f غ/يوم", need.supplementDryMatterKg * 1000), color = FS_GREEN, fontSize = 9.sp)
+                    if (expanded) {
+                        Divider(color = FS_LINE)
+                        Text("الطاقة التقديرية: " + String.format(Locale.US, "%.1f ميغاجول", need.meMj) +
+                            " • البروتين المستهدف: " + String.format(Locale.US, "%.0f غ", need.crudeProteinKg * 1000), color = FS_MUTED, fontSize = 9.sp)
+                        Text("مساهمة المرعى التقديرية: " + (need.pastureShare * 100).toInt() + "%", color = FS_MUTED, fontSize = 9.sp)
+                        calculateSupplementUses(listOf(need), ratios.map { (kind, share) ->
+                            FeedStock(kind, stock[kind] ?: 0.0, share)
+                        }).forEach { use ->
+                            val icon = when (use.kind) {
+                                FeedKind.BRAN, FeedKind.ALFALFA -> "🌿"
+                                FeedKind.SOY -> "🫘"
+                                FeedKind.MAIZE -> "🌽"
+                                else -> "🌾"
+                            }
+                            Text(icon + " " + use.kind.label + ": " +
+                                String.format(Locale.US, "%.0f غ/يوم", use.asFedKg * 1000), color = FS_GREEN, fontSize = 9.sp)
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Surface(color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("3. أصناف العلف وكميات الاستهلاك", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("الكميات المقترحة تُجمع من الحسابات الفردية، ويمكن تعديلها لتطابق ما قُدّم فعلياً.", color = FS_MUTED, fontSize = 9.sp)
+                    feedKinds.forEach { kind ->
+                        val icon = when (kind) {
+                            FeedKind.BARLEY, FeedKind.STRAW, FeedKind.WHEAT, FeedKind.OAT_HAY, FeedKind.OATS -> "🌾"
+                            FeedKind.BRAN, FeedKind.ALFALFA -> "🌿"
+                            FeedKind.MAIZE -> "🌽"
+                            FeedKind.SOY -> "🫘"
+                            FeedKind.MINERALS_YELLOW, FeedKind.MINERALS_RED -> "🧂"
+                            else -> "🌿"
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(icon, fontSize = 20.sp)
+                            Spacer(Modifier.width(7.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(kind.label, color = FS_INK, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                                Text("المتوفر: " + String.format(Locale.US, "%.2f", stock[kind] ?: 0.0) +
+                                    if (kind.isMineral) " قطعة" else " كغ", color = FS_MUTED, fontSize = 8.sp)
+                            }
+                            OutlinedTextField(value = amounts[kind] ?: "0",
+                                onValueChange = { value -> amounts[kind] = value.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' } },
+                                modifier = Modifier.width(112.dp),
+                                label = { Text(if (kind.isMineral) "قطعة" else "كمية كغ", fontSize = 8.sp) },
+                                singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                        }
+                        if (kind != feedKinds.last()) Divider(color = FS_LINE)
+                    }
+                }
+            }
+        }
+        item {
+            Surface(color = Color(0xFFEFF4EC), shape = RoundedCornerShape(15.dp)) {
+                Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("🌿 مساهمة المرعى", color = FS_GREEN, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("تُحتسب مساهمة المرعى ضمن احتياجات التغذية وتُسجل مستقلة؛ لا تُخصم من مخزون الفصة أو أي صنف.", color = FS_MUTED, fontSize = 9.sp, lineHeight = 14.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        listOf("ضعيف", "متوسط", "جيد").forEach { value ->
+                            FilterChip(pasture == value, { pasture = value }, label = { Text(value, fontSize = 9.sp) })
+                        }
+                    }
+                    Text("الكمية المقدرة من المرعى: " + String.format(Locale.US, "%.2f كغ مادة جافة/يوم", pastureKg),
+                        color = FS_GREEN, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        item { OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), label = { Text("ملاحظات العملية") }, minLines = 2) }
+        item {
+            Surface(color = Color(0xFFF7F2E8), shape = RoundedCornerShape(14.dp)) {
+                Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("4. مراجعة الاستهلاك", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("سيُخصم فقط ما أدخلته وأكدت تقديمه فعلياً. راجع الأرصدة قبل الحفظ.", color = FS_MUTED, fontSize = 9.sp)
+                    Text("الحساب الحالي تقديري وتوزيعي، وليس تركيبة متوازنة مثبتة مخبرياً. يجب التحقق من قيم الأعلاف والمرعى وحدود الحبوب والأملاح قبل اعتماد الخلطة غذائياً.",
+                        color = Color(0xFF81551A), fontSize = 9.sp, lineHeight = 14.sp)
+                }
+            }
+        }
+        item {
+            Button(onClick = {
+                runCatching {
+                    val values = feedKinds.associateWith { kind ->
+                        val raw = amounts[kind] ?: "0"
+                        val value = raw.replace(',', '.').toDoubleOrNull() ?: error("تحقق من كمية " + kind.label)
+                        require(value.isFinite() && value >= 0.0) { "الكمية غير صالحة: " + kind.label }
+                        value
+                    }
+                    val result = fsConsume(c, values, note.ifBlank { "استهلاك " + groupAnimals.size + " حيواناً • " + group })
+                    fsPasture(c, pastureKg, groupAnimals.size.toString() + " حيواناً • " + group)
+                    saved(result + ". سُجلت مساهمة المرعى منفصلة دون خصم من المخزون.")
+                }.onFailure { android.widget.Toast.makeText(c, it.message ?: "تعذر التسجيل", android.widget.Toast.LENGTH_LONG).show() }
+            }, Modifier.fillMaxWidth(), enabled = groupAnimals.isNotEmpty() && inputs.isNotEmpty(),
+                colors = ButtonDefaults.buttonColors(containerColor = FS_GREEN)) {
+                Text("تأكيد الاستهلاك وحفظ العملية", fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
