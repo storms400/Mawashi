@@ -259,7 +259,26 @@ fun FinanceScreen(modifier:Modifier=Modifier){
  AlertDialog(onDismissRequest=dismiss,title={Text("فاتورة بيع")},text={LazyColumn(Modifier.heightIn(max=440.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
   item{Row(horizontalArrangement=Arrangement.spacedBy(2.dp)){SaleType.values().forEach{t->FilterChip(type==t,{type=t;item=when(t){SaleType.ANIMAL->activeHerd.firstOrNull()?.tag?:"";SaleType.WOOL->"الصوف";SaleType.FEED->feed.filterValues{it>0}.keys.firstOrNull()?.label?:"";SaleType.MEDICINE->usableMedicineItems.firstOrNull()?:""};qty="1"},label={Text(t.title,fontSize=8.sp)})}}}
   item{OutlinedTextField(buyer,{buyer=it},label={Text("اسم المشتري")},modifier=Modifier.fillMaxWidth())}
-  item{var open by remember{mutableStateOf(false)};Box{OutlinedButton(onClick={open=true},enabled=options.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text(item.ifBlank{"لا توجد أصناف متاحة"});Spacer(Modifier.weight(1f));Icon(Icons.Outlined.ArrowDropDown,null)};DropdownMenu(open,{open=false}){options.forEach{o->DropdownMenuItem(text={Text(o)},onClick={item=o;open=false})}}}}
+  if(type==SaleType.ANIMAL){
+   item{
+    var animalSearch by rememberSaveable{mutableStateOf("")}
+    OutlinedTextField(animalSearch,{animalSearch=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("ابحث برقم الحيوان واختره")},leadingIcon={Icon(Icons.Outlined.Search,null)})
+    val matchingAnimals=activeHerd.filter{it.tag.contains(animalSearch.trim(),true)}
+    if(matchingAnimals.isEmpty())Text("لا توجد حيوانات نشطة مطابقة.",fontSize=10.sp,color=FinMuted)
+    matchingAnimals.take(30).forEach{animal->
+     Surface(color=if(item==animal.tag)Color(0xFFEAF1E9) else Color.White,shape=RoundedCornerShape(10.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable{item=animal.tag}){
+      Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically){
+       EweLogo(25);Spacer(Modifier.width(8.dp))
+       Column(Modifier.weight(1f)){Text(animal.tag+" • "+animal.kind,fontWeight=FontWeight.Bold,color=FinInk,fontSize=11.sp);Text(animal.productionState+" • "+animal.health,fontSize=9.sp,color=FinMuted)}
+       if(item==animal.tag)Icon(Icons.Outlined.CheckCircle,null,tint=FinGreen)
+      }
+     }
+    }
+    Text("المحدد للبيع: "+(activeHerd.firstOrNull{it.tag==item}?.let{it.tag+" • "+it.kind}?: "لم يتم اختيار حيوان"),fontSize=10.sp,color=FinGreen)
+   }
+  }else{
+   item{var open by remember{mutableStateOf(false)};Box{OutlinedButton(onClick={open=true},enabled=options.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text(item.ifBlank{"لا توجد أصناف متاحة"});Spacer(Modifier.weight(1f));Icon(Icons.Outlined.ArrowDropDown,null)};DropdownMenu(open,{open=false}){options.forEach{o->DropdownMenuItem(text={Text(o)},onClick={item=o;open=false})}}}}
+  }
   if(type!=SaleType.ANIMAL)item{OutlinedTextField(qty,{qty=it},label={Text("الكمية المراد بيعها")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())}
   item{OutlinedTextField(price,{price=it},label={Text("سعر الوحدة بالدينار")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())}
   item{Text(when(type){SaleType.ANIMAL->"يُباع الحيوان المختار من رقمه التعريفي.";SaleType.WOOL->"الرصيد المتاح: "+wool+" كغ";SaleType.FEED->"الرصيد المتاح: "+(feed[FeedKind.values().firstOrNull{it.label==item}]?:0.0)+" كغ";SaleType.MEDICINE->"الرصيد الصالح للبيع: "+usableMedicineStock(item,medicine[item]?:0.0,medicineLots,today)+" وحدة"},fontSize=10.sp,color=FinMuted)}
