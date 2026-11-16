@@ -388,6 +388,7 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scanDate: String, 
     var days by rememberSaveable { mutableStateOf("60") }
     var fetus by rememberSaveable { mutableStateOf("1") }
     var repeat by rememberSaveable { mutableStateOf(oldRepeat) }
+    var validationMessage by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("نتيجة سونار النعجة " + tag) },
@@ -395,7 +396,7 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scanDate: String, 
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 listOf("حامل", "غير حامل", "غير حاسم").forEach { option ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = result == option, onClick = { result = option })
+                        RadioButton(selected = result == option, onClick = { result = option; validationMessage = null })
                         Text(option, fontSize = 12.sp)
                     }
                 }
@@ -411,14 +412,20 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scanDate: String, 
                     MawashiDatePickerField(repeat, { repeat = it }, "موعد إعادة الفحص", Modifier.fillMaxWidth())
                     Text("لن تُسجل هذه النعجة على أنها غير حامل.", color = Color(0xFFA66B16), fontSize = 10.sp)
                 }
+                validationMessage?.let { Text(it, color = Color(0xFFC75B52), fontSize = 10.sp) }
             }
         },
         confirmButton = {
             TextButton(onClick = {
                 val age = days.toIntOrNull() ?: 0
-                val valid = result.isNotBlank() && (result != "حامل" || age in 1..145)
                 val validRepeat = result != "غير حاسم" || runCatching { LocalDate.parse(repeat).isAfter(LocalDate.parse(scanDate)) }.getOrDefault(false)
-                if (valid && validRepeat) onSave(result, age, fetus.toIntOrNull() ?: 1, repeat)
+                validationMessage = when {
+                    result.isBlank() -> "اختر نتيجة السونار أولاً."
+                    result == "حامل" && age !in 1..145 -> "أدخل عمر حمل صحيحاً بين يوم و145 يوماً."
+                    result == "غير حاسم" && !validRepeat -> "اختر موعد إعادة فحص بعد تاريخ السونار."
+                    else -> null
+                }
+                if (validationMessage == null) onSave(result, age, fetus.toIntOrNull() ?: 1, repeat)
             }) { Text("حفظ النتيجة", color = SeasonForest) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } }
