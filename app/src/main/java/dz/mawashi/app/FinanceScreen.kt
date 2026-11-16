@@ -488,7 +488,7 @@ private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
      }
      if(selected.productionState=="نعجة حامل"){
       Text("بداية الحمل: "+selected.pregnancyStartDate.ifBlank{"غير مسجلة"}+" • الولادة المتوقعة: "+selected.expectedBirthDate.ifBlank{"غير مسجلة"},fontSize=10.sp,color=FinGreen)
-      Text("عدد الأجنة المسجل: "+if(selected.fetusCount>=2)"توأم" else "جنين واحد",fontSize=10.sp,color=FinGreen)
+      Text("عدد الأجنة المسجل: "+when(selected.fetusCount){2->"توأم";3->"ثلاثة أجنة";else->"جنين واحد"},fontSize=10.sp,color=FinGreen)
      }
      if(selected.pregnancyScanOutcome=="غير حاسم"){
       Text("نتيجة السونار غير حاسمة؛ يلزم إعادة الفحص في الموعد المحدد، ولا تُعد النعجة غير حامل.",fontSize=10.sp,color=Color(0xFFA66B16))
