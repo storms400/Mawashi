@@ -35,7 +35,8 @@ private const val SEASON_KEY = "records"
 private data class SeasonRecord(
     val id: String, val name: String, val ram: String, val start: String, val removal: String,
     val scan: String, val tags: List<String>, val results: Map<String, String>,
-    val gestation: Map<String, Int>, val fetuses: Map<String, Int>, val repeatScan: Map<String, String>
+    val gestation: Map<String, Int>, val fetuses: Map<String, Int>, val repeatScan: Map<String, String>,
+    val scanDates: Map<String, String> = emptyMap()
 )
 
 private fun readSeasons(context: Context): List<SeasonRecord> {
@@ -54,7 +55,7 @@ private fun readSeasons(context: Context): List<SeasonRecord> {
                 return x.keys().asSequence().associateWith { x.optInt(it) }
             }
             SeasonRecord(o.optString("id"), o.optString("name"), o.optString("ram"), o.optString("start"), o.optString("removal"), o.optString("scan"),
-                (0 until tags.length()).map { tags.optString(it) }, stringMap("results"), intMap("gestation"), intMap("fetuses"), stringMap("repeatScan"))
+                (0 until tags.length()).map { tags.optString(it) }, stringMap("results"), intMap("gestation"), intMap("fetuses"), stringMap("repeatScan"), stringMap("scanDates"))
         }
     }.getOrDefault(emptyList())
 }
@@ -67,7 +68,7 @@ private fun writeSeasons(context: Context, seasons: List<SeasonRecord>) {
         array.put(JSONObject().apply {
             put("id", s.id); put("name", s.name); put("ram", s.ram); put("start", s.start); put("removal", s.removal); put("scan", s.scan)
             put("tags", JSONArray(s.tags)); put("results", stringObject(s.results)); put("gestation", intObject(s.gestation))
-            put("fetuses", intObject(s.fetuses)); put("repeatScan", stringObject(s.repeatScan))
+            put("fetuses", intObject(s.fetuses)); put("repeatScan", stringObject(s.repeatScan)); put("scanDates", stringObject(s.scanDates))
         })
     }
     check(context.getSharedPreferences(SEASON_PREFS, Context.MODE_PRIVATE).edit().putString(SEASON_KEY, array.toString()).commit()) { "تعذر حفظ سجلات مواسم التلقيح" }
@@ -219,7 +220,8 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                 items(visible, key = { it.id }) { ewe ->
                     val result = active.results[ewe.tag]
                     val days = active.gestation[ewe.tag]
-                    val due = if (result == "حامل" && days != null) runCatching { LocalDate.parse(active.scan).plusDays(147L - days).toString() }.getOrNull() else null
+                    val eweScanDate = active.scanDates[ewe.tag] ?: active.scan
+                    val due = if (result == "حامل" && days != null) runCatching { LocalDate.parse(eweScanDate).plusDays(147L - days).toString() }.getOrNull() else null
                     Surface(color = Color.White, shape = RoundedCornerShape(15.dp)) {
                         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             EwePhoto(42)
@@ -257,7 +259,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                     val dueRows = active.tags.mapNotNull { tag ->
                         val age = active.gestation[tag]
                         if (active.results[tag] != "حامل" || age == null) null
-                        else runCatching { tag to LocalDate.parse(active.scan).plusDays(147L - age) }.getOrNull()
+                        else runCatching { tag to LocalDate.parse(active.scanDates[tag] ?: active.scan).plusDays(147L - age) }.getOrNull()
                     }.sortedBy { it.second }
                     items(dueRows, key = { it.first }) { due ->
                         Surface(color = Color.White, shape = RoundedCornerShape(12.dp)) {
@@ -282,15 +284,16 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
         }
     }
     if (selectedTag != null && active != null) {
-        ScanOutcomeDialog(selectedTag!!, active.repeatScan[selectedTag!!].orEmpty(), active.scan, onDismiss = { selectedTag = null }) { outcome, days, fetusCount, repeat ->
+        ScanOutcomeDialog(selectedTag!!, active.repeatScan[selectedTag!!].orEmpty(), active.scan, onDismiss = { selectedTag = null }) { outcome, days, fetusCount, repeat, actualScanDate ->
             val updated = active.copy(
                 results = active.results + (selectedTag!! to outcome),
                 gestation = if (outcome == "حامل" && days > 0) active.gestation + (selectedTag!! to days) else active.gestation - selectedTag!!,
                 fetuses = if (outcome == "حامل") active.fetuses + (selectedTag!! to fetusCount) else active.fetuses - selectedTag!!,
-                repeatScan = if (outcome == "غير حاسم" && repeat.isNotBlank()) active.repeatScan + (selectedTag!! to repeat) else active.repeatScan - selectedTag!!
+                repeatScan = if (outcome == "غير حاسم" && repeat.isNotBlank()) active.repeatScan + (selectedTag!! to repeat) else active.repeatScan - selectedTag!!,
+                scanDates = active.scanDates + (selectedTag!! to actualScanDate)
             )
             val profileSaved = savePregnancyScanToHerd(
-                context, selectedTag!!, outcome, active.scan, days, fetusCount, repeat
+                context, selectedTag!!, outcome, actualScanDate, days, fetusCount, repeat
             )
             save(seasons.dropLast(1) + updated)
             if (!profileSaved) {
@@ -383,8 +386,9 @@ private fun CreateSeasonDialog(ewes: List<HerdAnimal>, rams: List<HerdAnimal>, o
 }
 
 @Composable
-private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scanDate: String, onDismiss: () -> Unit, onSave: (String, Int, Int, String) -> Unit) {
+private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scheduledScanDate: String, onDismiss: () -> Unit, onSave: (String, Int, Int, String, String) -> Unit) {
     var result by rememberSaveable { mutableStateOf("") }
+    var actualScanDate by rememberSaveable { mutableStateOf(scheduledScanDate) }
     var days by rememberSaveable { mutableStateOf("60") }
     var fetus by rememberSaveable { mutableStateOf("1") }
     var repeat by rememberSaveable { mutableStateOf(oldRepeat) }
@@ -394,6 +398,7 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scanDate: String, 
         title = { Text("نتيجة سونار النعجة " + tag) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                MawashiDatePickerField(actualScanDate, { actualScanDate = it; validationMessage = null }, "تاريخ إجراء السونار الفعلي", Modifier.fillMaxWidth())
                 listOf("حامل", "غير حامل", "غير حاسم").forEach { option ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = result == option, onClick = { result = option; validationMessage = null })
@@ -418,14 +423,14 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, scanDate: String, 
         confirmButton = {
             TextButton(onClick = {
                 val age = days.toIntOrNull() ?: 0
-                val validRepeat = result != "غير حاسم" || runCatching { LocalDate.parse(repeat).isAfter(LocalDate.parse(scanDate)) }.getOrDefault(false)
+                val validRepeat = result != "غير حاسم" || runCatching { LocalDate.parse(repeat).isAfter(LocalDate.parse(actualScanDate)) }.getOrDefault(false)
                 validationMessage = when {
                     result.isBlank() -> "اختر نتيجة السونار أولاً."
                     result == "حامل" && age !in 1..145 -> "أدخل عمر حمل صحيحاً بين يوم و145 يوماً."
                     result == "غير حاسم" && !validRepeat -> "اختر موعد إعادة فحص بعد تاريخ السونار."
                     else -> null
                 }
-                if (validationMessage == null) onSave(result, age, fetus.toIntOrNull() ?: 1, repeat)
+                if (validationMessage == null) onSave(result, age, fetus.toIntOrNull() ?: 1, repeat, actualScanDate)
             }) { Text("حفظ النتيجة", color = SeasonForest) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } }
