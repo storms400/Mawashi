@@ -72,4 +72,13 @@ class RationOptimizerTest {
         )
         assertFalse(result.feasible)
     }
+    @Test
+    fun refusesRationThatMustExceedTheEnergyCeiling() {
+        val result = RationOptimizer.solve(
+            RationTargets(1.0, 8.0, 0.08, maximumEnergyMj = 9.0),
+            listOf(ingredient(FeedKind.BARLEY, 2.0, 5.0, 12.0, 0.12, 0.20, 0.60, false))
+        )
+        assertFalse(result.feasible)
+        assertTrue(result.uses.isEmpty())
+    }
 }
