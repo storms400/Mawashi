@@ -97,7 +97,7 @@ internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pastur
  val inputs=feedInputsForAnimals(animals)
  if(inputs.isEmpty())return "لا توجد حيوانات بأوزان مسجلة صالحة للحساب"
  val stocks=loadFeedStocks(c)
- val selected=FeedKind.values().filter{it!=FeedKind.MINERALS && (shares[it]?:0.0)>0.0}
+ val selected=FeedKind.values().filter{!it.isMineral && (shares[it]?:0.0)>0.0}
  if(selected.isEmpty())return "حدد نسب مكونات الخلطة قبل الخصم"
  val missing=unavailableSelectedFeedKinds(stocks,shares)
  if(missing.isNotEmpty())return "لا يوجد مخزون من: "+missing.joinToString("، "){it.label}+"؛ لم يُخصم أي شيء ولم تُعدّل نسب الخلطة"
@@ -217,7 +217,7 @@ internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pastur
          Text(String.format(Locale.US,"الرصيد المتاح: %.2f كغ",q),color=FeedGreen,fontSize=11.sp,fontWeight=FontWeight.SemiBold)
         }
        }
-       if(kind!=FeedKind.MINERALS){
+       if(!kind.isMineral){
         Row(verticalAlignment=Alignment.CenterVertically){
          Text("نسبة الخلطة الإرشادية: ${(shares[kind]?:0.0).toInt()}%",fontSize=10.sp,color=FeedMuted)
          Spacer(Modifier.weight(1f))
