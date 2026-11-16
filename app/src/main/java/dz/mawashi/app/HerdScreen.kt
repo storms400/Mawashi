@@ -105,7 +105,7 @@ internal fun saveHerd(c:Context,list:List<HerdAnimal>) {
 }
 
 internal fun savePregnancyScanToHerd(
- c:Context, tag:String, outcome:String, scanDate:String, gestationDays:Int, fetusCount:Int
+ c:Context, tag:String, outcome:String, scanDate:String, gestationDays:Int, fetusCount:Int, repeatScanDate:String
 ):Boolean {
  val scan=runCatching{LocalDate.parse(scanDate)}.getOrNull()?:return false
  val animals=loadHerd(c).toMutableList()
@@ -129,6 +129,19 @@ internal fun savePregnancyScanToHerd(
  }
  animals[index]=updated
  saveHerd(c,animals)
+ val reminderTitle = if(outcome=="غير حاسم") "إعادة فحص السونار" else "موعد ولادة متوقع"
+ val retained = readHerdCare(c).filterNot { it.tag.equals(tag.trim(),true) && !it.completed && it.title in setOf("إعادة فحص السونار","موعد ولادة متوقع") }
+ val reminderDate = when(outcome) {
+  "حامل" -> updated.expectedBirthDate
+  "غير حاسم" -> repeatScanDate
+  else -> ""
+ }
+ if(reminderDate.isNotBlank() && runCatching{LocalDate.parse(reminderDate);true}.getOrDefault(false)) {
+  val note = if(outcome=="حامل") "موعد تقديري محسوب من السونار؛ راقب النعجة واستعد للولادة." else "نتيجة السونار غير حاسمة؛ أعد الفحص في هذا الموعد."
+  saveHerdCare(c, retained + HerdCareReminder(UUID.randomUUID().toString(), updated.tag, "متابعة", reminderTitle, reminderDate, note, false))
+ } else {
+  saveHerdCare(c, retained)
+ }
  true
 }
 
