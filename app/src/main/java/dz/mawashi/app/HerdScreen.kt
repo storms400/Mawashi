@@ -114,7 +114,7 @@ internal fun savePregnancyScanToHerd(
  val old=animals[index]
  val updated=when(outcome){
   "حامل"->{
-   if(gestationDays !in 1..145 || fetusCount !in 1..3 || !isValidPregnancyOffspringSex(offspringSex))return false
+   if(gestationDays !in 1..145 || fetusCount !in 1..3 || !isValidPregnancyOffspringSex(offspringSex,fetusCount))return false
    val start=scan.minusDays(gestationDays.toLong())
    val due=scan.plusDays(147L-gestationDays)
    val stage=when{gestationDays<50->"بداية الحمل";gestationDays<105->"منتصف الحمل";else->"الأربعة أسابيع الأخيرة"}
@@ -156,7 +156,7 @@ internal fun savePregnancyScanToHerd(
 
 
 
-internal fun isValidPregnancyOffspringSex(value:String):Boolean = value=="ذكر" || value=="أنثى"
+internal fun isValidPregnancyOffspringSex(value:String,fetusCount:Int=1):Boolean = value=="ذكر" || value=="أنثى" || (value=="مختلط" && fetusCount in 2..3)
 
 internal fun herdAnimalCostForSale(animal:HerdAnimal?,legacyFallback:Double):Double =
  animal?.acquisitionCost?.takeIf{it.isFinite()&&it>=0.0} ?: legacyFallback.takeIf{it.isFinite()&&it>=0.0} ?: 0.0
