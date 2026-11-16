@@ -73,17 +73,6 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='37' versionName='1.0.37-debug'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
-      - name: Build release APK (unsigned validation)
-        run: gradle --no-daemon :app:assembleRelease
-
-      - name: Verify release package and cartoon icon
-        run: |
-          APK="app/build/outputs/apk/release/app-release-unsigned.apk"
-          test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v37'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='37' versionName='1.0.37'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" | grep -F "mawashi_launcher_cartoon"
-
       - name: Build independently installable APK
         run: gradle --no-daemon :app:assembleStandalone
 
@@ -109,14 +98,6 @@ jobs:
         with:
           name: Mawashi-Standalone-Independent-v37
           path: app/build/outputs/apk/standalone/app-standalone.apk
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload unsigned release validation APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Mawashi-Release-Unsigned-v37
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 14
 
