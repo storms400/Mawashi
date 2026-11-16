@@ -389,10 +389,14 @@ private fun saveHerdCare(c:Context,list:List<HerdCareReminder>){
  HerdCareNotifications.scheduleAll(c, list.map { HerdCareNotificationData(it.id,it.tag,it.title,it.date,it.completed) })
 }
 private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
+@Composable fun HealthPreventionScreen(modifier:Modifier=Modifier){ HerdHealthMonitor(onBack={}) }
+
 @Composable private fun HerdHealthMonitor(onBack:()->Unit){
  val context=LocalContext.current
  val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (!granted) Toast.makeText(context, "يمكنك تفعيل الإشعارات من إعدادات الهاتف لتصلك مواعيد المتابعة", Toast.LENGTH_LONG).show() }
  var animals by remember{mutableStateOf(activeHerdAnimals(loadHerd(context)))}
+ var searchQuery by rememberSaveable{mutableStateOf("")}
+ var healthFilter by rememberSaveable{mutableStateOf("الكل")}
  var reminders by remember{mutableStateOf(readHerdCare(context))}
  var selectedTag by rememberSaveable{mutableStateOf<String?>(null)}
  var dialog by remember{mutableStateOf(false)}
@@ -408,16 +412,25 @@ private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
  val selected=animals.firstOrNull{it.tag==selectedTag}
  val today=LocalDate.now()
  val openReminders=reminders.filter{!it.completed}.sortedBy{it.date}
+ val filteredAnimals=animals.filter { a -> a.tag.contains(searchQuery.trim(),true) && when(healthFilter){ "متأخر" -> reminders.any{it.tag==a.tag&&!it.completed&&runCatching{LocalDate.parse(it.date).isBefore(today)}.getOrDefault(false)}; "قريب" -> reminders.any{it.tag==a.tag&&!it.completed&&runCatching{val d=LocalDate.parse(it.date);!d.isBefore(today)&&d<=today.plusDays(30)}.getOrDefault(false)}; "منتظم" -> reminders.none{it.tag==a.tag&&!it.completed&&runCatching{LocalDate.parse(it.date)<=today.plusDays(30)}.getOrDefault(false)}; else -> true } }
  val overdueCount=openReminders.count{runCatching{LocalDate.parse(it.date).isBefore(today)}.getOrDefault(false)}
  Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(9.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){
-   TextButton(onClick=onBack){Icon(Icons.Outlined.ArrowForward,null);Text("العودة إلى دليل الأدوية")}
-   Spacer(Modifier.weight(1f))
-   Text("متابعة القطيع",fontWeight=FontWeight.ExtraBold,color=FinGreen,fontSize=15.sp)
+   Column(Modifier.weight(1f)){Text("الصحة والوقاية",fontWeight=FontWeight.ExtraBold,color=FinGreen,fontSize=22.sp);Text("برنامج صحي فردي لجميع حيوانات القطيع",fontSize=10.sp,color=FinMuted)}
+   EweLogo(38)
   }
   Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
-   EweMetric("إجمالي الرؤوس",animals.size.toString(),Modifier.weight(1f))
+   EweMetric("إجمالي القطيع",animals.size.toString(),Modifier.weight(1f))
+   EweMetric("منتظم",animals.count{a->reminders.none{it.tag==a.tag&&!it.completed&&runCatching{LocalDate.parse(it.date)<=today.plusDays(30)}.getOrDefault(false)}}.toString(),Modifier.weight(1f))
    FinMetric("مواعيد مسجلة",openReminders.size.toString(),Icons.Outlined.Event,Modifier.weight(1f))
+  }
+  Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
+   EweMetric("مواعيد قادمة",openReminders.count{runCatching{val d=LocalDate.parse(it.date);!d.isBefore(today)}.getOrDefault(false)}.toString(),Modifier.weight(1f))
+   EweMetric("متأخرة",overdueCount.toString(),Modifier.weight(1f))
+  }
+  OutlinedTextField(searchQuery,{searchQuery=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(15.dp),placeholder={Text("ابحث برقم الحيوان...",fontSize=12.sp)},leadingIcon={Icon(Icons.Outlined.Search,null)})
+  Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+   listOf("الكل","منتظم","قريب","متأخر").forEach{f->FilterChip(selected=healthFilter==f,onClick={healthFilter=f},label={Text(f,fontSize=10.sp)})}
   }
   if(openReminders.isNotEmpty()){
    Surface(color=if(overdueCount>0)Color(0xFFFFF0EA) else Color(0xFFEAF1E9),shape=RoundedCornerShape(14.dp)){
@@ -430,8 +443,9 @@ private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
   if(selected==null){
    Text("اختر الحيوان لمتابعة ملفه الصحي والإنتاجي",fontWeight=FontWeight.Bold,color=FinInk,fontSize=13.sp)
    if(animals.isEmpty())EmptyFinance("لا توجد حيوانات في قسم القطيع","أضف الحيوانات أولاً من قسم القطيع لتظهر هنا")
+   if(filteredAnimals.isEmpty()&&animals.isNotEmpty())Text("لا توجد نتائج مطابقة. جرّب رقماً أو تصنيفاً آخر.",fontSize=11.sp,color=FinMuted)
    LazyColumn(Modifier.fillMaxWidth().heightIn(max=520.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
-    items(animals,key={it.id}){a->
+    items(filteredAnimals,key={it.id}){a->
      Surface(color=Color.White,shape=RoundedCornerShape(14.dp),border=BorderStroke(1.dp,FinLine),modifier=Modifier.fillMaxWidth().clickable{selectedTag=a.tag}){
       Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){
        EweLogo(26)
