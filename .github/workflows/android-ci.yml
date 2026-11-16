@@ -69,8 +69,8 @@ jobs:
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='35' versionName='1.0.35-debug'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v36'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='36' versionName='1.0.36-debug'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Build release APK (unsigned validation)
@@ -81,23 +81,20 @@ jobs:
           APK="app/build/outputs/apk/release/app-release-unsigned.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='35' versionName='1.0.35'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='36' versionName='1.0.36'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" | grep -F "mawashi_launcher_cartoon"
 
-      - name: Build standalone test APK when its Firebase config is available
-        if: ${{ hashFiles('app/src/standalone/google-services.json') != '' }}
+      - name: Build independently installable APK
         run: gradle --no-daemon :app:assembleStandalone
 
-      - name: Verify standalone package and cartoon icon
-        if: ${{ hashFiles('app/src/standalone/google-services.json') != '' }}
+      - name: Verify independent package and cartoon icon
         run: |
           APK="app/build/outputs/apk/standalone/app-standalone.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.test3'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v36'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Verify standalone APK uses the standard debug signature
-        if: ${{ hashFiles('app/src/standalone/google-services.json') != '' }}
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/standalone/app-standalone.apk"
@@ -105,13 +102,12 @@ jobs:
           test -s "$APK"
           "$APKSIGNER" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.test3'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='35' versionName='1.0.35-test3'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='36' versionName='1.0.36-test3'"
 
-      - name: Upload standalone test APK
-        if: ${{ hashFiles('app/src/standalone/google-services.json') != '' }}
+      - name: Upload independently installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Standalone-Test-v35
+          name: Mawashi-Standalone-Independent-v36
           path: app/build/outputs/apk/standalone/app-standalone.apk
           if-no-files-found: error
           retention-days: 14
@@ -119,7 +115,7 @@ jobs:
       - name: Upload unsigned release validation APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Release-Unsigned-v35
+          name: Mawashi-Release-Unsigned-v36
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 14
@@ -127,7 +123,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Debug-APK-v35
+          name: Mawashi-Debug-APK-v36
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
