@@ -124,7 +124,11 @@ internal fun savePregnancyScanToHerd(
   }
   "غير حامل"->old.copy(productionState="نعجة جافة",pregnancyStage="غير حامل",fetusCount=1,
     pregnancyStartDate="",expectedBirthDate="",pregnancyScanDate=scan.toString(),pregnancyScanOutcome="غير حامل")
-  "غير حاسم"->old.copy(pregnancyScanDate=scan.toString(),pregnancyScanOutcome="غير حاسم")
+  "غير حاسم"->{
+   val repeat=runCatching{LocalDate.parse(repeatScanDate)}.getOrNull()?:return false
+   if(!repeat.isAfter(scan))return false
+   old.copy(pregnancyScanDate=scan.toString(),pregnancyScanOutcome="غير حاسم")
+  }
   else->return false
  }
  animals[index]=updated
