@@ -8,97 +8,50 @@
     {
       "client_info": {
         "mobilesdk_app_id": "1:1015102317393:android:d02ce81befdc040e3ce970",
-        "android_client_info": {
-          "package_name": "dz.mawashi.app"
-        }
+        "android_client_info": { "package_name": "dz.mawashi.app" }
       },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
+      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
     },
     {
       "client_info": {
         "mobilesdk_app_id": "1:1015102317393:android:4693ccefdc89e9ec3ce970",
-        "android_client_info": {
-          "package_name": "dz.mawashi.app.test"
-        }
+        "android_client_info": { "package_name": "dz.mawashi.app.test" }
       },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
+      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
     },
     {
       "client_info": {
         "mobilesdk_app_id": "1:1015102317393:android:b23a97093f8967ba3ce970",
-        "android_client_info": {
-          "package_name": "dz.mawashi.app.independent.v36"
-        }
+        "android_client_info": { "package_name": "dz.mawashi.app.independent.v36" }
       },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
+      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
     },
     {
       "client_info": {
         "mobilesdk_app_id": "1:1015102317393:android:01ad175b4b2a535c3ce970",
-        "android_client_info": {
-          "package_name": "dz.mawashi.app.independent.v37"
-        }
+        "android_client_info": { "package_name": "dz.mawashi.app.independent.v37" }
       },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
+      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
     },
     {
       "client_info": {
         "mobilesdk_app_id": "1:1015102317393:android:16c91b490d907ff83ce970",
-        "android_client_info": {
-          "package_name": "dz.mawashi.app.independent.v38"
-        }
+        "android_client_info": { "package_name": "dz.mawashi.app.independent.v38" }
       },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
+      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1015102317393:android:16c91b490d907ff83ce970",
+        "android_client_info": { "package_name": "dz.mawashi.app.independent.v39" }
+      },
+      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
     }
   ],
   "configuration_version": "1"
