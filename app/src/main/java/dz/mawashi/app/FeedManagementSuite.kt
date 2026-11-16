@@ -573,7 +573,7 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
                         Divider(color = FS_LINE)
                         Text("الطاقة التقديرية: " + String.format(Locale.US, "%.1f ميغاجول", need.meMj) +
                             " • البروتين المستهدف: " + String.format(Locale.US, "%.0f غ", need.crudeProteinKg * 1000), color = FS_MUTED, fontSize = 9.sp)
-                        Text("مساهمة المرعى التقديرية: " + (need.pastureShare * 100).toInt() + "%", color = FS_MUTED, fontSize = 9.sp)
+                        Text("المرعى التقديري: " + String.format(Locale.US, "%.2f كغ مادة جافة • %.1f ميغاجول • %.0f غ بروتين", need.pastureDryMatterKg, need.pastureEnergyMj, need.pastureCrudeProteinKg * 1000), color = FS_MUTED, fontSize = 9.sp)
                         Text("تُعرض الخلطة المحسّنة للمجموعة في ملخص النتيجة؛ لا توجد نسب ثابتة لكل حيوان.",
                             color = FS_MUTED, fontSize = 9.sp)
                     }
@@ -654,6 +654,7 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
                         require(value.isFinite() && value >= 0.0) { "الكمية غير صالحة: " + kind.label }
                         value
                     }
+                    require(missingWeight == 0) { "لا يمكن اعتماد الاستهلاك قبل تسجيل وزن صالح لكل حيوان في الفئة." }
                     require(rationResult.feasible) { rationResult.message }
                     val enteredBulk = bulkFeedKinds.mapNotNull { kind ->
                         val quantity = values[kind] ?: 0.0
@@ -684,7 +685,7 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
                     fsPasture(c, pastureKg, groupAnimals.size.toString() + " حيواناً • " + group)
                     saved(result + ". سُجلت مساهمة المرعى منفصلة دون خصم من المخزون.")
                 }.onFailure { android.widget.Toast.makeText(c, it.message ?: "تعذر التسجيل", android.widget.Toast.LENGTH_LONG).show() }
-            }, Modifier.fillMaxWidth(), enabled = groupAnimals.isNotEmpty() && inputs.isNotEmpty() && rationResult.feasible,
+            }, Modifier.fillMaxWidth(), enabled = groupAnimals.isNotEmpty() && inputs.isNotEmpty() && missingWeight == 0 && rationResult.feasible,
                 colors = ButtonDefaults.buttonColors(containerColor = FS_GREEN)) {
                 Text("تأكيد الاستهلاك وحفظ العملية", fontWeight = FontWeight.Bold)
             }
