@@ -147,7 +147,7 @@ internal fun savePregnancyScanToHerd(
   runCatching { saveHerdCare(c, retained) }.isSuccess
  }
  if(!reminderSaved) android.widget.Toast.makeText(c, "تم حفظ بيانات النعجة لكن تعذرت جدولة التنبيه.", android.widget.Toast.LENGTH_LONG).show()
- true
+ return true
 }
 
 
