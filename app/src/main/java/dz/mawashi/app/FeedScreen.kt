@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -126,8 +127,10 @@ internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pastur
  var showPicker by remember{mutableStateOf(false)}
  var showConsumption by rememberSaveable{mutableStateOf(false)}
  var expandedTag by rememberSaveable{mutableStateOf("")}
+ var animalSearch by rememberSaveable{mutableStateOf("")}
  var message by remember{mutableStateOf<String?>(null)}
  val herd=activeHerdAnimals(loadHerd(c))
+ val visibleHerd=herd.filter{it.tag.contains(animalSearch.trim(),true)}
  val eligible=feedInputsForAnimals(herd)
  val needs=eligible.map{SheepNutrition.calculate(it,pasture)}
  val totalDmi=needs.sumOf{it.dryMatterKg}
@@ -251,8 +254,9 @@ internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pastur
   }else{
    Spacer(Modifier.height(10.dp))
    if(herd.isEmpty())Text("لا توجد حيوانات مسجلة في قسم القطيع.",color=FeedMuted,fontSize=12.sp)
+   else OutlinedTextField(animalSearch,{animalSearch=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("ابحث برقم الحيوان لعرض خيارات القطيع")},leadingIcon={Icon(Icons.Outlined.Search,null)})
    LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(9.dp),contentPadding=PaddingValues(bottom=16.dp)){
-    items(herd,key={it.id}){animal->
+    items(visibleHerd,key={it.id}){animal->
      val weight=animal.weightKg?.takeIf{it>0}
      val need=weight?.let{SheepNutrition.calculate(FeedAnimalInput(animal.tag,it,animal.productionState,animal.pregnancyStage,animal.fetusCount,animal.nursingLambs,animal.ageMonths),pasture)}
      val expanded=expandedTag==animal.tag
