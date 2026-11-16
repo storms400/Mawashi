@@ -93,6 +93,17 @@ class HerdLifecycleTest {
     }
 
     @Test
+    fun pregnancySexMustBeSelectedAndMixedIsOnlyValidForMultipleFetuses() {
+        assertTrue(isValidPregnancyOffspringSex("ذكر", 1))
+        assertTrue(isValidPregnancyOffspringSex("أنثى", 1))
+        assertFalse(isValidPregnancyOffspringSex("", 1))
+        assertFalse(isValidPregnancyOffspringSex("مختلط", 1))
+        assertTrue(isValidPregnancyOffspringSex("مختلط", 2))
+        assertTrue(isValidPregnancyOffspringSex("مختلط", 3))
+        assertFalse(isValidPregnancyOffspringSex("غير محدد", 2))
+    }
+
+    @Test
     fun validatesProductionStateAgainstAnimalKind() {
         assertTrue(isValidProductionState("نعجة", "نعجة حامل"))
         assertTrue(isValidProductionState("كبش", "كبش"))
