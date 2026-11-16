@@ -383,7 +383,7 @@ internal fun readHerdCare(c:Context):List<HerdCareReminder>{
  val a=JSONArray(c.getSharedPreferences(HERD_CARE_PREFS,0).getString(HERD_CARE_KEY,"[]")?:"[]")
  return (0 until a.length()).mapNotNull{i->runCatching{val x=a.getJSONObject(i);HerdCareReminder(x.optString("id"),x.optString("tag"),x.optString("kind"),x.optString("title"),x.optString("date"),x.optString("notes"),x.optBoolean("completed"))}.getOrNull()}
 }
-private fun saveHerdCare(c:Context,list:List<HerdCareReminder>){
+internal fun saveHerdCare(c:Context,list:List<HerdCareReminder>){
  val a=JSONArray();list.forEach{x->a.put(JSONObject().put("id",x.id).put("tag",x.tag).put("kind",x.kind).put("title",x.title).put("date",x.date).put("notes",x.notes).put("completed",x.completed))}
  check(c.getSharedPreferences(HERD_CARE_PREFS,0).edit().putString(HERD_CARE_KEY,a.toString()).commit())
  HerdCareNotifications.scheduleAll(c, list.map { HerdCareNotificationData(it.id,it.tag,it.title,it.date,it.completed) })
