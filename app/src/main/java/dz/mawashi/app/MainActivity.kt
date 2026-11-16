@@ -119,7 +119,7 @@ private fun MawashiApp() {
                     0 -> Dashboard(Modifier.padding(padding), refreshKey = dashboardRefresh, onSection = { selected = it; dashboardRefresh++ })
                     1 -> HerdScreen(Modifier.padding(padding), refreshKey = dashboardRefresh)
                     2 -> HealthPreventionScreen(Modifier.padding(padding))
-                    3 -> FeedScreen(Modifier.padding(padding))
+                    3 -> FeedManagementSuiteScreen(Modifier.padding(padding))
                     5 -> BreedingSeasonScreen(Modifier.padding(padding), onBack = { selected = 0; dashboardRefresh++ })
                     else -> FinanceScreen(Modifier.padding(padding))
                 }
