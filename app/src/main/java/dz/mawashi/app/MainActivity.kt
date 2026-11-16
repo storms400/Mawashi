@@ -53,7 +53,7 @@ private data class Section(
 
 private val sections = listOf(
     Section("القطيع", "الحيوانات والمواليد", Icons.Outlined.Agriculture, Emerald, "0", "حيوان مسجل"),
-    Section("الأدوية والتطعيمات", "العلاجات ومواعيد التحصين", Icons.Outlined.Vaccines, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة"),
+    Section("الصحة والوقاية", "الرعاية الصحية الفردية للقطيع", Icons.Outlined.HealthAndSafety, Color(0xFF526B55), "—", "متابعة صحة القطيع"),
     Section("مخزون العلف", "الكميات والاستهلاك", Icons.Outlined.Inventory2, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة"),
     Section("المالية", "الإيرادات والمصاريف", Icons.Outlined.AccountBalanceWallet, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة")
 )
@@ -93,7 +93,7 @@ private fun MawashiApp() {
                         val navItems = listOf(
                             Triple("الرئيسية", Icons.Outlined.Home, 0),
                             Triple("القطيع", Icons.Outlined.Agriculture, 1),
-                            Triple("الأدوية", Icons.Outlined.MedicalServices, 2),
+                            Triple("الصحة", Icons.Outlined.HealthAndSafety, 2),
                             Triple("مخزون العلف", Icons.Outlined.Inventory2, 3),
                             Triple("المالية", Icons.Outlined.AccountBalanceWallet, 4)
                         )
@@ -118,7 +118,7 @@ private fun MawashiApp() {
                 when (selected) {
                     0 -> Dashboard(Modifier.padding(padding), refreshKey = dashboardRefresh, onSection = { selected = it; dashboardRefresh++ })
                     1 -> HerdScreen(Modifier.padding(padding))
-                    2 -> MedicineScreen(Modifier.padding(padding))
+                    2 -> HealthPreventionScreen(Modifier.padding(padding))
                     3 -> FeedScreen(Modifier.padding(padding))
                     else -> FinanceScreen(Modifier.padding(padding))
                 }
