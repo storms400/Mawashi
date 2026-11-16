@@ -9,7 +9,7 @@ android {
     compileSdk = 35
     defaultConfig {
         // New package identity, independent from previously distributed Mawashi builds.
-        applicationId = "dz.mawashi.app.independent.v46"
+        applicationId = "dz.mawashi.app.independent.v46.standalone"
         minSdk = 26
         targetSdk = 35
         versionCode = 46
