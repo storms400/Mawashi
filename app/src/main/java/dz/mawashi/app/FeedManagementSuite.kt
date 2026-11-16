@@ -434,15 +434,16 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
     val totalSupplement = needs.sumOf { it.supplementDryMatterKg }
     val estimatedPastureEnergyShare = needs.sumOf { it.meMj * it.pastureShare }
     val estimatedPastureProteinShare = needs.sumOf { it.crudeProteinKg * it.pastureShare }
-    val latePregnancyGroup = inputs.any {
-        it.state == "نعجة حامل" && it.pregnancyStage == "الأربعة أسابيع الأخيرة"
+    val forageFloorRequired = inputs.any {
+        (it.state == "نعجة حامل" && it.pregnancyStage == "الأربعة أسابيع الأخيرة") ||
+            it.state == "نعجة مرضعة"
     }
     val rationResult = RationOptimizer.solve(
         RationTargets(
             dryMatterKg = totalSupplement,
             metabolizableEnergyMj = (needs.sumOf { it.meMj } - estimatedPastureEnergyShare).coerceAtLeast(0.0),
             crudeProteinKg = (needs.sumOf { it.crudeProteinKg } - estimatedPastureProteinShare).coerceAtLeast(0.0),
-            minimumForageFraction = if (latePregnancyGroup) 0.20 else 0.0,
+            minimumForageFraction = if (forageFloorRequired) 0.20 else 0.0,
             maximumStarchFraction = 0.30
         ),
         optimizerIngredients
@@ -634,7 +635,7 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
                     if (rationResult.warnings.isNotEmpty()) {
                         Text(rationResult.warnings.joinToString("\\n"), color = FS_MUTED, fontSize = 9.sp, lineHeight = 14.sp)
                     }
-                    val unpriced = feedKinds.filter { (stock[it] ?: 0.0) > 0.0 && (purchasePrices[it] ?: 0.0) <= 0.0 }
+                    val unpriced = bulkFeedKinds.filter { (stock[it] ?: 0.0) > 0.0 && (purchasePrices[it] ?: 0.0) <= 0.0 }
                     if (unpriced.isNotEmpty()) Text("أصناف بلا سعر شراء مسجل، لم تدخل في تحسين التكلفة: " +
                         unpriced.joinToString("، ") { it.label }, color = Color(0xFF81551A), fontSize = 9.sp)
                 }
