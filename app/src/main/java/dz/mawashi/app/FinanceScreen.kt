@@ -408,9 +408,9 @@ internal fun saveHerdCare(c:Context,list:List<HerdCareReminder>){
  HerdCareNotifications.scheduleAll(c, list.map { HerdCareNotificationData(it.id,it.tag,it.title,it.date,it.completed) })
 }
 private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
-@Composable fun HealthPreventionScreen(modifier:Modifier=Modifier){ HerdHealthMonitor(modifier,onBack={}) }
+@Composable fun HealthPreventionScreen(modifier:Modifier=Modifier){ CareCenterScreen(modifier) }
 
-@Composable private fun HerdHealthMonitor(modifier:Modifier=Modifier,onBack:()->Unit){
+@Composable internal fun HerdHealthMonitor(modifier:Modifier=Modifier,onBack:()->Unit){
  val context=LocalContext.current
  val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (!granted) Toast.makeText(context, "يمكنك تفعيل الإشعارات من إعدادات الهاتف لتصلك مواعيد المتابعة", Toast.LENGTH_LONG).show() }
  var animals by remember{mutableStateOf(loadHerd(context))}
