@@ -195,7 +195,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { createOpen = true }) { Text("موسم جديد", color = SeasonForest, fontSize = 11.sp) }
             }
-            OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("البحث برقم النعجة") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, shape = RoundedCornerShape(13.dp))
+            OutlinedTextField(search, { search = it; if (it.isNotBlank()) filter = "الكل" }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("ابحث برقم النعجة لعرض خيارات القطيع") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, shape = RoundedCornerShape(13.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("الكل", "حامل", "بانتظار", "غير حامل", "غير حاسم").forEach { item ->
                     FilterChip(selected = filter == item, onClick = { filter = item }, label = { Text(item, fontSize = 9.sp) })
@@ -334,7 +334,7 @@ private fun CreateSeasonDialog(ewes: List<HerdAnimal>, rams: List<HerdAnimal>, o
                     Text("كل النعاج النشطة (" + ewes.size + ")", fontSize = 11.sp)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = !all, onClick = { all = false })
+                    RadioButton(selected = !all, onClick = { all = false; chosen = emptySet() })
                     Text("اختيار نعاج محددة", fontSize = 11.sp)
                 }
                 if (!all) {
