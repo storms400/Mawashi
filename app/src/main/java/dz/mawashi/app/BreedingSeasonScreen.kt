@@ -118,7 +118,8 @@ private fun SeasonMiniMetric(label: String, value: String, modifier: Modifier = 
 fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
     val context = LocalContext.current
     val animals = remember { mutableStateListOf<HerdAnimal>().apply { addAll(loadHerd(context)) } }
-    val ewes = animals.filter { it.kind == "نعجة" && it.lifecycleStatus == "نشط" }
+    val allEwes = animals.filter { it.kind == "نعجة" }
+    val ewes = allEwes.filter { it.lifecycleStatus == "نشط" }
     val rams = animals.filter { it.kind == "كبش" && it.lifecycleStatus == "نشط" }
     var seasons by remember { mutableStateOf(readSeasons(context)) }
     var createOpen by rememberSaveable { mutableStateOf(false) }
@@ -200,7 +201,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                     FilterChip(selected = filter == item, onClick = { filter = item }, label = { Text(item, fontSize = 9.sp) })
                 }
             }
-            val visible = active.tags.mapNotNull { tag -> ewes.firstOrNull { it.tag == tag } }.filter { ewe ->
+            val visible = active.tags.mapNotNull { tag -> allEwes.firstOrNull { it.tag == tag } }.filter { ewe ->
                 val result = active.results[ewe.tag]
                 ewe.tag.contains(search.trim(), true) && when (filter) {
                     "حامل" -> result == "حامل"
@@ -314,9 +315,9 @@ private fun CreateSeasonDialog(ewes: List<HerdAnimal>, rams: List<HerdAnimal>, o
                     }
                 }
                 if (rams.isEmpty()) Text("لا يوجد كبش نشط مسجل في القطيع.", color = Color(0xFFC75B52), fontSize = 11.sp)
-                OutlinedTextField(start, { start = it; error = null }, label = { Text("تاريخ إدخال الكبش YYYY-MM-DD") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(removal, { removal = it; error = null }, label = { Text("تاريخ إخراج الكبش YYYY-MM-DD") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(scan, { scan = it; error = null }, label = { Text("موعد السونار YYYY-MM-DD") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                MawashiDatePickerField(start, { start = it; error = null }, "تاريخ إدخال الكبش", Modifier.fillMaxWidth())
+                MawashiDatePickerField(removal, { value -> removal = value; scan = runCatching { LocalDate.parse(value).plusDays(40).toString() }.getOrDefault(scan); error = null }, "تاريخ إخراج الكبش", Modifier.fillMaxWidth())
+                MawashiDatePickerField(scan, { scan = it; error = null }, "موعد السونار المقترح", Modifier.fillMaxWidth())
                 Text("اختيار النعاج", color = SeasonForest, fontWeight = FontWeight.Bold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = all, onClick = { all = true; chosen = ewes.map { it.tag }.toSet() })
@@ -326,11 +327,25 @@ private fun CreateSeasonDialog(ewes: List<HerdAnimal>, rams: List<HerdAnimal>, o
                     RadioButton(selected = !all, onClick = { all = false })
                     Text("اختيار نعاج محددة", fontSize = 11.sp)
                 }
-                if (!all) ewes.forEach { ewe ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = ewe.tag in chosen, onCheckedChange = { checked -> chosen = if (checked) chosen + ewe.tag else chosen - ewe.tag })
-                        Text("النعجة " + ewe.tag, fontSize = 11.sp)
+                if (!all) {
+                    var eweSearch by rememberSaveable { mutableStateOf("") }
+                    OutlinedTextField(
+                        value = eweSearch, onValueChange = { eweSearch = it },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true,
+                        label = { Text("ابحث برقم النعجة واخترها") },
+                        leadingIcon = { Icon(Icons.Outlined.Search, null) }
+                    )
+                    val matchingEwes = ewes.filter { it.tag.contains(eweSearch.trim(), ignoreCase = true) }
+                    if (matchingEwes.isEmpty()) Text("لا توجد نعاج مطابقة في القطيع النشط.", color = SeasonMuted, fontSize = 10.sp)
+                    matchingEwes.forEach { ewe ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = ewe.tag in chosen, onCheckedChange = { checked -> chosen = if (checked) chosen + ewe.tag else chosen - ewe.tag })
+                            EwePhoto(30)
+                            Spacer(Modifier.width(6.dp))
+                            Text("النعجة " + ewe.tag, fontSize = 11.sp)
+                        }
                     }
+                    Text("المحدد: ${chosen.size} نعجة", color = SeasonForest, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Text("عند تلقيح مضبوط لا يتجاوز نحو 34 يوماً، يُقترح السونار بعد 40 يوماً من إخراج الكبش. الحالات الأطول أو غير المؤكدة تحتاج جدولة فردية مع الطبيب البيطري.", color = SeasonMuted, fontSize = 10.sp)
                 error?.let { Text(it, color = Color(0xFFC75B52), fontSize = 11.sp) }
@@ -347,7 +362,7 @@ private fun CreateSeasonDialog(ewes: List<HerdAnimal>, rams: List<HerdAnimal>, o
                     ram.isBlank() -> "اختر كبشاً نشطاً."
                     participants.isEmpty() -> "اختر نعجة واحدة على الأقل."
                     from == null || to == null || !to.isAfter(from) -> "تحقق من تاريخي إدخال الكبش وإخراجه."
-                    scanDate == null || scanDate.isBefore(to) -> "موعد السونار يجب أن يكون بعد إخراج الكبش."
+                    scanDate == null || scanDate.isBefore(to.plusDays(40)) -> "موعد السونار المقترح يكون بعد 40 يوماً على الأقل من إخراج الكبش."
                     else -> null
                 }
                 if (error == null) onSave(SeasonRecord(java.util.UUID.randomUUID().toString(), name.trim(), ram, start, removal, scan, participants, emptyMap(), emptyMap(), emptyMap(), emptyMap()))
@@ -383,7 +398,7 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, onDismiss: () -> U
                     Text("يُحسب الموعد التقديري من عمر الحمل في تاريخ السونار وبمتوسط 147 يوماً.", color = SeasonMuted, fontSize = 10.sp)
                 }
                 if (result == "غير حاسم") {
-                    OutlinedTextField(repeat, { repeat = it }, label = { Text("موعد إعادة الفحص YYYY-MM-DD") }, singleLine = true)
+                    MawashiDatePickerField(repeat, { repeat = it }, "موعد إعادة الفحص", Modifier.fillMaxWidth())
                     Text("لن تُسجل هذه النعجة على أنها غير حامل.", color = Color(0xFFA66B16), fontSize = 10.sp)
                 }
             }
