@@ -120,6 +120,7 @@ private fun MawashiApp() {
                     1 -> HerdScreen(Modifier.padding(padding))
                     2 -> HealthPreventionScreen(Modifier.padding(padding))
                     3 -> FeedScreen(Modifier.padding(padding))
+                    5 -> BreedingSeasonScreen(Modifier.padding(padding), onBack = { selected = 0 })
                     else -> FinanceScreen(Modifier.padding(padding))
                 }
             }
@@ -231,6 +232,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                 }
             }
         }
+        item { BreedingSeasonHomeCard { onSection(5) } }
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("نظرة عامة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
