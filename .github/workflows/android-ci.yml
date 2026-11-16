@@ -80,7 +80,7 @@ jobs:
         run: |
           APK="app/build/outputs/apk/release/app-release-unsigned.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v36'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='36' versionName='1.0.36'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" | grep -F "mawashi_launcher_cartoon"
 
@@ -101,7 +101,7 @@ jobs:
           APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
           test -s "$APK"
           "$APKSIGNER" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.test3'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v36'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='36' versionName='1.0.36-test3'"
 
       - name: Upload independently installable APK
