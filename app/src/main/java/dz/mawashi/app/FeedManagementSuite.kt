@@ -432,18 +432,22 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
     }
     val totalDryMatter = needs.sumOf { it.dryMatterKg }
     val totalSupplement = needs.sumOf { it.supplementDryMatterKg }
-    val estimatedPastureEnergyShare = needs.sumOf { it.meMj * it.pastureShare }
-    val estimatedPastureProteinShare = needs.sumOf { it.crudeProteinKg * it.pastureShare }
+    // Pasture contributes its own estimated ME and protein; do not assume it supplies
+    // the same percentage of every nutrient merely because it supplies that share of DM.
+    val pastureDryMatter = needs.sumOf { it.pastureDryMatterKg }
     val forageFloorRequired = inputs.any {
         (it.state == "نعجة حامل" && it.pregnancyStage == "الأربعة أسابيع الأخيرة") ||
             it.state == "نعجة مرضعة"
     }
+    val supplementForageFloor = if (forageFloorRequired && totalSupplement > 1e-8)
+        ((totalDryMatter * 0.20 - pastureDryMatter).coerceAtLeast(0.0) / totalSupplement).coerceIn(0.0, 1.0)
+        else 0.0
     val rationResult = RationOptimizer.solve(
         RationTargets(
             dryMatterKg = totalSupplement,
-            metabolizableEnergyMj = (needs.sumOf { it.meMj } - estimatedPastureEnergyShare).coerceAtLeast(0.0),
-            crudeProteinKg = (needs.sumOf { it.crudeProteinKg } - estimatedPastureProteinShare).coerceAtLeast(0.0),
-            minimumForageFraction = if (forageFloorRequired) 0.20 else 0.0,
+            metabolizableEnergyMj = needs.sumOf { it.supplementEnergyMj },
+            crudeProteinKg = needs.sumOf { it.supplementCrudeProteinKg },
+            minimumForageFraction = supplementForageFloor,
             maximumStarchFraction = 0.30
         ),
         optimizerIngredients
@@ -457,7 +461,7 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
                 String.format(Locale.US, "%.3f", suggested[kind]?.asFedKg ?: 0.0)
         }
     }
-    val pastureKg = needs.sumOf { it.dryMatterKg * it.pastureShare }
+    val pastureKg = needs.sumOf { it.pastureDryMatterKg }
     val missingWeight = groupAnimals.size - inputs.size
     val todayConsumptionKg = fsMoves(c).filter { it.date == LocalDate.now().toString() && it.type == "استهلاك" }.sumOf { it.quantity }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp, horizontal = 1.dp),
