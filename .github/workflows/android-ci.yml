@@ -70,8 +70,8 @@ jobs:
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v44'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='43' versionName='1.0.44-debug'"
-          unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='44' versionName='1.0.44-debug'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Build independently installable APK
         run: gradle --no-daemon :app:assembleStandalone
@@ -91,7 +91,7 @@ jobs:
           test -s "$APK"
           "$APKSIGNER" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v44'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='43' versionName='1.0.44-test3'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='44' versionName='1.0.44-test3'"
 
       - name: Upload independently installable APK
         uses: actions/upload-artifact@v4
