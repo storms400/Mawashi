@@ -41,7 +41,7 @@ import java.util.Locale
 import java.util.UUID
 import java.io.FileOutputStream
 
-private const val FS_PREFS = "mawashi_feed_suite_v41"
+private const val FS_PREFS = "mawashi_feed_stock"
 private const val FS_INVOICES = "purchase_invoices"
 private const val FS_LEDGER = "movement_ledger"
 private const val FS_PASTURE = "pasture_records"
@@ -121,6 +121,14 @@ private fun fsConsume(c: Context, quantities: Map<FeedKind, Double>, note: Strin
         FsMove(UUID.randomUUID().toString(), date, "استهلاك", k, q, before, after, "", note)
     }
     saveFeedStocks(c, stock); moves.forEach { fsMove(c, it) }
+    // Keep the established accounting ledger in sync so finance reports value this consumption once.
+    val legacy = c.getSharedPreferences("mawashi_feed_stock", 0)
+    val legacyRows = JSONArray(legacy.getString("ledger", "[]") ?: "[]")
+    valid.forEach { (kind, quantity) ->
+        legacyRows.put(JSONObject().put("date", date).put("type", "consumption").put("kind", kind.name)
+            .put("quantityKg", quantity).put("note", note))
+    }
+    check(legacy.edit().putString("ledger", legacyRows.toString()).commit())
     return "تم تسجيل الاستهلاك وخصم " + valid.size + " أصناف من المخزون"
 }
 private fun fsPasture(c: Context, kg: Double, group: String) {
