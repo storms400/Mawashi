@@ -5,6 +5,6 @@ import org.junit.Test
 
 class ProjectIdentityTest {
     @Test fun debugApplicationIdentityMatchesFirebasePackage() {
-        assertEquals("dz.mawashi.app.independent.v41", BuildConfig.APPLICATION_ID)
+        assertEquals("dz.mawashi.app.independent.v42", BuildConfig.APPLICATION_ID)
     }
 }
