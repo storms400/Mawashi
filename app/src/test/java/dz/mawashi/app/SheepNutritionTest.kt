@@ -38,4 +38,12 @@ class SheepNutritionTest {
   assertEquals(1,uses.size)
   assertEquals(FeedKind.BARLEY,uses.first().kind)
  }
+ @Test fun pastureNutrientsUsePastureQualityInsteadOfAssumingEqualEnergyShare(){
+  val weak=SheepNutrition.calculate(FeedAnimalInput("Q-1",35.0,"نعجة جافة"),"ضعيف")
+  val good=SheepNutrition.calculate(FeedAnimalInput("Q-1",35.0,"نعجة جافة"),"جيد")
+  assertEquals(0.14,weak.pastureDryMatterKg,0.0001)
+  assertEquals(0.98,weak.pastureEnergyMj,0.0001)
+  assertTrue(good.pastureEnergyMj>weak.pastureEnergyMj)
+  assertEquals(weak.meMj-weak.pastureEnergyMj,weak.supplementEnergyMj,0.0001)
+ }
 }
