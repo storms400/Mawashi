@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -123,7 +124,7 @@ internal fun herdAnimalAgeMonths(animal:HerdAnimal,today:LocalDate=LocalDate.now
 
 internal fun herdAnimalAgeLabel(animal:HerdAnimal,today:LocalDate=LocalDate.now()):String {
  val birth=runCatching{LocalDate.parse(animal.birthDate)}.getOrNull()
- if(birth==null) return if(animal.ageMonths>0) "${animal.ageMonths} شهر • الأيام غير محددة (أضف تاريخ الميلاد)" else "تاريخ الميلاد غير مسجل"
+ if(birth==null) return if(animal.ageMonths>0) "${animal.ageMonths} شهر • نحو ${animal.ageMonths*30} يوم (تقديري)" else "تاريخ الميلاد غير مسجل"
  if(birth.isAfter(today)) return "تاريخ الميلاد غير صحيح"
  val totalDays=ChronoUnit.DAYS.between(birth,today)
  val period=Period.between(birth,today)
@@ -138,7 +139,8 @@ internal fun herdAnimalAgeLabel(animal:HerdAnimal,today:LocalDate=LocalDate.now(
 internal fun isValidPregnancyDates(start:String,due:String,today:LocalDate=LocalDate.now()):Boolean {
  val startDate=runCatching{LocalDate.parse(start)}.getOrNull()?:return false
  val dueDate=runCatching{LocalDate.parse(due)}.getOrNull()?:return false
- return !startDate.isAfter(today) && dueDate.isAfter(startDate)
+ val gestationDays=ChronoUnit.DAYS.between(startDate,dueDate)
+ return !startDate.isAfter(today) && gestationDays in 120..180
 }
 
 internal fun isValidMotherTag(motherTag:String,animals:List<HerdAnimal>,childId:String?=null):Boolean =
@@ -247,14 +249,16 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
   val qr=remember(a.id,a.tag){herdQrBitmap(a.id+"|"+a.tag)}
   val offspring=animals.filter{it.motherTag.equals(a.tag,true)}.sortedBy{it.birthDate}
   val careRecords=readHerdCare(context).filter{it.tag==a.tag}
+  val today=LocalDate.now()
   val pastVaccines=careRecords.filter{it.kind=="تطعيم"&&it.completed}.sortedByDescending{it.date}
-  val upcomingVaccines=careRecords.filter{it.kind=="تطعيم"&&!it.completed}.sortedBy{it.date}
+  val overdueVaccines=careRecords.filter{it.kind=="تطعيم"&&!it.completed&&runCatching{LocalDate.parse(it.date).isBefore(today)}.getOrDefault(false)}.sortedBy{it.date}
+  val upcomingVaccines=careRecords.filter{it.kind=="تطعيم"&&!it.completed&&runCatching{!LocalDate.parse(it.date).isBefore(today)}.getOrDefault(false)}.sortedBy{it.date}
   Dialog(onDismissRequest={selected=null}){
    Surface(modifier=Modifier.fillMaxWidth().heightIn(max=720.dp),color=HerdCream,shape=RoundedCornerShape(24.dp),border=BorderStroke(1.dp,HerdLine)){
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
      Row(verticalAlignment=Alignment.CenterVertically){
       Column(Modifier.weight(1f)){Text("البطاقة التقنية",fontSize=18.sp,fontWeight=FontWeight.ExtraBold,color=HerdInk);Text("ملف الحيوان رقم ${a.tag}",fontSize=11.sp,color=HerdMuted)}
-      IconButton(onClick={selected=null}){Icon(Icons.Outlined.DeleteOutline,contentDescription="إغلاق",tint=HerdMuted)}
+      IconButton(onClick={selected=null}){Icon(Icons.Outlined.Close,contentDescription="إغلاق",tint=HerdMuted)}
      }
      Surface(color=Color.White,shape=RoundedCornerShape(18.dp),border=BorderStroke(1.dp,HerdLine)){
       Column(Modifier.fillMaxWidth().padding(13.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)){
@@ -292,6 +296,11 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
        Text("التطعيمات السابقة",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=13.sp)
        if(pastVaccines.isEmpty())Text("لا توجد تطعيمات مكتملة مسجلة.",fontSize=10.sp,color=HerdMuted)
        pastVaccines.forEach{v->Text("• ${v.title} — ${v.date}",fontSize=10.sp,color=HerdInk)}
+       if(overdueVaccines.isNotEmpty()){
+        Divider(color=HerdLine)
+        Text("تطعيمات متأخرة",fontWeight=FontWeight.Bold,color=Color(0xFFB54D42),fontSize=13.sp)
+        overdueVaccines.forEach{v->Text("• ${v.title} — ${v.date}",fontSize=10.sp,color=Color(0xFFB54D42))}
+       }
        Divider(color=HerdLine)
        Text("التطعيمات القادمة",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=13.sp)
        if(upcomingVaccines.isEmpty())Text("لا توجد تطعيمات قادمة مسجلة.",fontSize=10.sp,color=HerdMuted)
