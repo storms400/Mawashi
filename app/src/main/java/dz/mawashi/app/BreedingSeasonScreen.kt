@@ -278,7 +278,13 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                 fetuses = if (outcome == "حامل") active.fetuses + (selectedTag!! to fetusCount) else active.fetuses - selectedTag!!,
                 repeatScan = if (outcome == "غير حاسم" && repeat.isNotBlank()) active.repeatScan + (selectedTag!! to repeat) else active.repeatScan - selectedTag!!
             )
+            val profileSaved = savePregnancyScanToHerd(
+                context, selectedTag!!, outcome, active.scan, days, fetusCount
+            )
             save(seasons.dropLast(1) + updated)
+            if (!profileSaved && outcome != "غير حاسم") {
+                android.widget.Toast.makeText(context, "حُفظت نتيجة الموسم لكن تعذر تحديث ملف النعجة في القطيع", android.widget.Toast.LENGTH_LONG).show()
+            }
             selectedTag = null
         }
     }
@@ -353,7 +359,7 @@ private fun CreateSeasonDialog(ewes: List<HerdAnimal>, rams: List<HerdAnimal>, o
 
 @Composable
 private fun ScanOutcomeDialog(tag: String, oldRepeat: String, onDismiss: () -> Unit, onSave: (String, Int, Int, String) -> Unit) {
-    var result by rememberSaveable { mutableStateOf("حامل") }
+    var result by rememberSaveable { mutableStateOf("") }
     var days by rememberSaveable { mutableStateOf("60") }
     var fetus by rememberSaveable { mutableStateOf("1") }
     var repeat by rememberSaveable { mutableStateOf(oldRepeat) }
@@ -385,7 +391,7 @@ private fun ScanOutcomeDialog(tag: String, oldRepeat: String, onDismiss: () -> U
         confirmButton = {
             TextButton(onClick = {
                 val age = days.toIntOrNull() ?: 0
-                val valid = result != "حامل" || age in 1..145
+                val valid = result.isNotBlank() && (result != "حامل" || age in 1..145)
                 val validRepeat = result != "غير حاسم" || runCatching { LocalDate.parse(repeat); true }.getOrDefault(false)
                 if (valid && validRepeat) onSave(result, age, fetus.toIntOrNull() ?: 1, repeat)
             }) { Text("حفظ النتيجة", color = SeasonForest) }
