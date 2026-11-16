@@ -38,6 +38,7 @@ import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
