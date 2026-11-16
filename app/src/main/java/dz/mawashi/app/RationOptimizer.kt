@@ -64,6 +64,7 @@ internal data class RationTargets(
     val crudeProteinKg: Double,
     val minimumForageFraction: Double = 0.0,
     val maximumStarchFraction: Double? = null,
+    val maximumEnergyMj: Double? = null,
     val minimumNdfFraction: Double? = null,
     val maximumIngredientFractions: Map<FeedKind, Double> = emptyMap()
 )
@@ -96,6 +97,7 @@ internal object RationOptimizer {
         require(targets.crudeProteinKg.isFinite() && targets.crudeProteinKg >= 0.0)
         require(targets.minimumForageFraction in 0.0..1.0)
         require(targets.maximumStarchFraction == null || targets.maximumStarchFraction in 0.0..1.0)
+        require(targets.maximumEnergyMj == null || (targets.maximumEnergyMj.isFinite() && targets.maximumEnergyMj >= 0.0))
         require(targets.minimumNdfFraction == null || targets.minimumNdfFraction in 0.0..1.0)
         require(targets.maximumIngredientFractions.values.all { it.isFinite() && it in 0.0..1.0 })
 
@@ -125,6 +127,12 @@ internal object RationOptimizer {
             Relationship.GEQ, targets.crudeProteinKg
         )
 
+        targets.maximumEnergyMj?.let { maximum ->
+            constraints += LinearConstraint(
+                DoubleArray(usable.size) { usable[it].profile.meMjPerKgDm },
+                Relationship.LEQ, maximum
+            )
+        }
         if (targets.minimumForageFraction > 0.0) {
             constraints += LinearConstraint(
                 DoubleArray(usable.size) { if (usable[it].profile.forage) 1.0 else 0.0 },
