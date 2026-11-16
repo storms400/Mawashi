@@ -142,9 +142,9 @@ internal fun savePregnancyScanToHerd(
  }
  if(reminderDate.isNotBlank() && runCatching{LocalDate.parse(reminderDate);true}.getOrDefault(false)) {
   val note = if(outcome=="حامل") "موعد تقديري محسوب من السونار؛ راقب النعجة واستعد للولادة." else "نتيجة السونار غير حاسمة؛ أعد الفحص في هذا الموعد."
-  saveHerdCare(c, retained + HerdCareReminder(UUID.randomUUID().toString(), updated.tag, "متابعة", reminderTitle, reminderDate, note, false))
+  if(runCatching { saveHerdCare(c, retained + HerdCareReminder(UUID.randomUUID().toString(), updated.tag, "متابعة", reminderTitle, reminderDate, note, false)) }.isFailure) return false
  } else {
-  saveHerdCare(c, retained)
+  if(runCatching { saveHerdCare(c, retained) }.isFailure) return false
  }
  true
 }
