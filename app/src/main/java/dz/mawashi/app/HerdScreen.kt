@@ -511,7 +511,8 @@ private const val EWE_PHOTO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAJAAAACQCAMAAADQmB
      pregnancyStartDate=if(productionState=="نعجة حامل")pregnancyStartDate else "",
      expectedBirthDate=if(productionState=="نعجة حامل")expectedBirthDate else "",
      pregnancyScanDate=initial?.pregnancyScanDate?:"",
-     pregnancyScanOutcome=initial?.pregnancyScanOutcome?:""
+     pregnancyScanOutcome=initial?.pregnancyScanOutcome?:"",
+     pregnancyOffspringSex=if(productionState=="نعجة حامل")initial?.pregnancyOffspringSex.orEmpty() else ""
     ))
    }
   }){Text("حفظ",color=HerdGreen)}},
