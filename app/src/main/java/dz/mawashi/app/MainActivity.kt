@@ -93,7 +93,7 @@ private fun MawashiApp() {
                         val navItems = listOf(
                             Triple("الرئيسية", Icons.Outlined.Home, 0),
                             Triple("القطيع", Icons.Outlined.Agriculture, 1),
-                            Triple("الصحة", Icons.Outlined.HealthAndSafety, 2),
+                            Triple("الصحة والوقاية", Icons.Outlined.HealthAndSafety, 2),
                             Triple("مخزون العلف", Icons.Outlined.Inventory2, 3),
                             Triple("المالية", Icons.Outlined.AccountBalanceWallet, 4)
                         )
