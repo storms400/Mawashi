@@ -477,6 +477,7 @@ private fun FsInvoiceArchive(c: Context, invoices: List<FsInvoice>) {
                                 String.format(Locale.US, "%.0f دج", (invoice.total - invoice.paid).coerceAtLeast(0.0)),
                                 color = FS_MUTED, fontSize = 9.sp)
                         }
+                        TextButton(onClick = { printFsInvoice(c, invoice) }) { Icon(Icons.Outlined.Print, null); Text("طباعة", fontSize = 9.sp) }
                         TextButton(onClick = { selected = invoice; savePdf.launch(invoice.id + ".pdf") }) {
                             Icon(Icons.Outlined.PictureAsPdf, null); Text("حفظ PDF", fontSize = 9.sp)
                         }
@@ -486,4 +487,56 @@ private fun FsInvoiceArchive(c: Context, invoices: List<FsInvoice>) {
         }
         if (invoices.isEmpty()) item { Text("لا توجد فواتير محفوظة بعد.", color = FS_MUTED, fontSize = 10.sp) }
     }
+}
+
+
+private class FsInvoicePrintAdapter(private val invoice: FsInvoice) : PrintDocumentAdapter() {
+    override fun onLayout(oldAttributes: PrintAttributes?, newAttributes: PrintAttributes,
+        cancellationSignal: CancellationSignal, callback: LayoutResultCallback, metadata: android.os.Bundle?) {
+        if (cancellationSignal.isCanceled) { callback.onLayoutCancelled(); return }
+        callback.onLayoutFinished(PrintDocumentInfo.Builder(invoice.id + ".pdf")
+            .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).setPageCount(1).build(), true)
+    }
+    override fun onWrite(pages: Array<PageRange>, destination: ParcelFileDescriptor,
+        cancellationSignal: CancellationSignal, callback: WriteResultCallback) {
+        val pdf = PdfDocument()
+        try {
+            val page = pdf.startPage(PdfDocument.PageInfo.Builder(595, 842, 1).create())
+            val canvas = page.canvas
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 15f; textAlign = Paint.Align.RIGHT }
+            var y = 58f
+            paint.textSize = 25f; paint.isFakeBoldText = true; paint.color = android.graphics.Color.rgb(82, 107, 85)
+            canvas.drawText("MAWASHI | مواشي", 545f, y, paint); y += 42f
+            paint.textSize = 20f; canvas.drawText("فاتورة شراء أعلاف", 545f, y, paint); y += 38f
+            paint.textSize = 13f; paint.isFakeBoldText = false; paint.color = android.graphics.Color.BLACK
+            listOf("رقم الفاتورة: " + invoice.id, "التاريخ: " + invoice.date,
+                "المورد: " + invoice.supplier.ifBlank { "غير محدد" }).forEach { canvas.drawText(it, 545f, y, paint); y += 24f }
+            y += 12f
+            invoice.lines.forEach { line ->
+                canvas.drawText(line.kind.label + " • " + String.format(Locale.US, "%.2f", line.quantity) +
+                    " • " + String.format(Locale.US, "%.0f دج", line.unitPrice) + " • " +
+                    String.format(Locale.US, "%.0f دج", line.total), 545f, y, paint)
+                y += 25f
+            }
+            y += 20f; paint.isFakeBoldText = true
+            canvas.drawText("الإجمالي: " + String.format(Locale.US, "%.0f دج", invoice.total), 545f, y, paint); y += 25f
+            paint.isFakeBoldText = false
+            canvas.drawText("المدفوع: " + String.format(Locale.US, "%.0f دج", invoice.paid), 545f, y, paint); y += 24f
+            canvas.drawText("المتبقي: " + String.format(Locale.US, "%.0f دج", (invoice.total - invoice.paid).coerceAtLeast(0.0)), 545f, y, paint)
+            pdf.finishPage(page)
+            if (cancellationSignal.isCanceled) { callback.onWriteCancelled(); return }
+            FileOutputStream(destination.fileDescriptor).use { pdf.writeTo(it) }
+            callback.onWriteFinished(arrayOf(PageRange(0, 0)))
+        } catch (failure: Exception) {
+            callback.onWriteFailed(failure.message)
+        } finally { pdf.close() }
+    }
+}
+
+private fun printFsInvoice(context: Context, invoice: FsInvoice) {
+    val manager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
+    val attributes = PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+        .setResolution(PrintAttributes.Resolution("mawashi", "invoice", 300, 300))
+        .setMinMargins(PrintAttributes.Margins.NO_MARGINS).build()
+    manager.print(invoice.id, FsInvoicePrintAdapter(invoice), attributes)
 }
