@@ -232,7 +232,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                 }
             }
         }
-        item { BreedingSeasonHomeCard { onSection(5) } }
+        item { BreedingSeasonHomeCard(refreshKey = refreshKey) { onSection(5) } }
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("نظرة عامة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
