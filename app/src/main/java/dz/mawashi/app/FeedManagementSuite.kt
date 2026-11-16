@@ -422,9 +422,10 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
     val inputs = feedInputsForAnimals(groupAnimals)
     val needsByAnimal = inputs.map { input -> input to SheepNutrition.calculate(input, pasture) }
     val needs = needsByAnimal.map { it.second }
-    val feedKinds = FeedKind.values().filter { !it.isMineral }
+    val feedKinds = FeedKind.values().filter { it != FeedKind.MINERALS }
+    val bulkFeedKinds = feedKinds.filter { !it.isMineral }
     val purchasePrices = fsAverageFeedPrices(c)
-    val optimizerIngredients = feedKinds.mapNotNull { kind ->
+    val optimizerIngredients = bulkFeedKinds.mapNotNull { kind ->
         val profile = FeedProfileCatalog.profiles[kind] ?: return@mapNotNull null
         val price = purchasePrices[kind] ?: return@mapNotNull null
         RationIngredient(kind, stock[kind] ?: 0.0, price, profile)
@@ -448,10 +449,11 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
     )
     val suggested = rationResult.uses.associateBy { it.kind }
     val selectedIds = groupAnimals.map { it.id }
-    LaunchedEffect(group, pasture, selectedIds) {
+    LaunchedEffect(group, pasture, selectedIds, stock, purchasePrices) {
         amounts.clear()
         feedKinds.forEach { kind ->
-            amounts[kind] = String.format(Locale.US, "%.3f", suggested[kind]?.asFedKg ?: 0.0)
+            amounts[kind] = if (kind.isMineral) "0" else
+                String.format(Locale.US, "%.3f", suggested[kind]?.asFedKg ?: 0.0)
         }
     }
     val pastureKg = needs.sumOf { it.dryMatterKg * it.pastureShare }
@@ -541,8 +543,8 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
             }
         }
         item {
-            Text("تفاصيل الخلطات الفردية", color = FS_INK, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text("افتح بطاقة الحيوان لمراجعة احتياجه وكمية كل مكوّن تقديرية.", color = FS_MUTED, fontSize = 9.sp)
+            Text("تفاصيل الاحتياجات الفردية", color = FS_INK, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text("افتح بطاقة الحيوان لمراجعة احتياجه من الطاقة والبروتين والمادة الجافة.", color = FS_MUTED, fontSize = 9.sp)
         }
         items(needsByAnimal, key = { it.first.tag }) { pair ->
             val input = pair.first
@@ -577,7 +579,7 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
             Surface(color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, FS_LINE)) {
                 Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text("3. أصناف العلف وكميات الاستهلاك", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text("الكميات المقترحة تُجمع من الحسابات الفردية، ويمكن تعديلها لتطابق ما قُدّم فعلياً.", color = FS_MUTED, fontSize = 9.sp)
+                    Text("الكميات المقترحة ناتجة عن حل أقل تكلفة، ويمكن تعديلها لتطابق ما قُدّم فعلياً قبل التسجيل.", color = FS_MUTED, fontSize = 9.sp)
                     feedKinds.forEach { kind ->
                         val icon = when (kind) {
                             FeedKind.BARLEY, FeedKind.STRAW, FeedKind.WHEAT, FeedKind.OAT_HAY, FeedKind.OATS -> "🌾"
