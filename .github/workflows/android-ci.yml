@@ -59,6 +59,10 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Verify Firebase client mapping for independent v47 package
+        run: |
+          grep -q '"package_name": "dz.mawashi.app.independent.v47.encyclopedia"' app/google-services.json
+
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
 
