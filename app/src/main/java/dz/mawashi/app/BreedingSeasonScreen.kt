@@ -201,15 +201,19 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                     FilterChip(selected = filter == item, onClick = { filter = item }, label = { Text(item, fontSize = 9.sp) })
                 }
             }
-            val visible = active.tags.mapNotNull { tag -> allEwes.firstOrNull { it.tag == tag } }.filter { ewe ->
+            val participantTags = active.tags.toSet()
+            val visible = allEwes.filter { ewe ->
+                val participant = ewe.tag in participantTags
                 val result = active.results[ewe.tag]
-                ewe.tag.contains(search.trim(), true) && when (filter) {
-                    "حامل" -> result == "حامل"
-                    "غير حامل" -> result == "غير حامل"
-                    "غير حاسم" -> result == "غير حاسم"
-                    "بانتظار" -> result == null
-                    else -> true
+                val matchesSearch = ewe.tag.contains(search.trim(), true)
+                val matchesFilter = when (filter) {
+                    "حامل" -> participant && result == "حامل"
+                    "غير حامل" -> participant && result == "غير حامل"
+                    "غير حاسم" -> participant && result == "غير حاسم"
+                    "بانتظار" -> participant && result == null
+                    else -> participant || search.isNotBlank()
                 }
+                matchesSearch && matchesFilter
             }
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 18.dp, top = 7.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(visible, key = { it.id }) { ewe ->
@@ -222,17 +226,23 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                             Spacer(Modifier.width(8.dp))
                             Column(Modifier.weight(1f)) {
                                 Text("النعجة رقم " + ewe.tag, color = SeasonForest, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                Text("الكبش " + active.ram + " • " + when (result) {
+                                Text(if (ewe.tag in participantTags) "الكبش " + active.ram + " • " + when (result) {
                                     "حامل" -> "حامل مؤكد"
                                     "غير حامل" -> "غير حامل"
                                     "غير حاسم" -> "نتيجة غير حاسمة"
                                     else -> "بانتظار السونار"
-                                }, color = when (result) { "حامل" -> Color(0xFF438052); "غير حامل" -> Color(0xFFC75B52); else -> Color(0xFFA66B16) }, fontSize = 10.sp)
+                                } else if (ewe.lifecycleStatus == "مؤرشف") "حيوان مؤرشف خارج القطيع النشط" else "غير مشاركة في الموسم", color = when (result) { "حامل" -> Color(0xFF438052); "غير حامل" -> Color(0xFFC75B52); else -> SeasonMuted }, fontSize = 10.sp)
                                 if (result == "حامل") Text((active.fetuses[ewe.tag]?.let { "عدد الأجنة: " + it } ?: "عدد الأجنة غير محدد") + (days?.let { " • عمر الحمل: " + it + " يوم" } ?: ""), color = SeasonMuted, fontSize = 9.sp)
                                 if (due != null) Text("الولادة المتوقعة: " + due, color = SeasonForest, fontSize = 9.sp)
                                 if (active.repeatScan[ewe.tag] != null) Text("إعادة الفحص: " + active.repeatScan[ewe.tag], color = SeasonMuted, fontSize = 9.sp)
                             }
-                            TextButton(onClick = { selectedTag = ewe.tag }) { Text("تسجيل الفحص", color = SeasonForest, fontSize = 10.sp) }
+                            if (ewe.tag in participantTags) {
+                                TextButton(onClick = { selectedTag = ewe.tag }) { Text("تسجيل الفحص", color = SeasonForest, fontSize = 10.sp) }
+                            } else if (ewe.lifecycleStatus == "نشط") {
+                                TextButton(onClick = {
+                                    save(seasons.dropLast(1) + active.copy(tags = (active.tags + ewe.tag).distinct()))
+                                }) { Text("إضافة للموسم", color = SeasonForest, fontSize = 10.sp) }
+                            }
                         }
                     }
                 }
