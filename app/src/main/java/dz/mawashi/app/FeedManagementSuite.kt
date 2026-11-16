@@ -79,6 +79,12 @@ private fun fsMoves(c: Context): List<FsMove> {
 internal fun readFeedPurchaseCostsFromSuite(c: Context): List<FeedPurchaseCost> =
     fsInvoices(c).flatMap { inv -> inv.lines.map { FeedPurchaseCost(it.kind.label, it.quantity, it.total, inv.date) } }
 
+private fun fsAverageFeedPrices(c: Context): Map<FeedKind, Double> =
+    fsInvoices(c).flatMap { invoice -> invoice.lines }
+        .filter { it.quantity.isFinite() && it.quantity > 0.0 && it.unitPrice.isFinite() && it.unitPrice > 0.0 }
+        .groupBy { it.kind }
+        .mapValues { (_, lines) -> lines.sumOf { it.quantity * it.unitPrice } / lines.sumOf { it.quantity } }
+
 private fun fsMove(c: Context, move: FsMove) {
     val p = fsPrefs(c); val a = JSONArray(p.getString(FS_LEDGER, "[]") ?: "[]")
     a.put(JSONObject().put("id", move.id).put("date", move.date).put("type", move.type).put("kind", move.kind.name)
@@ -416,23 +422,38 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
     val inputs = feedInputsForAnimals(groupAnimals)
     val needsByAnimal = inputs.map { input -> input to SheepNutrition.calculate(input, pasture) }
     val needs = needsByAnimal.map { it.second }
-    val ratios = linkedMapOf(
-        FeedKind.BARLEY to 40.0, FeedKind.BRAN to 20.0,
-        FeedKind.ALFALFA to 25.0, FeedKind.STRAW to 10.0, FeedKind.SOY to 5.0
+    val feedKinds = FeedKind.values().filter { !it.isMineral }
+    val purchasePrices = fsAverageFeedPrices(c)
+    val optimizerIngredients = feedKinds.mapNotNull { kind ->
+        val profile = FeedProfileCatalog.profiles[kind] ?: return@mapNotNull null
+        val price = purchasePrices[kind] ?: return@mapNotNull null
+        RationIngredient(kind, stock[kind] ?: 0.0, price, profile)
+    }
+    val totalDryMatter = needs.sumOf { it.dryMatterKg }
+    val totalSupplement = needs.sumOf { it.supplementDryMatterKg }
+    val estimatedPastureEnergyShare = needs.sumOf { it.meMj * it.pastureShare }
+    val estimatedPastureProteinShare = needs.sumOf { it.crudeProteinKg * it.pastureShare }
+    val latePregnancyGroup = inputs.any {
+        it.state == "نعجة حامل" && it.pregnancyStage == "الأربعة أسابيع الأخيرة"
+    }
+    val rationResult = RationOptimizer.solve(
+        RationTargets(
+            dryMatterKg = totalSupplement,
+            metabolizableEnergyMj = (needs.sumOf { it.meMj } - estimatedPastureEnergyShare).coerceAtLeast(0.0),
+            crudeProteinKg = (needs.sumOf { it.crudeProteinKg } - estimatedPastureProteinShare).coerceAtLeast(0.0),
+            minimumForageFraction = if (latePregnancyGroup) 0.20 else 0.0,
+            maximumStarchFraction = 0.30
+        ),
+        optimizerIngredients
     )
-    val feedKinds = FeedKind.values().filter { it != FeedKind.MINERALS }
-    val suggested = calculateSupplementUses(
-        needs, ratios.map { (kind, share) -> FeedStock(kind, stock[kind] ?: 0.0, share) }
-    ).associateBy { it.kind }
+    val suggested = rationResult.uses.associateBy { it.kind }
     val selectedIds = groupAnimals.map { it.id }
     LaunchedEffect(group, pasture, selectedIds) {
         amounts.clear()
         feedKinds.forEach { kind ->
-            amounts[kind] = if (kind.isMineral) "0" else String.format(Locale.US, "%.3f", suggested[kind]?.asFedKg ?: 0.0)
+            amounts[kind] = String.format(Locale.US, "%.3f", suggested[kind]?.asFedKg ?: 0.0)
         }
     }
-    val totalDryMatter = needs.sumOf { it.dryMatterKg }
-    val totalSupplement = needs.sumOf { it.supplementDryMatterKg }
     val pastureKg = needs.sumOf { it.dryMatterKg * it.pastureShare }
     val missingWeight = groupAnimals.size - inputs.size
     val todayConsumptionKg = fsMoves(c).filter { it.date == LocalDate.now().toString() && it.type == "استهلاك" }.sumOf { it.quantity }
@@ -506,6 +527,15 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
                         Text("المكمل التقديري", color = FS_MUTED, fontSize = 10.sp)
                         Text(String.format(Locale.US, "%.2f كغ مادة جافة/يوم", totalSupplement), color = FS_GREEN, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
+                    if (rationResult.feasible) {
+                        Text("حل أقل تكلفة: " + String.format(Locale.US, "%.0f دج/يوم", rationResult.totalCost),
+                            color = FS_GREEN, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("الطاقة: " + String.format(Locale.US, "%.1f ميغاجول", rationResult.suppliedEnergyMj) +
+                            " • البروتين: " + String.format(Locale.US, "%.0f غ", rationResult.suppliedCrudeProteinKg * 1000),
+                            color = FS_MUTED, fontSize = 9.sp)
+                    } else {
+                        Text(rationResult.message, color = Color(0xFF9A6720), fontSize = 10.sp)
+                    }
                     if (missingWeight > 0) Text("تنبيه: " + missingWeight + " حيواناً لا يملك وزناً صالحاً؛ لن يدخل في الحساب حتى تسجيل وزنه.", color = Color(0xFF9A6720), fontSize = 10.sp)
                 }
             }
@@ -537,18 +567,8 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
                         Text("الطاقة التقديرية: " + String.format(Locale.US, "%.1f ميغاجول", need.meMj) +
                             " • البروتين المستهدف: " + String.format(Locale.US, "%.0f غ", need.crudeProteinKg * 1000), color = FS_MUTED, fontSize = 9.sp)
                         Text("مساهمة المرعى التقديرية: " + (need.pastureShare * 100).toInt() + "%", color = FS_MUTED, fontSize = 9.sp)
-                        calculateSupplementUses(listOf(need), ratios.map { (kind, share) ->
-                            FeedStock(kind, stock[kind] ?: 0.0, share)
-                        }).forEach { use ->
-                            val icon = when (use.kind) {
-                                FeedKind.BRAN, FeedKind.ALFALFA -> "🌿"
-                                FeedKind.SOY -> "🫘"
-                                FeedKind.MAIZE -> "🌽"
-                                else -> "🌾"
-                            }
-                            Text(icon + " " + use.kind.label + ": " +
-                                String.format(Locale.US, "%.0f غ/يوم", use.asFedKg * 1000), color = FS_GREEN, fontSize = 9.sp)
-                        }
+                        Text("تُعرض الخلطة المحسّنة للمجموعة في ملخص النتيجة؛ لا توجد نسب ثابتة لكل حيوان.",
+                            color = FS_MUTED, fontSize = 9.sp)
                     }
                 }
             }
@@ -607,8 +627,14 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
                 Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("4. مراجعة الاستهلاك", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Text("سيُخصم فقط ما أدخلته وأكدت تقديمه فعلياً. راجع الأرصدة قبل الحفظ.", color = FS_MUTED, fontSize = 9.sp)
-                    Text("الحساب الحالي تقديري وتوزيعي، وليس تركيبة متوازنة مثبتة مخبرياً. يجب التحقق من قيم الأعلاف والمرعى وحدود الحبوب والأملاح قبل اعتماد الخلطة غذائياً.",
+                    Text("يستخدم المحرك البرمجة الخطية لاختيار أقل تكلفة ضمن الطاقة والبروتين والمادة الجافة والمخزون وحد النشا. قيم الأعلاف مرجعية وليست تحليلاً محلياً، ومساهمة المرعى ما زالت تقديرية؛ لذلك لا تُعد النتيجة خلطة نهائية معتمدة.",
                         color = Color(0xFF81551A), fontSize = 9.sp, lineHeight = 14.sp)
+                    if (rationResult.warnings.isNotEmpty()) {
+                        Text(rationResult.warnings.joinToString("\\n"), color = FS_MUTED, fontSize = 9.sp, lineHeight = 14.sp)
+                    }
+                    val unpriced = feedKinds.filter { (stock[it] ?: 0.0) > 0.0 && (purchasePrices[it] ?: 0.0) <= 0.0 }
+                    if (unpriced.isNotEmpty()) Text("أصناف بلا سعر شراء مسجل، لم تدخل في تحسين التكلفة: " +
+                        unpriced.joinToString("، ") { it.label }, color = Color(0xFF81551A), fontSize = 9.sp)
                 }
             }
         }
