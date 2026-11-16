@@ -9,11 +9,11 @@ android {
     compileSdk = 35
     defaultConfig {
         // New package identity, independent from previously distributed Mawashi builds.
-        applicationId = "dz.mawashi.app.independent.v40"
+        applicationId = "dz.mawashi.app.independent.v41"
         minSdk = 26
         targetSdk = 35
-        versionCode = 40
-        versionName = "1.0.40"
+        versionCode = 41
+        versionName = "1.0.41"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
