@@ -136,7 +136,7 @@ internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pastur
  val totalDmi=needs.sumOf{it.dryMatterKg}
  val totalSupplement=needs.sumOf{it.supplementDryMatterKg}
  val activeStocks=FeedKind.values().filter{(stocks[it]?:0.0)>0.0001}
- val selectedFeeds=FeedKind.values().filter{it!=FeedKind.MINERALS && (shares[it]?:0.0)>0}
+ val selectedFeeds=FeedKind.values().filter{!it.isMineral && (shares[it]?:0.0)>0}
  val unavailableSelected=selectedFeeds.filter{(stocks[it]?:0.0)<=0.0001}
  val estimatedUses=calculateSupplementUses(needs,selectedFeeds.map{FeedStock(it,stocks[it]?:0.0,shares[it]?:0.0)})
  val dailyAsFed=estimatedUses.sumOf{it.asFedKg}
@@ -230,7 +230,7 @@ internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pastur
      }
     }
     item{
-     Text("مجموع النسب المدخلة: ${shares.filterKeys{it!=FeedKind.MINERALS}.values.sum().toInt()}% — النسب تستخدم لتوزيع تقديري للمكمل، ولا تثبت وحدها توازن الطاقة والبروتين.",fontSize=10.sp,color=FeedMuted)
+     Text("مجموع النسب المدخلة: ${shares.filterKeys{!it.isMineral}.values.sum().toInt()}% — النسب تستخدم لتوزيع تقديري للمكمل، ولا تثبت وحدها توازن الطاقة والبروتين.",fontSize=10.sp,color=FeedMuted)
     }
     item{
      Surface(color=Color(0xFFEAF1E9),shape=RoundedCornerShape(15.dp),modifier=Modifier.fillMaxWidth().clickable{showConsumption=true}){
