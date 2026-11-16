@@ -3,6 +3,7 @@ package dz.mawashi.app
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -123,9 +124,9 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                         }
                     }
                     if (rams.isEmpty()) Text("لا يوجد كبش نشط مسجل. أضف الكبش في قسم القطيع أولاً.", color = Color(0xFFC75B52), fontSize = 11.sp)
-                    MawashiDatePickerField(startDate, { startDate = it; error = null }, "تاريخ إدخال الكبش", Modifier.fillMaxWidth())
-                    MawashiDatePickerField(removalDate, { removalDate = it; error = null }, "تاريخ إخراج الكبش", Modifier.fillMaxWidth())
-                    MawashiDatePickerField(scanDate, { scanDate = it; error = null }, "موعد فحص السونار", Modifier.fillMaxWidth())
+                    OutlinedTextField(startDate, { startDate = it; error = null }, label = { Text("تاريخ إدخال الكبش (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(removalDate, { removalDate = it; error = null }, label = { Text("تاريخ إخراج الكبش (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(scanDate, { scanDate = it; error = null }, label = { Text("موعد فحص السونار (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Text("للتلقيح المضبوط الذي لا يتجاوز نحو 34 يوماً، يمكن اقتراح السونار بعد 40 يوماً من إخراج الكبش. الموعد تقديري ويُراجع مع الطبيب البيطري.", color = SeasonMuted, fontSize = 10.sp)
                     error?.let { Text(it, color = Color(0xFFC75B52), fontSize = 11.sp) }
                 }
