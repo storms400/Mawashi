@@ -38,6 +38,21 @@ class HerdProfileRulesTest {
         assertTrue(label.contains("46 يوم إجمالاً"))
     }
 
+
+    @Test
+    fun ageWithoutBirthDateIsClearlyMarkedAsApproximate() {
+        val animal = HerdAnimal(
+            id = "ewe-1",
+            tag = "E-0001",
+            kind = "نعجة",
+            ageMonths = 4,
+            health = "جيدة",
+            notes = ""
+        )
+
+        assertTrue(herdAnimalAgeLabel(animal).contains("نحو 120 يوم (تقديري)"))
+    }
+
     @Test
     fun pregnancyDatesMustBeOrderedAndStartCannotBeFuture() {
         val today = LocalDate.parse("2026-11-16")
