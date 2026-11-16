@@ -12,8 +12,16 @@
           "package_name": "dz.mawashi.app.independent.v36"
         }
       },
-      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
-      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     },
     {
       "client_info": {
@@ -22,8 +30,16 @@
           "package_name": "dz.mawashi.app.independent.v37"
         }
       },
-      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
-      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     },
     {
       "client_info": {
@@ -32,8 +48,16 @@
           "package_name": "dz.mawashi.app.independent.v38"
         }
       },
-      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
-      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     },
     {
       "client_info": {
@@ -42,8 +66,16 @@
           "package_name": "dz.mawashi.app.independent.v39"
         }
       },
-      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
-      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     },
     {
       "client_info": {
@@ -52,8 +84,34 @@
           "package_name": "dz.mawashi.app.independent.v40"
         }
       },
-      "api_key": [{ "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec" }],
-      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1015102317393:android:16c91b490d907ff83ce970",
+        "android_client_info": {
+          "package_name": "dz.mawashi.app.independent.v41"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     }
   ],
   "configuration_version": "1"
