@@ -464,6 +464,16 @@ private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
      Text("العمر: "+herdAgeLabel(selected)+"   |   الوزن الحالي: "+(selected.weightKg?.let{"%.1f كغ".format(Locale.US,it)}?:"غير مسجل"),fontSize=11.sp,color=FinMuted)
      Text("الحالة الصحية المسجلة: "+selected.health,fontSize=11.sp,color=FinInk)
      Text("الحالة الإنتاجية: "+selected.productionState+" • "+selected.pregnancyStage,fontSize=11.sp,color=FinInk)
+     if(selected.kind=="نعجة" && selected.pregnancyScanDate.isNotBlank()){
+      Text("آخر سونار: "+selected.pregnancyScanDate+" • النتيجة: "+selected.pregnancyScanOutcome,fontSize=10.sp,color=FinGreen)
+     }
+     if(selected.productionState=="نعجة حامل"){
+      Text("بداية الحمل: "+selected.pregnancyStartDate.ifBlank{"غير مسجلة"}+" • الولادة المتوقعة: "+selected.expectedBirthDate.ifBlank{"غير مسجلة"},fontSize=10.sp,color=FinGreen)
+      Text("عدد الأجنة المسجل: "+if(selected.fetusCount>=2)"توأم" else "جنين واحد",fontSize=10.sp,color=FinGreen)
+     }
+     if(selected.pregnancyScanOutcome=="غير حاسم"){
+      Text("نتيجة السونار غير حاسمة؛ يلزم إعادة الفحص في الموعد المحدد، ولا تُعد النعجة غير حامل.",fontSize=10.sp,color=Color(0xFFA66B16))
+     }
      if(selected.kind.contains("حمل")||selected.ageMonths<6){
       Text("متابعة المواليد: راقب الرضاعة وتناول اللبأ في الساعات الأولى، وسجّل وزن الميلاد ثم أعد الوزن دورياً، وراقب السرة والإسهال والتنفس والنشاط. أي خمول أو امتناع عن الرضاعة يستدعي تقييماً بيطرياً عاجلاً.",fontSize=10.sp,color=FinGreen,lineHeight=15.sp)
      }
