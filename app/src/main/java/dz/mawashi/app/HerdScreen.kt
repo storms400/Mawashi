@@ -309,6 +309,7 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
         Text("مرحلة الحمل: ${a.pregnancyStage} • ${if(a.fetusCount>=2)"توأم" else "جنين واحد"}",fontSize=11.sp,color=HerdInk)
         Text("بداية الحمل: ${a.pregnancyStartDate.ifBlank{"غير مسجلة"}}",fontSize=10.sp,color=HerdMuted)
         Text("الولادة المتوقعة: ${a.expectedBirthDate.ifBlank{"غير مسجلة"}}",fontSize=10.sp,color=HerdMuted)
+        if(a.pregnancyScanDate.isNotBlank())Text("السونار: ${a.pregnancyScanDate} • النتيجة: ${a.pregnancyScanOutcome}",fontSize=10.sp,color=HerdGreen)
        }
       }
      }
@@ -478,7 +479,9 @@ private const val EWE_PHOTO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAJAAAACQCAMAAADQmB
      lifecycleStatus=initial?.lifecycleStatus?:"نشط",exitDate=initial?.exitDate?:"",exitReason=initial?.exitReason?:"",
      acquisitionCost=initial?.acquisitionCost,breed=breed.trim().ifBlank{"غير محددة"},
      pregnancyStartDate=if(productionState=="نعجة حامل")pregnancyStartDate else "",
-     expectedBirthDate=if(productionState=="نعجة حامل")expectedBirthDate else ""
+     expectedBirthDate=if(productionState=="نعجة حامل")expectedBirthDate else "",
+     pregnancyScanDate=initial?.pregnancyScanDate?:"",
+     pregnancyScanOutcome=initial?.pregnancyScanOutcome?:""
     ))
    }
   }){Text("حفظ",color=HerdGreen)}},
