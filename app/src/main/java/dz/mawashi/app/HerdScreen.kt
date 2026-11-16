@@ -241,7 +241,7 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
   Text("مثال: Q-0001، Q-0002، Q-0003",color=HerdGreen,fontSize=11.sp)
   Text("تُنشأ البطاقات بنوع غير محدد لتعبئة العمر والوزن والحالة الصحية لاحقاً.",fontSize=11.sp,color=HerdMuted)
  }},confirmButton={TextButton(onClick={val n=batchCount.toIntOrNull();if(n!=null&&n in 1..500){generateHerdTags(animals.map{it.tag},n).forEach{tag->animals.add(HerdAnimal(UUID.randomUUID().toString(),tag,"غير محدد",0,"غير محددة",""))};saveHerd(context,animals.toList());batchDialog=false}}){Text("إنشاء الأرقام",color=HerdGreen)}},dismissButton={TextButton(onClick={batchDialog=false}){Text("إلغاء")}})
- if(editor)HerdEditor(selected,animals.toList(),{editor=false;selected=null}){a->val i=animals.indexOfFirst{it.id==a.id};if(i>=0)animals[i]=a else animals.add(a);saveHerd(context,animals.toList());editor=false;selected=null}
+ if(editor)HerdEditor(selected,animals.toList(),{editor=false;selected=null}){a->val i=animals.indexOfFirst{it.id==a.id};if(i>=0){animals[i]=a;selected=a}else{animals.add(a);selected=null};saveHerd(context,animals.toList());editor=false}
  if(!editor)selected?.let{selectedAnimal->
   val a=animals.firstOrNull{it.id==selectedAnimal.id}?:selectedAnimal
   val qr=remember(a.id,a.tag){herdQrBitmap(a.id+"|"+a.tag)}
