@@ -200,17 +200,18 @@ fun FeedManagementSuiteScreen(modifier: Modifier = Modifier) {
 
 @Composable
 private fun FsStock(c: Context, stock: Map<FeedKind, Double>, moves: List<FsMove>, herdCount: Int, go: (FsPage) -> Unit) {
-    val low = FeedKind.values().filter { (stock[it] ?: 0.0) in 0.000001..5.0 }
+    val visibleKinds = FeedKind.values().filter { it.name != "MINERALS" }
+    val low = visibleKinds.filter { (stock[it] ?: 0.0) in 0.000001..5.0 }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { Text("أصناف المخزون", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
-        items(FeedKind.values().toList(), key = { it.name }) { k ->
-            val icon = when (k) { FeedKind.BARLEY -> "🌾"; FeedKind.BRAN -> "🌿"; FeedKind.MAIZE -> "🌽"; FeedKind.WHEAT -> "🌾"; FeedKind.SOY -> "🫘"; FeedKind.STRAW -> "🌾"; FeedKind.ALFALFA -> "🍀"; FeedKind.OAT_HAY -> "🌱"; FeedKind.MINERALS -> "🧂" }
+        items(visibleKinds, key = { it.name }) { k ->
+            val icon = when { k == FeedKind.BARLEY -> "🌾"; k == FeedKind.BRAN -> "🌿"; k == FeedKind.MAIZE -> "🌽"; k == FeedKind.WHEAT -> "🌾"; k == FeedKind.SOY -> "🫘"; k == FeedKind.STRAW -> "🌾"; k == FeedKind.ALFALFA -> "🍀"; k == FeedKind.OAT_HAY -> "🌾"; k == FeedKind.OATS -> "🌱"; k == FeedKind.MINERALS_YELLOW -> "🟡"; k == FeedKind.MINERALS_RED -> "🔴"; else -> "🌾" }
             Surface(color = Color.White, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, FS_LINE)) {
                 Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(icon, fontSize = 22.sp); Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f)) {
                         Text(k.label, color = FS_INK, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("الرصيد: " + String.format(Locale.US, "%.2f", stock[k] ?: 0.0) + if (k == FeedKind.MINERALS) " عبوة/وحدة" else " كغ",
+                        Text("الرصيد: " + String.format(Locale.US, "%.2f", stock[k] ?: 0.0) + if (k.isMineral) " قطعة" else " كغ",
                             color = FS_MUTED, fontSize = 10.sp)
                     }
                     Text(if ((stock[k] ?: 0.0) <= 0.0001) "نفد" else if ((stock[k] ?: 0.0) <= 5.0) "منخفض" else "متوفر",
@@ -244,50 +245,154 @@ private fun FsStock(c: Context, stock: Map<FeedKind, Double>, moves: List<FsMove
 
 @Composable
 private fun FsPurchase(c: Context, saved: (String) -> Unit) {
+    val kinds = remember { FeedKind.values().filter { it.name != "MINERALS" } }
     var kind by rememberSaveable { mutableStateOf(FeedKind.BARLEY) }
-    var qty by rememberSaveable { mutableStateOf("") }; var price by rememberSaveable { mutableStateOf("") }
-    var supplier by rememberSaveable { mutableStateOf("") }; var paid by rememberSaveable { mutableStateOf("") }
+    var qty by rememberSaveable { mutableStateOf("") }
+    var price by rememberSaveable { mutableStateOf("") }
+    var supplier by rememberSaveable { mutableStateOf("") }
+    var paid by rememberSaveable { mutableStateOf("") }
     var note by rememberSaveable { mutableStateOf("") }
-    val lines = remember { mutableStateListOf<FsLine>() }; val total = lines.sumOf { it.total }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { Text("فاتورة شراء متعددة الأصناف", color = FS_INK, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
-        item { OutlinedTextField(supplier, { supplier = it }, Modifier.fillMaxWidth(), label = { Text("المورد (اختياري)") }, singleLine = true) }
-        item { Text("اختر المادة", color = FS_INK, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-        item { Column { FeedKind.values().toList().chunked(3).forEach { row -> Row {
-            row.forEach { k -> FilterChip(kind == k, { kind = k }, label = { Text(k.label.take(9), fontSize = 8.sp) }) }
-        } } } }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            OutlinedTextField(qty, { qty = it }, Modifier.weight(1f), label = { Text(if (kind == FeedKind.MINERALS) "عدد العبوات" else "الكمية كغ") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-            OutlinedTextField(price, { price = it }, Modifier.weight(1f), label = { Text("سعر الوحدة دج") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-        } }
-        item { OutlinedButton(onClick = {
-            val q = qty.replace(',', '.').toDoubleOrNull(); val p = price.replace(',', '.').toDoubleOrNull()
-            if (q != null && q > 0 && p != null && p >= 0) { lines.add(FsLine(kind, q, p)); qty = ""; price = "" }
-        }, Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Add, null); Text("إضافة بند") } }
-        item { Row(verticalAlignment = Alignment.CenterVertically) { Text("بنود الفاتورة: " + lines.size, color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 12.sp); Spacer(Modifier.weight(1f)); TextButton(onClick = { saved("افتح تبويب الفواتير لمراجعة الأرشيف وحفظ PDF.") }) { Text("الأرشيف", fontSize = 9.sp) } } }
-        items(lines.toList()) { l -> Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, FS_LINE)) {
-            Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text(l.kind.label, color = FS_INK, fontSize = 10.sp, fontWeight = FontWeight.Bold); Text(l.quantity.toString() + " × " + l.unitPrice + " دج", color = FS_MUTED, fontSize = 9.sp) }
-                Text(String.format(Locale.US, "%.0f دج", l.total), color = FS_GREEN, fontSize = 10.sp)
-                IconButton({ lines.remove(l) }) { Icon(Icons.Outlined.DeleteOutline, "حذف") }
+    val lines = remember { mutableStateListOf<FsLine>() }
+    val total = lines.sumOf { it.total }
+    val paidValue = paid.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val validPaid = paidValue.isFinite() && paidValue >= 0.0 && paidValue <= total
+
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item {
+            Surface(color = Color.White, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("إضافة مخزون", color = FS_INK, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("اختر المواد المشتراة وسجّل كمياتها وأسعارها", color = FS_MUTED, fontSize = 10.sp)
+                    }
+                    Icon(Icons.Outlined.Inventory2, null, tint = FS_GREEN, modifier = Modifier.size(30.dp))
+                }
             }
-        } }
-        item { OutlinedTextField(paid, { paid = it }, Modifier.fillMaxWidth(), label = { Text("المبلغ المدفوع (دج)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)) }
-        item { OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), label = { Text("ملاحظات اختيارية") }) }
-        item { Surface(color = FS_GREEN, shape = RoundedCornerShape(14.dp)) { Column(Modifier.padding(12.dp)) {
-            Text("الإجمالي: " + String.format(Locale.US, "%.0f دج", total), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text("المتبقي: " + String.format(Locale.US, "%.0f دج", (total - (paid.replace(',', '.').toDoubleOrNull() ?: 0.0)).coerceAtLeast(0.0)), color = Color.White, fontSize = 10.sp)
-        } } }
-        item { Button(onClick = {
-            runCatching {
-                val p = paid.replace(',', '.').toDoubleOrNull() ?: 0.0
-                val inv = FsInvoice("MF-" + System.currentTimeMillis(), LocalDate.now().toString(), supplier.trim(), total, p, note.trim(), lines.toList())
-                fsSavePurchase(c, inv); lines.clear()
-                saved("حُفظت الفاتورة وأضيفت الأصناف للمخزون، وسُجل إجمالي الشراء مرة واحدة في المالية. رقم الفاتورة: " + inv.id)
-            }.onFailure { android.widget.Toast.makeText(c, it.message ?: "تعذر الحفظ", android.widget.Toast.LENGTH_LONG).show() }
-        }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = FS_GREEN)) { Icon(Icons.Outlined.Save, null); Text("اعتماد الفاتورة") } }
-        item { Text("تُحفظ الفاتورة داخلياً مع المورد والتاريخ والبنود والمدفوع والمتبقي. الطباعة وPDF ستضاف بعد اختبار هذه الدورة الأساسية.",
-            color = FS_MUTED, fontSize = 9.sp, lineHeight = 14.sp) }
+        }
+        item {
+            Surface(color = Color.White, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("اختيار أصناف المخزون", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Spacer(Modifier.weight(1f))
+                        Text("11 صنفاً", color = FS_GREEN, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    kinds.chunked(3).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            row.forEach { item ->
+                                val icon = when {
+                                    item == FeedKind.BARLEY || item == FeedKind.WHEAT || item == FeedKind.STRAW || item == FeedKind.OAT_HAY -> "🌾"
+                                    item == FeedKind.BRAN -> "🌿"
+                                    item == FeedKind.MAIZE -> "🌽"
+                                    item == FeedKind.SOY -> "🫘"
+                                    item == FeedKind.ALFALFA -> "🍀"
+                                    item == FeedKind.OATS -> "🌱"
+                                    item == FeedKind.MINERALS_YELLOW -> "🟡"
+                                    item == FeedKind.MINERALS_RED -> "🔴"
+                                    else -> "🌾"
+                                }
+                                Surface(Modifier.weight(1f).clickable { kind = item },
+                                    color = if (kind == item) Color(0xFFE8F0E6) else Color(0xFFF8F7F2),
+                                    shape = RoundedCornerShape(11.dp),
+                                    border = BorderStroke(1.dp, if (kind == item) FS_GREEN else FS_LINE)) {
+                                    Column(Modifier.padding(vertical = 9.dp, horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(icon, fontSize = 21.sp)
+                                        Text(item.label, color = FS_INK, fontSize = 8.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                                    }
+                                }
+                            }
+                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Surface(color = Color.White, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("تفاصيل الصنف المحدد: " + kind.label, color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        OutlinedTextField(qty, { qty = it }, Modifier.weight(1f), label = { Text(if (kind.isMineral) "الكمية (قطعة)" else "الكمية (كغ)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                        OutlinedTextField(price, { price = it }, Modifier.weight(1f), label = { Text("سعر الوحدة دج") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                    }
+                    OutlinedButton(onClick = {
+                        val q = qty.replace(',', '.').toDoubleOrNull()
+                        val p = price.replace(',', '.').toDoubleOrNull()
+                        if (q != null && q.isFinite() && q > 0 && p != null && p.isFinite() && p >= 0) {
+                            lines.add(FsLine(kind, q, p)); qty = ""; price = ""
+                        } else android.widget.Toast.makeText(c, "أدخل كمية وسعراً صحيحين", android.widget.Toast.LENGTH_SHORT).show()
+                    }, Modifier.fillMaxWidth()) { Icon(Icons.Outlined.AddCircleOutline, null); Text("إضافة الصنف إلى المشتريات") }
+                }
+            }
+        }
+        item {
+            Surface(color = Color.White, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("المشتريات المضافة", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Spacer(Modifier.weight(1f))
+                        Text(lines.size.toString() + " بند", color = FS_GREEN, fontSize = 10.sp)
+                    }
+                    if (lines.isEmpty()) Text("لم تضف أصنافاً بعد.", color = FS_MUTED, fontSize = 10.sp)
+                    lines.toList().forEachIndexed { index, line ->
+                        Surface(color = Color(0xFFF8F8F4), shape = RoundedCornerShape(11.dp)) {
+                            Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(line.kind.label, color = FS_INK, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Text(line.quantity.toString() + (if (line.kind.isMineral) " قطعة" else " كغ") + " × " + line.unitPrice + " دج", color = FS_MUTED, fontSize = 9.sp)
+                                }
+                                Text(String.format(Locale.US, "%.0f دج", line.total), color = FS_GREEN, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                IconButton(onClick = { lines.removeAt(index) }) { Icon(Icons.Outlined.DeleteOutline, "حذف") }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Surface(color = Color.White, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("معلومات الشراء", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    OutlinedTextField(supplier, { supplier = it }, Modifier.fillMaxWidth(), label = { Text("المورّد (اختياري)") }, singleLine = true)
+                    OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), label = { Text("ملاحظات اختيارية") }, minLines = 2)
+                }
+            }
+        }
+        item {
+            Surface(color = Color.White, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("فاتورة الشراء الناتجة", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Spacer(Modifier.weight(1f))
+                        Text("تُنشأ تلقائياً", color = FS_GREEN, fontSize = 9.sp)
+                    }
+                    Surface(color = Color(0xFFEFF4EC), shape = RoundedCornerShape(13.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Text("إجمالي قيمة المشتريات", color = FS_MUTED, fontSize = 10.sp)
+                            Text(String.format(Locale.US, "%.0f دج", total), color = FS_GREEN, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                            OutlinedTextField(paid, { paid = it }, Modifier.fillMaxWidth(), label = { Text("المبلغ المدفوع (دج)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), isError = paid.isNotBlank() && !validPaid)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("المبلغ المتبقي", color = FS_MUTED, fontSize = 11.sp)
+                                Text(String.format(Locale.US, "%.0f دج", (total - paidValue.coerceAtLeast(0.0)).coerceAtLeast(0.0)), color = Color(0xFF9A6B2F), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Text("رقم الفاتورة وتاريخها ينشآن عند اعتماد الشراء.", color = FS_MUTED, fontSize = 9.sp)
+                        }
+                    }
+                    Button(onClick = {
+                        runCatching {
+                            require(lines.isNotEmpty()) { "أضف صنفاً واحداً على الأقل" }
+                            require(validPaid) { "المدفوع يجب أن يكون بين صفر وإجمالي الفاتورة" }
+                            val inv = FsInvoice("MF-" + System.currentTimeMillis(), LocalDate.now().toString(), supplier.trim(), total, paidValue, note.trim(), lines.toList())
+                            fsSavePurchase(c, inv)
+                            lines.clear(); qty = ""; price = ""; paid = ""; supplier = ""; note = ""
+                            saved("تم اعتماد الشراء وتحديث المخزون وحفظ الفاتورة. رقمها: " + inv.id)
+                        }.onFailure { android.widget.Toast.makeText(c, it.message ?: "تعذر حفظ الشراء", android.widget.Toast.LENGTH_LONG).show() }
+                    }, Modifier.fillMaxWidth(), enabled = lines.isNotEmpty() && validPaid, colors = ButtonDefaults.buttonColors(containerColor = FS_GREEN)) {
+                        Icon(Icons.Outlined.ReceiptLong, null); Spacer(Modifier.width(6.dp)); Text("تأكيد الشراء وحفظ الفاتورة")
+                    }
+                }
+            }
+        }
     }
 }
 
