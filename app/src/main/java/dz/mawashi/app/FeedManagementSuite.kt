@@ -448,7 +448,8 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
             metabolizableEnergyMj = needs.sumOf { it.supplementEnergyMj },
             crudeProteinKg = needs.sumOf { it.supplementCrudeProteinKg },
             minimumForageFraction = supplementForageFloor,
-            maximumStarchFraction = 0.30
+            maximumStarchFraction = 0.30,
+            maximumEnergyMj = needs.sumOf { it.supplementEnergyMj } * 1.15
         ),
         optimizerIngredients
     )
@@ -671,6 +672,9 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
                     }
                     require(enteredEnergy + 0.02 >= needs.sumOf { it.supplementEnergyMj }) {
                         "الخلطة المعدلة لا تحقق الحد الأدنى للطاقة؛ لم يتم تسجيل الاستهلاك."
+                    }
+                    require(enteredEnergy <= needs.sumOf { it.supplementEnergyMj } * 1.15 + 0.02) {
+                        "الخلطة المعدلة تتجاوز سقف الطاقة الاحترازي؛ لا تعتمدها قبل إعادة الموازنة."
                     }
                     require(enteredProtein + 0.001 >= needs.sumOf { it.supplementCrudeProteinKg }) {
                         "الخلطة المعدلة لا تحقق الحد الأدنى للبروتين؛ لم يتم تسجيل الاستهلاك."
