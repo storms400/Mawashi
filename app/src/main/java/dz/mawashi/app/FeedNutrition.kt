@@ -11,8 +11,12 @@ internal enum class FeedKind(val label:String, val dryMatter:Double, val meMjPer
     SOY("كسبة الصويا",0.89,12.0,44.0),
     STRAW("التبن",0.90,6.0,4.0,true),
     ALFALFA("الفصة",0.88,8.5,18.0,true),
-    OAT_HAY("الخرطال (الشوفان)",0.89,8.5,9.0,true),
-    MINERALS("الأملاح المعدنية",0.98,0.0,0.0)
+    OAT_HAY("الخرطال",0.89,8.5,9.0,true),
+    OATS("الشوفان",0.89,8.5,9.0,true),
+    MINERALS("الأملاح المعدنية (قديم)",0.98,0.0,0.0),
+    MINERALS_YELLOW("صخرة الأملاح المعدنية الصفراء",0.98,0.0,0.0),
+    MINERALS_RED("صخرة الأملاح المعدنية الحمراء",0.98,0.0,0.0);
+    val isMineral:Boolean get() = name.startsWith("MINERALS")
 }
 
 internal data class FeedAnimalInput(
@@ -88,10 +92,10 @@ internal data class FeedStock(val kind:FeedKind,val quantityKg:Double,val shareP
 internal data class FeedUse(val kind:FeedKind,val asFedKg:Double,val dryMatterKg:Double)
 
 internal fun unavailableSelectedFeedKinds(stocks:Map<FeedKind,Double>,shares:Map<FeedKind,Double>):List<FeedKind> =
-    FeedKind.values().filter { it!=FeedKind.MINERALS && (shares[it]?:0.0)>0.0 && (stocks[it]?:0.0)<=0.0 }
+    FeedKind.values().filter { !it.isMineral && (shares[it]?:0.0)>0.0 && (stocks[it]?:0.0)<=0.0 }
 
 internal fun calculateSupplementUses(needs:List<DailyNeed>,stocks:List<FeedStock>):List<FeedUse> {
-    val eligible=stocks.filter{it.kind!=FeedKind.MINERALS && it.sharePercent>0}
+    val eligible=stocks.filter{!it.kind.isMineral && it.sharePercent>0}
     val shareTotal=eligible.sumOf{it.sharePercent}
     if(shareTotal<=0.0)return emptyList()
     val dm=needs.sumOf{it.supplementDryMatterKg}
