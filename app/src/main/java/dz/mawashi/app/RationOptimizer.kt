@@ -23,16 +23,15 @@ internal data class FeedNutrientProfile(
 ) {
     fun isValid(): Boolean =
         dryMatterFraction in 0.5..1.0 &&
-            meMjPerKgDm > 0.0 &&
-            crudeProteinFraction in 0.0..0.7 &&
-            ndfFraction in 0.0..1.0 &&
-            starchFraction in 0.0..1.0
+        meMjPerKgDm in 0.1..20.0 &&
+        crudeProteinFraction in 0.0..0.7 &&
+        ndfFraction in 0.0..1.0 &&
+        starchFraction in 0.0..1.0
 }
 
 /**
- * Reference-average ingredient data. Values are not a substitute for a local laboratory analysis.
- * DM/CP/NDF/starch are based on Feedipedia averages where available; ME remains a working
- * reference estimate and must be calibrated against local feed analyses and the chosen sheep system.
+ * Reference averages are provisional ingredient data, not an analysis of the user's feed batch.
+ * Update these values only from a traceable feed table or a laboratory certificate.
  */
 internal object FeedProfileCatalog {
     private const val FEEDIPEDIA = "Feedipedia average; local batch not analysed"
@@ -63,10 +62,10 @@ internal data class RationTargets(
     val dryMatterKg: Double,
     val metabolizableEnergyMj: Double,
     val crudeProteinKg: Double,
-    /** A forage floor is enabled only for a production group whose feeding protocol requires it. */
     val minimumForageFraction: Double = 0.0,
-    /** Optional operating guardrail; must be reviewed for the breed and production stage. */
-    val maximumStarchFraction: Double? = null
+    val maximumStarchFraction: Double? = null,
+    val minimumNdfFraction: Double? = null,
+    val maximumIngredientFractions: Map<FeedKind, Double> = emptyMap()
 )
 
 internal data class OptimizedFeedUse(
@@ -84,116 +83,131 @@ internal data class RationOptimizationResult(
     val suppliedEnergyMj: Double,
     val suppliedCrudeProteinKg: Double,
     val warnings: List<String>,
-    val message: String
+    val message: String,
+    val suppliedNdfKg: Double = 0.0,
+    val suppliedStarchKg: Double = 0.0,
+    val forageFraction: Double = 0.0
 )
 
 internal object RationOptimizer {
-    fun solve(
-        targets: RationTargets,
-        ingredients: List<RationIngredient>
-    ): RationOptimizationResult {
+    fun solve(targets: RationTargets, ingredients: List<RationIngredient>): RationOptimizationResult {
         require(targets.dryMatterKg.isFinite() && targets.dryMatterKg >= 0.0)
         require(targets.metabolizableEnergyMj.isFinite() && targets.metabolizableEnergyMj >= 0.0)
         require(targets.crudeProteinKg.isFinite() && targets.crudeProteinKg >= 0.0)
         require(targets.minimumForageFraction in 0.0..1.0)
         require(targets.maximumStarchFraction == null || targets.maximumStarchFraction in 0.0..1.0)
+        require(targets.minimumNdfFraction == null || targets.minimumNdfFraction in 0.0..1.0)
+        require(targets.maximumIngredientFractions.values.all { it.isFinite() && it in 0.0..1.0 })
 
         if (targets.dryMatterKg <= 1e-8) {
             return RationOptimizationResult(true, emptyList(), 0.0, 0.0, 0.0, 0.0,
                 emptyList(), "لا يلزم مكمل جاف وفق المدخلات الحالية")
         }
 
-        val candidates = ingredients.filter {
-            !it.kind.isMineral &&
-                it.stockAsFedKg.isFinite() && it.stockAsFedKg > 0.0 &&
-                it.pricePerAsFedKg.isFinite() && it.pricePerAsFedKg > 0.0 &&
-                it.profile.isValid()
+        val usable = ingredients.filter {
+            !it.kind.isMineral && it.stockAsFedKg.isFinite() && it.stockAsFedKg > 0.0 &&
+                it.pricePerAsFedKg.isFinite() && it.pricePerAsFedKg >= 0.0 && it.profile.isValid()
         }.distinctBy { it.kind }
-
-        if (candidates.isEmpty()) {
-            return failure("لا توجد أصناف متاحة لها كمية وسعر وبطاقة غذائية صالحة.")
+        if (usable.isEmpty()) {
+            return failure("لا توجد مواد علفية متاحة لها مخزون وسعر وبطاقة غذائية صالحة.")
         }
 
         val constraints = mutableListOf<LinearConstraint>()
-        val dm = DoubleArray(candidates.size) { 1.0 }
+        val dm = DoubleArray(usable.size) { 1.0 }
         constraints += LinearConstraint(dm, Relationship.EQ, targets.dryMatterKg)
 
-        val energy = DoubleArray(candidates.size) { candidates[it].profile.meMjPerKgDm }
-        constraints += LinearConstraint(energy, Relationship.GEQ, targets.metabolizableEnergyMj)
-
-        val protein = DoubleArray(candidates.size) { candidates[it].profile.crudeProteinFraction }
-        constraints += LinearConstraint(protein, Relationship.GEQ, targets.crudeProteinKg)
+        constraints += LinearConstraint(
+            DoubleArray(usable.size) { usable[it].profile.meMjPerKgDm },
+            Relationship.GEQ, targets.metabolizableEnergyMj
+        )
+        constraints += LinearConstraint(
+            DoubleArray(usable.size) { usable[it].profile.crudeProteinFraction },
+            Relationship.GEQ, targets.crudeProteinKg
+        )
 
         if (targets.minimumForageFraction > 0.0) {
-            val forage = DoubleArray(candidates.size) { if (candidates[it].profile.forage) 1.0 else 0.0 }
             constraints += LinearConstraint(
-                forage, Relationship.GEQ, targets.dryMatterKg * targets.minimumForageFraction
+                DoubleArray(usable.size) { if (usable[it].profile.forage) 1.0 else 0.0 },
+                Relationship.GEQ, targets.dryMatterKg * targets.minimumForageFraction
+            )
+        }
+        targets.maximumStarchFraction?.let { maximum ->
+            constraints += LinearConstraint(
+                DoubleArray(usable.size) { usable[it].profile.starchFraction },
+                Relationship.LEQ, targets.dryMatterKg * maximum
+            )
+        }
+        targets.minimumNdfFraction?.let { minimum ->
+            constraints += LinearConstraint(
+                DoubleArray(usable.size) { usable[it].profile.ndfFraction },
+                Relationship.GEQ, targets.dryMatterKg * minimum
             )
         }
 
-        targets.maximumStarchFraction?.let { maximum ->
-            val starch = DoubleArray(candidates.size) { candidates[it].profile.starchFraction }
-            constraints += LinearConstraint(starch, Relationship.LEQ, targets.dryMatterKg * maximum)
-        }
-
-        candidates.forEachIndexed { index, item ->
-            val cap = DoubleArray(candidates.size)
+        usable.forEachIndexed { index, item ->
+            val cap = DoubleArray(usable.size)
             cap[index] = 1.0
+            // Convert available as-fed stock into dry matter before applying the solver cap.
             constraints += LinearConstraint(
                 cap, Relationship.LEQ, item.stockAsFedKg * item.profile.dryMatterFraction
             )
+            targets.maximumIngredientFractions[item.kind]?.let { fraction ->
+                constraints += LinearConstraint(
+                    cap, Relationship.LEQ, targets.dryMatterKg * fraction
+                )
+            }
         }
 
+        // Objective is cost per kg of dry matter, not cost per as-fed kg.
         val objective = LinearObjectiveFunction(
-            DoubleArray(candidates.size) {
-                candidates[it].pricePerAsFedKg / candidates[it].profile.dryMatterFraction
+            DoubleArray(usable.size) {
+                usable[it].pricePerAsFedKg / usable[it].profile.dryMatterFraction
             }, 0.0
         )
 
         return try {
             val point: PointValuePair = SimplexSolver(1e-9, 10, 1e-12).optimize(
-                MaxIter(2000),
-                objective,
-                LinearConstraintSet(constraints),
-                GoalType.MINIMIZE,
-                NonNegativeConstraint(true)
+                MaxIter(2000), objective, LinearConstraintSet(constraints),
+                GoalType.MINIMIZE, NonNegativeConstraint(true)
             )
-            val uses = candidates.mapIndexedNotNull { index, item ->
+            val uses = usable.mapIndexedNotNull { index, item ->
                 val dmKg = point.point[index].coerceAtLeast(0.0)
-                if (dmKg <= 1e-7) null else OptimizedFeedUse(
-                    item.kind,
-                    dmKg / item.profile.dryMatterFraction,
-                    dmKg,
-                    (dmKg / item.profile.dryMatterFraction) * item.pricePerAsFedKg
-                )
+                if (dmKg <= 1e-7) null else {
+                    val asFed = dmKg / item.profile.dryMatterFraction
+                    OptimizedFeedUse(item.kind, asFed, dmKg, asFed * item.pricePerAsFedKg)
+                }
             }
             val suppliedDm = uses.sumOf { it.dryMatterKg }
-            val suppliedEnergy = uses.sumOf {
-                it.dryMatterKg * candidates.first { candidate -> candidate.kind == it.kind }.profile.meMjPerKgDm
-            }
-            val suppliedProtein = uses.sumOf {
-                it.dryMatterKg * candidates.first { candidate -> candidate.kind == it.kind }.profile.crudeProteinFraction
-            }
+            val profiles = usable.associateBy { it.kind }
+            val energy = uses.sumOf { it.dryMatterKg * profiles.getValue(it.kind).profile.meMjPerKgDm }
+            val protein = uses.sumOf { it.dryMatterKg * profiles.getValue(it.kind).profile.crudeProteinFraction }
+            val ndf = uses.sumOf { it.dryMatterKg * profiles.getValue(it.kind).profile.ndfFraction }
+            val starch = uses.sumOf { it.dryMatterKg * profiles.getValue(it.kind).profile.starchFraction }
+            val forageDm = uses.filter { profiles.getValue(it.kind).profile.forage }.sumOf { it.dryMatterKg }
             val warnings = buildList {
-                if (candidates.any { it.profile.reference.contains("estimate", true) }) {
-                    add("توجد قيم مرجعية تقديرية؛ يلزم تحليل الأعلاف المحلية قبل اعتماد الخلطة نهائياً.")
+                if (usable.any { it.profile.reference.contains("estimate", true) }) {
+                    add("بعض القيم الغذائية تقديرية؛ يلزم تحليل الأعلاف المحلية قبل اعتماد الخلطة نهائياً.")
                 }
-                if (candidates.any { it.kind == FeedKind.SOY }) {
-                    add("قيمة كسبة الصويا تقديرية؛ طابقها مع نسبة البروتين المكتوبة على كيس المنتج.")
+                if (usable.any { it.kind == FeedKind.SOY }) {
+                    add("طابق بروتين كسبة الصويا مع بطاقة المنتج أو التحليل المخبري.")
                 }
                 if (targets.maximumStarchFraction != null) {
-                    add("حد النشا قيد احترازي قابل للمراجعة وليس تشخيصاً بيطرياً.")
+                    add("حد النشا قيد احترازي في المكمل، ويجب مراجعة إجمالي العليقة والانتقال التدريجي للحبوب.")
                 }
-                add("الأملاح المعدنية لا تدخل في حل الخلطة؛ تُضبط وفق بطاقة المنتج ونسبة النحاس المسموح بها للأغنام.")
+                add("الأملاح المعدنية مستبعدة من حل الخلطة؛ جرعتها وتركيبها يحددان من بطاقة المنتج مع الانتباه للنحاس.")
             }
             RationOptimizationResult(
-                true, uses, uses.sumOf { it.cost }, suppliedDm, suppliedEnergy, suppliedProtein,
-                warnings, "تم إيجاد خلطة تحقق القيود الرياضية المدخلة."
+                feasible = true, uses = uses, totalCost = uses.sumOf { it.cost },
+                suppliedDryMatterKg = suppliedDm, suppliedEnergyMj = energy,
+                suppliedCrudeProteinKg = protein, warnings = warnings,
+                message = "تم إيجاد تركيبة تحقق القيود الرياضية والحدود المدخلة.",
+                suppliedNdfKg = ndf, suppliedStarchKg = starch,
+                forageFraction = if (suppliedDm > 0.0) forageDm / suppliedDm else 0.0
             )
         } catch (_: NoFeasibleSolutionException) {
-            failure("المخزون والأسعار والقيود الحالية لا تسمح بتركيبة تحقق الاحتياجات. لا توجد خلطة معتمدة.")
+            failure("المخزون والأسعار والقيود الحالية لا تسمح بتركيبة تحقق الاحتياجات؛ لم يتم اقتراح خلطة.")
         } catch (_: Exception) {
-            failure("تعذر حل الخلطة بهذه المدخلات. راجع القيم الغذائية والأسعار والمخزون.")
+            failure("تعذر حل الخلطة بهذه المدخلات. راجع الأوزان والأسعار والبطاقات الغذائية.")
         }
     }
 
