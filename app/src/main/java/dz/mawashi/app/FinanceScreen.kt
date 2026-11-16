@@ -394,7 +394,7 @@ private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
 @Composable private fun HerdHealthMonitor(modifier:Modifier=Modifier,onBack:()->Unit){
  val context=LocalContext.current
  val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (!granted) Toast.makeText(context, "يمكنك تفعيل الإشعارات من إعدادات الهاتف لتصلك مواعيد المتابعة", Toast.LENGTH_LONG).show() }
- var animals by remember{mutableStateOf(activeHerdAnimals(loadHerd(context)))}
+ var animals by remember{mutableStateOf(loadHerd(context))}
  var searchQuery by rememberSaveable{mutableStateOf("")}
  var healthFilter by rememberSaveable{mutableStateOf("الكل")}
  var reminders by remember{mutableStateOf(readHerdCare(context))}
@@ -450,7 +450,7 @@ private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
       Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){
        EweLogo(26)
        Spacer(Modifier.width(10.dp))
-       Column(Modifier.weight(1f)){Text(a.tag+" • "+a.kind,fontWeight=FontWeight.Bold,color=FinInk,fontSize=12.sp);Text("العمر: "+herdAgeLabel(a)+"  |  الوزن: "+(a.weightKg?.let{"%.1f كغ".format(Locale.US,it)}?:"غير مسجل"),fontSize=10.sp,color=FinMuted);Text("الحالة: "+a.health+" • "+a.productionState,fontSize=10.sp,color=FinGreen)}
+       Column(Modifier.weight(1f)){Text(a.tag+" • "+a.kind,fontWeight=FontWeight.Bold,color=FinInk,fontSize=12.sp);Text("العمر: "+herdAgeLabel(a)+"  |  الوزن: "+(a.weightKg?.let{"%.1f كغ".format(Locale.US,it)}?:"غير مسجل"),fontSize=10.sp,color=FinMuted);Text("الحالة: "+a.health+" • "+a.productionState+" • "+if(a.lifecycleStatus=="مؤرشف")"مؤرشف" else "نشط",fontSize=10.sp,color=FinGreen)}
        Icon(Icons.Outlined.ChevronLeft,null,tint=FinMuted)
       }
      }
