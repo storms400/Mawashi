@@ -151,7 +151,7 @@ private fun fsReverse(c: Context, m: FsMove): String {
     return "تم تسجيل تصحيح عكسي مع الاحتفاظ بالحركة الأصلية"
 }
 
-private enum class FsPage(val title: String) { STOCK("المخزون"), PURCHASE("إضافة مخزون"), INVOICES("الفواتير"), CONSUME("الاستهلاك"), CALC("الحاسبة"), LEDGER("السجل") }
+private enum class FsPage(val title: String) { STOCK("المخزون"), PURCHASE("إضافة مخزون"), INVOICES("الفواتير"), CONSUME("الاستهلاك"), LEDGER("السجل") }
 
 @Composable
 fun FeedManagementSuiteScreen(modifier: Modifier = Modifier) {
@@ -190,8 +190,7 @@ fun FeedManagementSuiteScreen(modifier: Modifier = Modifier) {
             FsPage.STOCK -> FsStock(c, stock, moves, herd.size, { page = it })
             FsPage.PURCHASE -> FsPurchase(c) { message = it; revision++; page = FsPage.STOCK }
             FsPage.INVOICES -> FsInvoiceArchive(c, invoices)
-            FsPage.CONSUME -> FsConsume(c, herd, stock) { message = it; revision++ }
-            FsPage.CALC -> FsCalculator(stock, { page = it })
+            FsPage.CONSUME -> FsConsume(c, herd, stock, { page = it }) { message = it; revision++ }
             FsPage.LEDGER -> FsLedger(c, moves) { message = it; revision++ }
         }
     }
@@ -235,10 +234,7 @@ private fun FsStock(c: Context, stock: Map<FeedKind, Double>, moves: List<FsMove
             Button({ go(FsPage.PURCHASE) }, Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = FS_GREEN)) { Icon(Icons.Outlined.Add, null); Text("إضافة مخزون", fontSize = 10.sp) }
             OutlinedButton({ go(FsPage.CONSUME) }, Modifier.weight(1f)) { Icon(Icons.Outlined.Restore, null); Text("تسجيل استهلاك", fontSize = 10.sp) }
         } }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            OutlinedButton({ go(FsPage.CALC) }, Modifier.weight(1f)) { Icon(Icons.Outlined.Calculate, null); Text("حساب العلف", fontSize = 10.sp) }
-            OutlinedButton({ go(FsPage.LEDGER) }, Modifier.weight(1f)) { Icon(Icons.Outlined.ReceiptLong, null); Text("سجل العمليات", fontSize = 10.sp) }
-        } }
+        item { OutlinedButton({ go(FsPage.LEDGER) }, Modifier.fillMaxWidth()) { Icon(Icons.Outlined.ReceiptLong, null); Text("سجل العمليات", fontSize = 10.sp) } }
         item { Text("آخر الحركات", color = FS_INK, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
         items(moves.take(4), key = { it.id }) { FsMoveCard(it) }
     }
@@ -398,7 +394,7 @@ private fun FsPurchase(c: Context, saved: (String) -> Unit) {
 }
 
 @Composable
-private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, Double>, saved: (String) -> Unit) {
+private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, Double>, go: (FsPage) -> Unit, saved: (String) -> Unit) {
     val groups = listOf(
         "النعاج الجافة" to "🐑", "النعاج الحوامل" to "🐑",
         "النعاج المرضعة" to "🐑", "الكباش" to "🐏",
@@ -439,11 +435,38 @@ private fun FsConsume(c: Context, herd: List<HerdAnimal>, stock: Map<FeedKind, D
     val totalSupplement = needs.sumOf { it.supplementDryMatterKg }
     val pastureKg = needs.sumOf { it.dryMatterKg * it.pastureShare }
     val missingWeight = groupAnimals.size - inputs.size
+    val todayConsumptionKg = fsMoves(c).filter { it.date == LocalDate.now().toString() && it.type == "استهلاك" }.sumOf { it.quantity }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp, horizontal = 1.dp),
         verticalArrangement = Arrangement.spacedBy(9.dp)) {
         item {
-            Text("تسجيل الاستهلاك", color = FS_INK, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text("خلطة كل رأس أولاً، ثم تجميع احتياجات الفئة", color = FS_MUTED, fontSize = 10.sp)
+            Surface(color = Color.White, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, FS_LINE)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { go(FsPage.STOCK) }) {
+                        Icon(Icons.Outlined.ArrowForward, contentDescription = "الرجوع إلى مخزون العلف", tint = FS_GREEN)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("الاستهلاك الذكي", color = FS_INK, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("تنظيم الخلطة الغذائية اليومية للقطيع", color = FS_MUTED, fontSize = 10.sp)
+                    }
+                    Text("🌿", fontSize = 27.sp)
+                }
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Surface(Modifier.weight(1f), color = Color(0xFFEFF4EC), shape = RoundedCornerShape(14.dp)) {
+                    Column(Modifier.padding(11.dp)) {
+                        Text("القطيع المختار", color = FS_MUTED, fontSize = 9.sp)
+                        Text(groupAnimals.size.toString() + " رأس", color = FS_GREEN, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                }
+                Surface(Modifier.weight(1f), color = Color(0xFFEFF4EC), shape = RoundedCornerShape(14.dp)) {
+                    Column(Modifier.padding(11.dp)) {
+                        Text("استهلاك اليوم المسجل", color = FS_MUTED, fontSize = 9.sp)
+                        Text(String.format(Locale.US, "%.2f كغ", todayConsumptionKg), color = FS_GREEN, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                }
+            }
         }
         item {
             Surface(color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, FS_LINE)) {
