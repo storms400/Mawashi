@@ -74,9 +74,9 @@ private fun writeSeasons(context: Context, seasons: List<SeasonRecord>) {
 }
 
 @Composable
-fun BreedingSeasonHomeCard(onClick: () -> Unit) {
+fun BreedingSeasonHomeCard(refreshKey: Int = 0, onClick: () -> Unit) {
     val context = LocalContext.current
-    val active = remember { readSeasons(context).lastOrNull() }
+    val active = remember(refreshKey) { readSeasons(context).lastOrNull() }
     val confirmed = active?.results?.values?.count { it == "حامل" } ?: 0
     val pending = (active?.tags?.size ?: 0) - (active?.results?.size ?: 0)
     Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), color = SeasonForest, shape = RoundedCornerShape(23.dp), shadowElevation = 2.dp) {
