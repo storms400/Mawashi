@@ -126,6 +126,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
     var filter by rememberSaveable { mutableStateOf("الكل") }
     var selectedTag by remember { mutableStateOf<String?>(null) }
     var historyOpen by rememberSaveable { mutableStateOf(false) }
+    var calendarOpen by rememberSaveable { mutableStateOf(false) }
     val active = seasons.lastOrNull()
 
     fun save(updated: List<SeasonRecord>) {
@@ -237,8 +238,27 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(onClick = { historyOpen = true }, modifier = Modifier.weight(1f)) { Text("سجل المواسم", fontSize = 10.sp) }
-                        OutlinedButton(onClick = { selectedTag = null }, modifier = Modifier.weight(1f), enabled = false) { Text("تقويم الولادات", fontSize = 10.sp) }
+                        OutlinedButton(onClick = { calendarOpen = !calendarOpen }, modifier = Modifier.weight(1f)) { Text("تقويم الولادات", fontSize = 10.sp) }
                     }
+                }
+                if (calendarOpen) {
+                    item { Text("الولادات المتوقعة للحمل المؤكد", color = SeasonForest, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                    val dueRows = active.tags.mapNotNull { tag ->
+                        val age = active.gestation[tag]
+                        if (active.results[tag] != "حامل" || age == null) null
+                        else runCatching { tag to LocalDate.parse(active.scan).plusDays(147L - age) }.getOrNull()
+                    }.sortedBy { it.second }
+                    items(dueRows, key = { it.first }) { due ->
+                        Surface(color = Color.White, shape = RoundedCornerShape(12.dp)) {
+                            Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                EwePhoto(34)
+                                Spacer(Modifier.width(8.dp))
+                                Text("النعجة " + due.first, color = SeasonForest, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), fontSize = 11.sp)
+                                Text(due.second.toString(), color = SeasonMuted, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                    if (dueRows.isEmpty()) item { Text("لا توجد ولادات مؤكدة التاريخ بعد؛ سجّل عمر الحمل من السونار.", color = SeasonMuted, fontSize = 10.sp) }
                 }
             }
         }
