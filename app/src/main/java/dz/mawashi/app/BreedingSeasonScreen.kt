@@ -290,7 +290,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                 repeatScan = if (outcome == "غير حاسم" && repeat.isNotBlank()) active.repeatScan + (selectedTag!! to repeat) else active.repeatScan - selectedTag!!
             )
             val profileSaved = savePregnancyScanToHerd(
-                context, selectedTag!!, outcome, active.scan, days, fetusCount
+                context, selectedTag!!, outcome, active.scan, days, fetusCount, repeat
             )
             save(seasons.dropLast(1) + updated)
             if (!profileSaved && outcome != "غير حاسم") {
