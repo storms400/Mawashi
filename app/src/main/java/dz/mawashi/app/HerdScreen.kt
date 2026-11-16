@@ -71,7 +71,7 @@ private val HerdMuted = Color(0xFF778078)
 private val HerdLine = Color(0xFFE8E4DA)
 private const val HERD_PREFS = "mawashi_herd_local"
 private const val HERD_KEY = "animals"
-internal data class HerdAnimal(val id:String,val tag:String,val kind:String,val ageMonths:Int,val health:String,val notes:String,val weightKg:Double?=null,val birthDate:String="",val birthWeightKg:Double?=null,val motherTag:String="",val productionState:String="نعجة جافة",val pregnancyStage:String="غير حامل",val fetusCount:Int=1,val nursingLambs:Int=1,val lifecycleStatus:String="نشط",val exitDate:String="",val exitReason:String="",val acquisitionCost:Double?=null,val breed:String="غير محددة",val pregnancyStartDate:String="",val expectedBirthDate:String="")
+internal data class HerdAnimal(val id:String,val tag:String,val kind:String,val ageMonths:Int,val health:String,val notes:String,val weightKg:Double?=null,val birthDate:String="",val birthWeightKg:Double?=null,val motherTag:String="",val productionState:String="نعجة جافة",val pregnancyStage:String="غير حامل",val fetusCount:Int=1,val nursingLambs:Int=1,val lifecycleStatus:String="نشط",val exitDate:String="",val exitReason:String="",val acquisitionCost:Double?=null,val breed:String="غير محددة",val pregnancyStartDate:String="",val expectedBirthDate:String="",val pregnancyScanDate:String="",val pregnancyScanOutcome:String="")
 
 internal fun loadHerd(c:Context):List<HerdAnimal> {
  val raw=c.getSharedPreferences(HERD_PREFS,0).getString(HERD_KEY,"[]") ?: "[]"
@@ -85,7 +85,7 @@ internal fun loadHerd(c:Context):List<HerdAnimal> {
     if(tag.isNotBlank() && result.none{it.tag.equals(tag,true)}) result.add(
      HerdAnimal(id,tag,x.optString("kind","غير محدد"),x.optInt("ageMonths"),x.optString("health","غير محددة"),x.optString("notes"),
       if(x.has("weightKg")&&!x.isNull("weightKg"))x.optDouble("weightKg") else null,
-      x.optString("birthDate"),if(x.has("birthWeightKg")&&!x.isNull("birthWeightKg"))x.optDouble("birthWeightKg") else null,x.optString("motherTag"),x.optString("productionState","نعجة جافة"),x.optString("pregnancyStage","غير حامل"),x.optInt("fetusCount",1),x.optInt("nursingLambs",1),x.optString("lifecycleStatus","نشط"),x.optString("exitDate"),x.optString("exitReason"),if(x.has("acquisitionCost")&&!x.isNull("acquisitionCost"))x.optDouble("acquisitionCost").takeIf{it.isFinite()&&it>=0.0} else null,x.optString("breed","غير محددة"),x.optString("pregnancyStartDate"),x.optString("expectedBirthDate"))
+      x.optString("birthDate"),if(x.has("birthWeightKg")&&!x.isNull("birthWeightKg"))x.optDouble("birthWeightKg") else null,x.optString("motherTag"),x.optString("productionState","نعجة جافة"),x.optString("pregnancyStage","غير حامل"),x.optInt("fetusCount",1),x.optInt("nursingLambs",1),x.optString("lifecycleStatus","نشط"),x.optString("exitDate"),x.optString("exitReason"),if(x.has("acquisitionCost")&&!x.isNull("acquisitionCost"))x.optDouble("acquisitionCost").takeIf{it.isFinite()&&it>=0.0} else null,x.optString("breed","غير محددة"),x.optString("pregnancyStartDate"),x.optString("expectedBirthDate"),x.optString("pregnancyScanDate"),x.optString("pregnancyScanOutcome"))
     )
    } catch(_:Exception) { /* تجاهل السجل التالف مع الحفاظ على بقية القطيع */ }
   }
@@ -99,10 +99,39 @@ internal fun saveHerd(c:Context,list:List<HerdAnimal>) {
   if(x.weightKg==null)put("weightKg",JSONObject.NULL) else put("weightKg",x.weightKg)
   put("birthDate",x.birthDate)
   if(x.birthWeightKg==null)put("birthWeightKg",JSONObject.NULL) else put("birthWeightKg",x.birthWeightKg)
-  put("motherTag",x.motherTag);put("productionState",x.productionState);put("pregnancyStage",x.pregnancyStage);put("fetusCount",x.fetusCount);put("nursingLambs",x.nursingLambs);put("lifecycleStatus",x.lifecycleStatus);put("exitDate",x.exitDate);put("exitReason",x.exitReason);if(x.acquisitionCost==null)put("acquisitionCost",JSONObject.NULL) else put("acquisitionCost",x.acquisitionCost);put("breed",x.breed);put("pregnancyStartDate",x.pregnancyStartDate);put("expectedBirthDate",x.expectedBirthDate)
+  put("motherTag",x.motherTag);put("productionState",x.productionState);put("pregnancyStage",x.pregnancyStage);put("fetusCount",x.fetusCount);put("nursingLambs",x.nursingLambs);put("lifecycleStatus",x.lifecycleStatus);put("exitDate",x.exitDate);put("exitReason",x.exitReason);if(x.acquisitionCost==null)put("acquisitionCost",JSONObject.NULL) else put("acquisitionCost",x.acquisitionCost);put("breed",x.breed);put("pregnancyStartDate",x.pregnancyStartDate);put("expectedBirthDate",x.expectedBirthDate);put("pregnancyScanDate",x.pregnancyScanDate);put("pregnancyScanOutcome",x.pregnancyScanOutcome)
  })}
  check(c.getSharedPreferences(HERD_PREFS,0).edit().putString(HERD_KEY,a.toString()).commit()) { "تعذر حفظ بيانات القطيع" }
 }
+
+internal fun savePregnancyScanToHerd(
+ c:Context, tag:String, outcome:String, scanDate:String, gestationDays:Int, fetusCount:Int
+):Boolean {
+ val scan=runCatching{LocalDate.parse(scanDate)}.getOrNull()?:return false
+ val animals=loadHerd(c).toMutableList()
+ val index=animals.indexOfFirst{it.tag.equals(tag.trim(),true)&&it.kind=="نعجة"}
+ if(index<0)return false
+ val old=animals[index]
+ val updated=when(outcome){
+  "حامل"->{
+   if(gestationDays !in 1..145 || fetusCount !in 1..3)return false
+   val start=scan.minusDays(gestationDays.toLong())
+   val due=scan.plusDays(147L-gestationDays)
+   val stage=when{gestationDays<50->"بداية الحمل";gestationDays<105->"منتصف الحمل";else->"الأربعة أسابيع الأخيرة"}
+   old.copy(productionState="نعجة حامل",pregnancyStage=stage,fetusCount=fetusCount,
+    pregnancyStartDate=start.toString(),expectedBirthDate=due.toString(),
+    pregnancyScanDate=scan.toString(),pregnancyScanOutcome="حامل")
+  }
+  "غير حامل"->old.copy(productionState="نعجة جافة",pregnancyStage="غير حامل",fetusCount=1,
+    pregnancyStartDate="",expectedBirthDate="",pregnancyScanDate=scan.toString(),pregnancyScanOutcome="غير حامل")
+  "غير حاسم"->old.copy(pregnancyScanDate=scan.toString(),pregnancyScanOutcome="غير حاسم")
+  else->return false
+ }
+ animals[index]=updated
+ saveHerd(c,animals)
+ true
+}
+
 
 
 internal fun herdAnimalCostForSale(animal:HerdAnimal?,legacyFallback:Double):Double =
