@@ -26,7 +26,7 @@ internal data class FeedAnimalInput(
 
 internal fun feedInputsForAnimals(animals:List<HerdAnimal>):List<FeedAnimalInput> =
     activeHerdAnimals(animals).mapNotNull { animal ->
-        val weight=animal.weightKg?.takeIf { it.isFinite() && it>0.0 } ?: return@mapNotNull null
+        val weight=animal.weightKg?.takeIf { it.isFinite() && it in 2.0..180.0 } ?: return@mapNotNull null
         FeedAnimalInput(animal.tag,weight,animal.productionState,animal.pregnancyStage,animal.fetusCount,animal.nursingLambs,animal.ageMonths)
     }
 
