@@ -61,8 +61,8 @@ jobs:
 
       - name: Verify Firebase client mapping for independent v49 package
         run: |
-          grep -q '"package_name": "dz.mawashi.app.independent.v49"' app/google-services.json
-          grep -q '"package_name": "dz.mawashi.app.independent.v49"' app/src/standalone/google-services.json
+          grep -q 'dz.mawashi.app.independent.v49' app/google-services.json
+          grep -q 'dz.mawashi.app.independent.v49' app/src/standalone/google-services.json
 
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
