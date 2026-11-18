@@ -28,14 +28,6 @@ private val CareCream = Color(0xFFF7F3EA)
 private val CareInk = Color(0xFF27332A)
 private val CareMuted = Color(0xFF778078)
 private val CareLine = Color(0xFFE8E4DA)
-private val CareVaccines = listOf(
- "لقاح الكلوستريديا والتسمم المعوي والكزاز (CD&T)",
- "لقاح الباستوريلا",
- "لقاح طاعون المجترات الصغيرة (PPR)",
- "لقاح جدري الأغنام",
- "لقاح الحمى القلاعية (FMD)",
- "لقاح البروسيلا (Rev.1) — وفق البرنامج الرسمي فقط"
-)
 
 @Composable
 internal fun CareCenterScreen(modifier: Modifier = Modifier) {
@@ -120,82 +112,192 @@ private fun CareVaccineScreen(modifier: Modifier, back: () -> Unit) {
  val c = LocalContext.current
  var animals by remember { mutableStateOf(loadHerd(c).filter { it.lifecycleStatus != "مؤرشف" }) }
  var records by remember { mutableStateOf(readHerdCare(c)) }
- var vaccine by rememberSaveable { mutableStateOf(CareVaccines.first()) }
- var date by rememberSaveable { mutableStateOf(LocalDate.now().plusDays(7).toString()) }
- var notes by rememberSaveable { mutableStateOf("") }
- var search by rememberSaveable { mutableStateOf("") }
- var selected by remember { mutableStateOf(setOf<String>()) }
- val vaccineRecords = records.filter { it.kind == "تطعيم" }
+ var selectedTags by remember { mutableStateOf(setOf<String>()) }
+ var dialogOpen by rememberSaveable { mutableStateOf(false) }
+ var dialogStepId by rememberSaveable { mutableStateOf("") }
+ var dialogTags by rememberSaveable { mutableStateOf(listOf<String>()) }
+ var date by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
+ var batchNotes by rememberSaveable { mutableStateOf("") }
+ val today = LocalDate.now()
+ val birthDates = animals.associate { animal -> animal.tag to runCatching { LocalDate.parse(animal.birthDate) }.getOrNull() }
+ val completed = animals.sumOf { animal -> SMART_VACCINATION_STEPS.count { step -> smartVaccinationDone(animal.tag, step.id, records) } }
+ val eligible = animals.filter { animal ->
+  val birth = birthDates[animal.tag] ?: return@filter false
+  val idx = SMART_VACCINATION_STEPS.indexOfFirst { !smartVaccinationDone(animal.tag, it.id, records) }
+  idx >= 0 && smartVaccinationUnlocked(animal.tag, idx, records) && !smartVaccinationDueDate(birth, SMART_VACCINATION_STEPS[idx]).isAfter(today)
+ }
+ val currentStepsByTag = animals.associate { animal ->
+  animal.tag to SMART_VACCINATION_STEPS.firstOrNull { step -> !smartVaccinationDone(animal.tag, step.id, records) }
+ }
+ val selectedEligible = eligible.filter { it.tag in selectedTags }
+ val commonStepId = selectedEligible.mapNotNull { currentStepsByTag[it.tag]?.id }.distinct().singleOrNull()
+ val commonStep = SMART_VACCINATION_STEPS.firstOrNull { it.id == commonStepId }
+ val dueStepsCount = eligible.size
+ val totalHeads = animals.count { birthDates[it.tag] != null }
+ LaunchedEffect(Unit) {
+  animals = loadHerd(c).filter { it.lifecycleStatus != "مؤرشف" }
+  val fresh = readHerdCare(c)
+  val cleaned = fresh.filterNot { it.kind == "تطعيم" && !it.completed }
+  records = reconcileSmartVaccinationReminders(animals, cleaned, LocalDate.now())
+  if (records != fresh) runCatching { saveHerdCare(c, records) }
+ }
+ fun openRecord(tags: List<String>, step: SmartVaccinationStep) {
+  dialogTags = tags
+  dialogStepId = step.id
+  date = LocalDate.now().toString()
+  batchNotes = ""
+  dialogOpen = true
+ }
  Column(modifier.fillMaxSize().background(CareCream).padding(14.dp)) {
   Row(verticalAlignment = Alignment.CenterVertically) {
    IconButton(onClick = back) { Icon(Icons.Outlined.ArrowBack, null, tint = CareGreen) }
-   Text("برنامج التطعيمات", color = CareInk, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+   Column(Modifier.weight(1f)) {
+    Text("برنامج التحصين المرحلي", color = CareInk, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+    Text("مواشي تقود مراحل التحصين منذ الولادة", color = CareMuted, fontSize = 10.sp)
+   }
   }
-  LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+  LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
    item {
-    Surface(color = Color.White, shape = RoundedCornerShape(15.dp), border = BorderStroke(1.dp, CareLine)) {
+    Surface(color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, CareLine)) {
      Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-      Text("إضافة موعد تطعيم", color = CareInk, fontWeight = FontWeight.Bold)
-      Text("اختر اللقاح والحيوانات من القطيع. يحدد الطبيب البيطري توقيت الجرعات وفق نشرة المنتج والبرنامج المحلي.", color = CareMuted, fontSize = 10.sp)
-      CareVaccines.forEach { name ->
-       Row(verticalAlignment = Alignment.CenterVertically) {
-        RadioButton(selected = vaccine == name, onClick = { vaccine = name })
-        Text(name, color = CareInk, fontSize = 10.sp)
-       }
+      Text("ملخص برنامج القطيع", color = CareInk, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+      Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+       CareStat("مواليد ببيانات ميلاد", totalHeads.toString(), Modifier.weight(1f))
+       CareStat("مستحقون الآن", dueStepsCount.toString(), Modifier.weight(1f))
+       CareStat("جرعات موثقة", completed.toString(), Modifier.weight(1f))
       }
-      MawashiDatePickerField(date, { date = it }, "تاريخ الموعد", Modifier.fillMaxWidth())
-      OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("بحث برقم الحيوان") })
-      Text("الحيوانات النشطة", color = CareInk, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-      animals.filter { it.tag.contains(search.trim(), true) }.forEach { animal ->
-       Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(selected.contains(animal.tag), { checked ->
-         selected = if (checked) selected + animal.tag else selected - animal.tag
-        })
-        Column {
-         Text(animal.tag + " • " + animal.kind, color = CareInk, fontSize = 11.sp)
-         Text("العمر: " + herdAnimalAgeLabel(animal), color = CareMuted, fontSize = 9.sp)
+      Text("يحسب مواشي الاستحقاق من تاريخ ميلاد كل رأس، ويعرض الخطوة التالية فقط بعد إكمال الخطوة السابقة.", color = CareMuted, fontSize = 10.sp)
+     }
+    }
+   }
+   item {
+    Surface(color = CareGreen, shape = RoundedCornerShape(15.dp)) {
+     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+      Text("مراحل البرنامج المعتمدة داخل التطبيق", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+      Text("① شهران • التسمم المعوي", color = Color.White, fontSize = 11.sp)
+      Text("② ثلاثة أشهر • التسمم الدموي", color = Color.White, fontSize = 11.sp)
+      Text("③ أربعة أشهر • الجدري ثم PPR ثم الحمى القلاعية", color = Color.White, fontSize = 11.sp)
+      Text("توقيت هذه المراحل يحتاج اعتماداً بيطرياً محلياً قبل اعتباره برنامجاً طبياً نهائياً.", color = Color(0xFFE9EEE8), fontSize = 9.sp)
+     }
+    }
+   }
+   item {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+     Text("الخطوة المطلوبة الآن", color = CareInk, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+     Text("حدد الرؤوس المستحقة للتحصين الجماعي", color = CareMuted, fontSize = 9.sp)
+    }
+   }
+   if (eligible.isEmpty()) item {
+    Surface(color = Color.White, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, CareLine)) {
+     Column(Modifier.padding(12.dp)) {
+      Text("لا توجد خطوات تحصين مستحقة الآن", color = CareGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+      Text("ستظهر الحيوانات تلقائياً عند حلول موعد المرحلة التالية واستيفاء شروطها.", color = CareMuted, fontSize = 10.sp)
+     }
+    }
+   }
+   items(animals, key = { it.tag }) { animal ->
+    val birth = birthDates[animal.tag]
+    val doneCount = SMART_VACCINATION_STEPS.count { smartVaccinationDone(animal.tag, it.id, records) }
+    val idx = SMART_VACCINATION_STEPS.indexOfFirst { !smartVaccinationDone(animal.tag, it.id, records) }
+    val step = if (idx >= 0) SMART_VACCINATION_STEPS[idx] else null
+    val unlocked = step != null && smartVaccinationUnlocked(animal.tag, idx, records)
+    val dueDate = if (birth != null && step != null) smartVaccinationDueDate(birth, step) else null
+    val dueNow = unlocked && dueDate != null && !dueDate.isAfter(today)
+    val isEligible = animal in eligible
+    Surface(color = Color.White, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, CareLine)) {
+     Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+       Column(Modifier.weight(1f)) {
+        Text("🐑 ${animal.tag} • ${animal.kind}", color = CareInk, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text(if (birth != null) "تاريخ الميلاد: $birth • ${herdAnimalAgeLabel(animal)}" else "تاريخ الميلاد غير مسجل؛ لا يمكن حساب البرنامج", color = CareMuted, fontSize = 9.sp)
+       }
+       if (isEligible) Checkbox(selectedTags.contains(animal.tag), { checked -> selectedTags = if (checked) selectedTags + animal.tag else selectedTags - animal.tag })
+      }
+      Row(verticalAlignment = Alignment.CenterVertically) {
+       Text("التقدم", color = CareMuted, fontSize = 9.sp, modifier = Modifier.weight(1f))
+       Text("$doneCount / ${SMART_VACCINATION_STEPS.size}", color = CareGreen, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+      }
+      LinearProgressIndicator(progress = { doneCount.toFloat() / SMART_VACCINATION_STEPS.size }, modifier = Modifier.fillMaxWidth(), color = CareGreen, trackColor = CareLine)
+      if (step == null) {
+       Text("اكتمل المسار الأساسي المسجل لهذا الحيوان", color = CareGreen, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+      } else {
+       Text("المرحلة ${step.stage} • ${step.title}", color = CareInk, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+       if (!unlocked) {
+        Text("🔒 تفتح بعد إكمال الخطوة السابقة", color = CareMuted, fontSize = 9.sp)
+       } else if (dueDate != null && dueDate.isAfter(today)) {
+        Text("📅 موعد الاستحقاق: $dueDate", color = CareMuted, fontSize = 10.sp)
+       } else if (dueNow) {
+        Text("مستحق الآن • موعد الاستحقاق $dueDate", color = Color(0xFFB88743), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+        Button(onClick = { openRecord(listOf(animal.tag), step) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = CareGreen)) {
+         Text("تسجيل التطعيم")
         }
        }
       }
-      OutlinedTextField(notes, { notes = it }, modifier = Modifier.fillMaxWidth(), label = { Text("ملاحظات الطبيب / المنتج / رقم الدفعة") }, minLines = 2)
-      Button(onClick = {
-       val validDate = runCatching { LocalDate.parse(date); true }.getOrDefault(false)
-       val targets = animals.filter { selected.contains(it.tag) }
-       if (!validDate || targets.isEmpty()) {
-        Toast.makeText(c, "اختر حيواناً واحداً على الأقل وتاريخاً صحيحاً", Toast.LENGTH_LONG).show()
-       } else {
-        val additions = targets.map { a -> HerdCareReminder(UUID.randomUUID().toString(), a.tag, "تطعيم", vaccine, date, notes.trim(), false) }
-        val merged = records + additions
-        runCatching { saveHerdCare(c, merged) }.onSuccess {
-         records = merged
-         selected = emptySet()
-         notes = ""
-         Toast.makeText(c, "تم حفظ المواعيد وربطها بملفات الحيوانات", Toast.LENGTH_LONG).show()
-        }.onFailure { Toast.makeText(c, "تعذر حفظ المواعيد", Toast.LENGTH_LONG).show() }
+     }
+    }
+   }
+   item {
+    if (selectedEligible.isNotEmpty()) {
+     Surface(color = Color.White, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, CareLine)) {
+      Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+       Text("التحصين الجماعي", color = CareInk, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+       Text("المحدد: ${selectedEligible.size} • ${commonStep?.title ?: "اختر رؤوساً لها نفس الخطوة الحالية"}", color = CareMuted, fontSize = 10.sp)
+       Button(onClick = { if (commonStep != null) openRecord(selectedEligible.map { it.tag }, commonStep) }, enabled = commonStep != null, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = CareGreen)) {
+        Text("تسجيل الخطوة للحيوانات المحددة")
        }
-      }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = CareGreen)) {
-       Text("حفظ مواعيد الحيوانات المختارة")
+       TextButton(onClick = { selectedTags = emptySet() }) { Text("إلغاء التحديد", color = CareGreen) }
       }
      }
     }
    }
-   item { Text("سجل التطعيمات", color = CareInk, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
-   if (vaccineRecords.isEmpty()) item { Text("لا توجد سجلات تطعيم بعد.", color = CareMuted, fontSize = 11.sp) }
-   items(vaccineRecords.sortedBy { it.date }, key = { it.id }) { record ->
-    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, CareLine)) {
-     Row(Modifier.fillMaxWidth().padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
-      Column(Modifier.weight(1f)) {
-       Text(record.tag + " • " + record.title, color = CareInk, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-       Text(record.date + if (record.notes.isBlank()) "" else " • " + record.notes, color = CareMuted, fontSize = 9.sp)
-      }
-      Checkbox(record.completed, { done ->
-       val changed = records.map { if (it.id == record.id) it.copy(completed = done) else it }
-       runCatching { saveHerdCare(c, changed) }.onSuccess { records = changed }
-      })
-     }
+   item {
+    Surface(color = Color(0xFFEDE8DE), shape = RoundedCornerShape(13.dp)) {
+     Text("ملاحظة علمية: هذا المسار نموذج تنظيمي أولي. الأعمار والتوافق والجرعات والفواصل يجب اعتمادها من الطبيب البيطري ونشرة كل منتج والبرنامج المحلي. لا يسجل التطبيق جرعة على أنها مكتملة إلا بعد تأكيد المربي إعطاءها فعلياً.", color = CareInk, fontSize = 9.sp, modifier = Modifier.padding(11.dp))
     }
    }
   }
+ }
+ if (dialogOpen) {
+  val step = SMART_VACCINATION_STEPS.firstOrNull { it.id == dialogStepId }
+  AlertDialog(
+   onDismissRequest = { dialogOpen = false },
+   title = { Text("تسجيل تنفيذ التحصين", color = CareInk, fontWeight = FontWeight.Bold) },
+   text = {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+     Text(step?.title.orEmpty(), color = CareInk, fontWeight = FontWeight.Bold)
+     Text("الحيوانات: ${dialogTags.joinToString("، ")}", color = CareMuted, fontSize = 10.sp)
+     MawashiDatePickerField(date, { date = it }, "تاريخ إعطاء اللقاح", Modifier.fillMaxWidth())
+     OutlinedTextField(batchNotes, { batchNotes = it }, modifier = Modifier.fillMaxWidth(), label = { Text("رقم الدفعة أو ملاحظات (اختياري)") }, minLines = 2)
+     Text("التسجيل يؤكد أن التطعيم أعطي فعلياً. لا تستخدم تاريخاً مستقبلياً.", color = CareMuted, fontSize = 9.sp)
+    }
+   },
+   confirmButton = {
+    Button(onClick = {
+     val actualDate = runCatching { LocalDate.parse(date) }.getOrNull()
+     val selectedStep = SMART_VACCINATION_STEPS.firstOrNull { it.id == dialogStepId }
+     if (actualDate == null || actualDate.isAfter(LocalDate.now()) || selectedStep == null) {
+      Toast.makeText(c, "أدخل تاريخاً صحيحاً غير مستقبلي", Toast.LENGTH_LONG).show()
+     } else {
+      val additions = dialogTags.map { tag -> HerdCareReminder(
+       id = UUID.randomUUID().toString(), tag = tag, kind = "تحصين مرحلي",
+       title = selectedStep.title, date = actualDate.toString(),
+       notes = "SMART_VAX_DONE:${selectedStep.id}" + if (batchNotes.isBlank()) "" else "\n" + batchNotes.trim(),
+       completed = true
+      ) }
+      val base = records.filterNot { it.kind == "تحصين مرحلي" && it.notes.startsWith("SMART_VAX_PENDING:") && it.tag in dialogTags }
+      val reconciled = reconcileSmartVaccinationReminders(animals, base + additions, LocalDate.now())
+      runCatching { saveHerdCare(c, reconciled) }.onSuccess {
+       records = reconciled
+       selectedTags = selectedTags - dialogTags.toSet()
+       dialogOpen = false
+       Toast.makeText(c, "تم توثيق التحصين وفتح الخطوة التالية عند استيفاء شروطها", Toast.LENGTH_LONG).show()
+      }.onFailure { Toast.makeText(c, "تعذر حفظ سجل التحصين", Toast.LENGTH_LONG).show() }
+     }
+    }, colors = ButtonDefaults.buttonColors(containerColor = CareGreen)) { Text("تأكيد وحفظ") }
+   },
+   dismissButton = { TextButton(onClick = { dialogOpen = false }) { Text("إلغاء", color = CareGreen) } },
+   containerColor = CareCream
+  )
  }
 }
 
