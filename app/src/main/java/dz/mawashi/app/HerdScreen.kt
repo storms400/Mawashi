@@ -295,8 +295,8 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
    }
   }else{
    Text("الحيوانات المسجلة (${visible.size})",color=HerdInk,fontWeight=FontWeight.Bold,fontSize=14.sp)
-   LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){items(visible,key={it.id}){a->Surface(onClick={selected=a},modifier=Modifier.fillMaxWidth(),color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,HerdLine)){Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically){EweLogo(45);Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)){Text(a.tag,color=HerdInk,fontWeight=FontWeight.Bold,fontSize=14.sp);Text("${a.kind} • ${herdAnimalAgeLabel(a)} • ${a.health}",color=HerdMuted,fontSize=10.sp);Text("الوزن الحالي: ${a.weightKg?.let{"%.2f".format(java.util.Locale.US,it)}?.plus(" كغ")?:"غير مسجل"}",color=HerdGreen,fontSize=10.sp,fontWeight=FontWeight.SemiBold);Text("الحالة الإنتاجية: ${a.productionState}${if(a.productionState=="نعجة حامل")" • ${a.pregnancyStage} • ${when(a.fetusCount){2->"توأم";3->"ثلاثة أجنة";else->"جنين واحد"}} • الجنس: ${a.pregnancyOffspringSex.ifBlank{"غير محدد"}}" else if(a.productionState=="نعجة مرضعة")" • ${a.nursingLambs} حمل" else ""}",color=HerdMuted,fontSize=9.sp);
-       if(a.productionState=="نعجة حامل" && a.pregnancyScanDate.isNotBlank()) Text("السونار: ${a.pregnancyScanDate} • الولادة المتوقعة: ${a.expectedBirthDate}",color=HerdGreen,fontSize=9.sp);if(a.kind=="حمل/رخلة")Text("الجنس: ${a.sex.ifBlank{"غير محدد"}} • الميلاد: ${a.birthDate.ifBlank{"غير مسجل"}} • وزن الميلاد: ${a.birthWeightKg?.let{"%.2f".format(java.util.Locale.US,it)+" كغ"}?:"غير مسجل"} • الأم: ${a.motherTag.ifBlank{"غير مسجل"}}",color=HerdMuted,fontSize=9.sp);if(a.lifecycleStatus=="مؤرشف")Text("مؤرشف • ${a.exitReason} • ${a.exitDate}",color=Color(0xFF9A5B32),fontSize=10.sp,fontWeight=FontWeight.SemiBold);if(a.notes.isNotBlank())Text(a.notes,color=HerdMuted,fontSize=10.sp,maxLines=1)};IconButton(onClick={selected=a;editor=true}){Icon(Icons.Outlined.Edit,"تعديل",tint=HerdGreen)};if(a.lifecycleStatus=="نشط")IconButton(onClick={deleting=a;exitDate=LocalDate.now().toString();exitReason="بيع";exitError=null}){Icon(Icons.Outlined.Archive,"أرشفة الحيوان",tint=HerdMuted)} else IconButton(onClick={val i=animals.indexOfFirst{it.id==a.id};if(i>=0){animals[i]=restoreHerdAnimal(a);saveHerd(context,animals.toList())}}){Icon(Icons.Outlined.Restore,"إعادة إلى القطيع",tint=HerdGreen)}}}}}
+   LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){items(visible,key={it.id}){a->Surface(onClick={selected=a},modifier=Modifier.fillMaxWidth(),color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,HerdLine)){Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically){EweLogo(45);Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)){Text(a.tag,color=HerdInk,fontWeight=FontWeight.Bold,fontSize=14.sp);Text("${a.kind} • ${herdAnimalAgeLabel(a)} • ${a.health}",color=HerdMuted,fontSize=14.sp);Text("الوزن الحالي: ${a.weightKg?.let{"%.2f".format(java.util.Locale.US,it)}?.plus(" كغ")?:"غير مسجل"}",color=HerdGreen,fontSize=14.sp,fontWeight=FontWeight.SemiBold);Text("الحالة الإنتاجية: ${a.productionState}${if(a.productionState=="نعجة حامل")" • ${a.pregnancyStage} • ${when(a.fetusCount){2->"توأم";3->"ثلاثة أجنة";else->"جنين واحد"}} • الجنس: ${a.pregnancyOffspringSex.ifBlank{"غير محدد"}}" else if(a.productionState=="نعجة مرضعة")" • ${a.nursingLambs} حمل" else ""}",color=HerdMuted,fontSize=14.sp);
+       if(a.productionState=="نعجة حامل" && a.pregnancyScanDate.isNotBlank()) Text("السونار: ${a.pregnancyScanDate} • الولادة المتوقعة: ${a.expectedBirthDate}",color=HerdGreen,fontSize=14.sp);if(a.kind=="حمل/رخلة")Text("الجنس: ${a.sex.ifBlank{"غير محدد"}} • الميلاد: ${a.birthDate.ifBlank{"غير مسجل"}} • وزن الميلاد: ${a.birthWeightKg?.let{"%.2f".format(java.util.Locale.US,it)+" كغ"}?:"غير مسجل"} • الأم: ${a.motherTag.ifBlank{"غير مسجل"}}",color=HerdMuted,fontSize=14.sp);if(a.lifecycleStatus=="مؤرشف")Text("مؤرشف • ${a.exitReason} • ${a.exitDate}",color=Color(0xFF9A5B32),fontSize=14.sp,fontWeight=FontWeight.SemiBold);if(a.notes.isNotBlank())Text(a.notes,color=HerdMuted,fontSize=14.sp,maxLines=1)};IconButton(onClick={selected=a;editor=true}){Icon(Icons.Outlined.Edit,"تعديل",tint=HerdGreen)};if(a.lifecycleStatus=="نشط")IconButton(onClick={deleting=a;exitDate=LocalDate.now().toString();exitReason="بيع";exitError=null}){Icon(Icons.Outlined.Archive,"أرشفة الحيوان",tint=HerdMuted)} else IconButton(onClick={val i=animals.indexOfFirst{it.id==a.id};if(i>=0){animals[i]=restoreHerdAnimal(a);saveHerd(context,animals.toList())}}){Icon(Icons.Outlined.Restore,"إعادة إلى القطيع",tint=HerdGreen)}}}}}
  }
  }
  if(batchDialog)AlertDialog(onDismissRequest={batchDialog=false},title={Text("ترقيم مجموعة من القطيع")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
@@ -319,29 +319,29 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
    Surface(modifier=Modifier.fillMaxWidth().heightIn(max=720.dp),color=HerdCream,shape=RoundedCornerShape(24.dp),border=BorderStroke(1.dp,HerdLine)){
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
      Row(verticalAlignment=Alignment.CenterVertically){
-      Column(Modifier.weight(1f)){Text("البطاقة التقنية",fontSize=18.sp,fontWeight=FontWeight.ExtraBold,color=HerdInk);Text("ملف الحيوان رقم ${a.tag}",fontSize=11.sp,color=HerdMuted)}
+      Column(Modifier.weight(1f)){Text("البطاقة التقنية",fontSize=18.sp,fontWeight=FontWeight.ExtraBold,color=HerdInk);Text("ملف الحيوان رقم ${a.tag}",fontSize=15.sp,color=HerdMuted)}
       IconButton(onClick={selected=null}){Icon(Icons.Outlined.Close,contentDescription="إغلاق",tint=HerdMuted)}
      }
      Surface(color=Color.White,shape=RoundedCornerShape(18.dp),border=BorderStroke(1.dp,HerdLine)){
       Column(Modifier.fillMaxWidth().padding(13.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)){
        Image(qr.asImageBitmap(),contentDescription="رمز QR للحيوان",modifier=Modifier.size(108.dp))
        Text(a.tag,color=HerdGreen,fontSize=20.sp,fontWeight=FontWeight.ExtraBold)
-       Text(a.kind,color=HerdMuted,fontSize=11.sp)
+       Text(a.kind,color=HerdMuted,fontSize=15.sp)
       }
      }
      Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,HerdLine)){
       Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
        Text("المعلومات الأساسية",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=13.sp)
-       Text("العمر: ${herdAnimalAgeLabel(a)}",fontSize=11.sp,color=HerdInk)
-       Text("السلالة: ${a.breed.ifBlank{"غير محددة"}}",fontSize=11.sp,color=HerdInk)
-       Text("آخر وزن مسجل: ${a.weightKg?.let{"%.2f كغ".format(java.util.Locale.US,it)}?:"غير مسجل"}",fontSize=11.sp,color=HerdInk)
-       Text("الحالة الصحية: ${a.health}",fontSize=11.sp,color=HerdInk)
-       Text("الحالة الإنتاجية: ${a.productionState}",fontSize=11.sp,color=HerdInk)
+       Text("العمر: ${herdAnimalAgeLabel(a)}",fontSize=15.sp,color=HerdInk)
+       Text("السلالة: ${a.breed.ifBlank{"غير محددة"}}",fontSize=15.sp,color=HerdInk)
+       Text("آخر وزن مسجل: ${a.weightKg?.let{"%.2f كغ".format(java.util.Locale.US,it)}?:"غير مسجل"}",fontSize=15.sp,color=HerdInk)
+       Text("الحالة الصحية: ${a.health}",fontSize=15.sp,color=HerdInk)
+       Text("الحالة الإنتاجية: ${a.productionState}",fontSize=15.sp,color=HerdInk)
        if(a.productionState=="نعجة حامل"){
-        Text("مرحلة الحمل: ${a.pregnancyStage} • ${if(a.fetusCount>=2)"توأم" else "جنين واحد"}",fontSize=11.sp,color=HerdInk)
-        Text("بداية الحمل: ${a.pregnancyStartDate.ifBlank{"غير مسجلة"}}",fontSize=10.sp,color=HerdMuted)
-        Text("الولادة المتوقعة: ${a.expectedBirthDate.ifBlank{"غير مسجلة"}}",fontSize=10.sp,color=HerdMuted)
-        if(a.pregnancyScanDate.isNotBlank())Text("السونار: ${a.pregnancyScanDate} • النتيجة: ${a.pregnancyScanOutcome}",fontSize=10.sp,color=HerdGreen)
+        Text("مرحلة الحمل: ${a.pregnancyStage} • ${if(a.fetusCount>=2)"توأم" else "جنين واحد"}",fontSize=15.sp,color=HerdInk)
+        Text("بداية الحمل: ${a.pregnancyStartDate.ifBlank{"غير مسجلة"}}",fontSize=14.sp,color=HerdMuted)
+        Text("الولادة المتوقعة: ${a.expectedBirthDate.ifBlank{"غير مسجلة"}}",fontSize=14.sp,color=HerdMuted)
+        if(a.pregnancyScanDate.isNotBlank())Text("السونار: ${a.pregnancyScanDate} • النتيجة: ${a.pregnancyScanOutcome}",fontSize=14.sp,color=HerdGreen)
        }
       }
      }
@@ -349,25 +349,25 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
       Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,HerdLine)){
        Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         Text("سجل الولادات",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=13.sp)
-        Text(if(offspring.isNotEmpty())"ولدت من قبل: نعم • عدد المواليد المسجلين: ${offspring.size}" else "ولدت من قبل: لا توجد ولادات مسجلة",fontSize=11.sp,color=HerdInk)
-        offspring.forEach{child->Text("• ${child.tag} — ${child.birthDate.ifBlank{"تاريخ غير مسجل"}}",fontSize=10.sp,color=HerdMuted)}
+        Text(if(offspring.isNotEmpty())"ولدت من قبل: نعم • عدد المواليد المسجلين: ${offspring.size}" else "ولدت من قبل: لا توجد ولادات مسجلة",fontSize=15.sp,color=HerdInk)
+        offspring.forEach{child->Text("• ${child.tag} — ${child.birthDate.ifBlank{"تاريخ غير مسجل"}}",fontSize=14.sp,color=HerdMuted)}
        }
       }
      }
      Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,HerdLine)){
       Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
        Text("التطعيمات السابقة",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=13.sp)
-       if(pastVaccines.isEmpty())Text("لا توجد تطعيمات مكتملة مسجلة.",fontSize=10.sp,color=HerdMuted)
-       pastVaccines.forEach{v->Text("• ${v.title} — ${v.date}",fontSize=10.sp,color=HerdInk)}
+       if(pastVaccines.isEmpty())Text("لا توجد تطعيمات مكتملة مسجلة.",fontSize=14.sp,color=HerdMuted)
+       pastVaccines.forEach{v->Text("• ${v.title} — ${v.date}",fontSize=14.sp,color=HerdInk)}
        if(overdueVaccines.isNotEmpty()){
         Divider(color=HerdLine)
         Text("تطعيمات متأخرة",fontWeight=FontWeight.Bold,color=Color(0xFFB54D42),fontSize=13.sp)
-        overdueVaccines.forEach{v->Text("• ${v.title} — ${v.date}",fontSize=10.sp,color=Color(0xFFB54D42))}
+        overdueVaccines.forEach{v->Text("• ${v.title} — ${v.date}",fontSize=14.sp,color=Color(0xFFB54D42))}
        }
        Divider(color=HerdLine)
        Text("التطعيمات القادمة",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=13.sp)
-       if(upcomingVaccines.isEmpty())Text("لا توجد تطعيمات قادمة مسجلة.",fontSize=10.sp,color=HerdMuted)
-       upcomingVaccines.forEach{v->Text("• ${v.title} — ${v.date}",fontSize=10.sp,color=HerdInk)}
+       if(upcomingVaccines.isEmpty())Text("لا توجد تطعيمات قادمة مسجلة.",fontSize=14.sp,color=HerdMuted)
+       upcomingVaccines.forEach{v->Text("• ${v.title} — ${v.date}",fontSize=14.sp,color=HerdInk)}
       }
      }
      Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
