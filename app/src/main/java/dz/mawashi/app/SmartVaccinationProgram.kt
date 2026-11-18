@@ -21,7 +21,7 @@ internal fun smartVaccinationDueDate(birthDate: LocalDate, step: SmartVaccinatio
     birthDate.plusMonths(step.ageMonths)
 
 internal fun smartVaccinationDone(tag: String, stepId: String, records: List<HerdCareReminder>): Boolean =
-    records.any { it.tag.equals(tag, true) && it.kind == "تحصين مرحلي" && it.notes == "SMART_VAX_DONE:$stepId" && it.completed }
+    records.any { it.tag.equals(tag, true) && it.kind == "تحصين مرحلي" && it.notes.startsWith("SMART_VAX_DONE:$stepId") && it.completed }
 
 internal fun smartVaccinationUnlocked(tag: String, stepIndex: Int, records: List<HerdCareReminder>): Boolean =
     stepIndex == 0 || smartVaccinationDone(tag, SMART_VACCINATION_STEPS[stepIndex - 1].id, records)
