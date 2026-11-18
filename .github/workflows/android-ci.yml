@@ -61,8 +61,8 @@ jobs:
 
       - name: Verify Firebase client mapping for independent v49 package
         run: |
-          grep -q '"package_name": "dz.mawashi.app.independent.v49.encyclopedia"' app/google-services.json
-          grep -q '"package_name": "dz.mawashi.app.independent.v49.encyclopedia"' app/src/standalone/google-services.json
+          grep -q '"package_name": "dz.mawashi.app.independent.v49"' app/google-services.json
+          grep -q '"package_name": "dz.mawashi.app.independent.v49"' app/src/standalone/google-services.json
 
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
@@ -74,7 +74,7 @@ jobs:
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v49.encyclopedia'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v49'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='49' versionName='1.0.49-debug'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" | grep -F "mawashi_launcher_cartoon"
 
@@ -85,7 +85,7 @@ jobs:
         run: |
           APK="app/build/outputs/apk/standalone/app-standalone.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v49.encyclopedia'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v49'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Verify standalone APK uses the standard debug signature
@@ -95,7 +95,7 @@ jobs:
           APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
           test -s "$APK"
           "$APKSIGNER" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v49.encyclopedia'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v49'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='49' versionName='1.0.49-test3'"
 
       - name: Upload independently installable APK
