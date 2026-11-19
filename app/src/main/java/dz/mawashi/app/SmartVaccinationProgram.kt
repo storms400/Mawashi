@@ -137,36 +137,53 @@ internal fun smartAnnualWindowContains(date:LocalDate,today:LocalDate)=!date.isB
  * A documented annual vaccine without a product-specific nextDate gets a review
  * at the one-year point, not an assumed administration date.
  */
-internal fun smartLactatingAnnualReviewTasks(
+internal fun smartAdultAnnualCoreTasks(
+    category: String,
     history: List<AnnualVaccineRecord>,
-    today: LocalDate
+    today: LocalDate,
+    expectedBirthDate: String = ""
 ): List<AnnualVaccineTask> {
+    if (category !in setOf("dry", "pregnant", "lactating", "ram")) return emptyList()
     val out = mutableListOf<AnnualVaccineTask>()
-    listOf(
+    val core = listOf(
         "clostridial" to "التسمم المعوي والكزاز",
         "pasteurella" to "الباستوريلا"
-    ).forEach { (id, title) ->
-        val doses = history.filter { it.vaccineId == id }.sortedBy { it.date }
-        if (doses.isEmpty()) {
+    )
+    core.forEach { (id, title) ->
+        val doses = history.filter { it.vaccineId == id }
+            .sortedBy { runCatching { LocalDate.parse(it.date) }.getOrDefault(LocalDate.MIN) }
+        val latest = doses.lastOrNull()
+        val productNext = latest?.nextDate?.takeIf { it.isNotBlank() }
+            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        if (productNext != null) return@forEach
+
+        val due = if (id == "clostridial" && category == "pregnant") {
+            val lambing = runCatching { LocalDate.parse(expectedBirthDate) }.getOrNull()
+            lambing?.minusDays(21)
+                ?.takeIf { doses.none { r -> runCatching { LocalDate.parse(r.date).isAfter(it.minusDays(300)) }.getOrDefault(false) } }
+        } else if (latest != null) {
+            runCatching { LocalDate.parse(latest.date).plusYears(1) }.getOrNull()
+        } else today
+
+        if (due != null && smartAnnualWindowContains(due, today)) {
+            val noHistory = latest == null
+            val isPreLambing = id == "clostridial" && category == "pregnant" && expectedBirthDate.isNotBlank()
             out += AnnualVaccineTask(
-                "lactating-review-$id", id, "مراجعة سجل التحصين • $title", today,
-                "لا توجد جرعة موثقة لهذا اللقاح في بطاقة الحيوان. تحقّق من السجل والمنتج مع الطبيب؛ هذا موعد مراجعة وليس أمراً بإعطاء جرعة.",
-                "مراجعة تأسيسية"
+                "annual-core-$category-$id",
+                id,
+                when {
+                    isPreLambing -> "مراجعة تحصين ما قبل الولادة • $title"
+                    noHistory -> "مراجعة تأسيس التحصين • $title"
+                    else -> "مراجعة الاستحقاق السنوي • $title"
+                },
+                due,
+                when {
+                    isPreLambing -> "موعد مراجعة قبل الولادة المتوقعة بـ21 يوماً. افحص سجل الجرعات ونشرة المنتج وحالة الحمل مع الطبيب؛ ليس أمراً تلقائياً بإعطاء جرعة."
+                    noHistory -> "لا توجد جرعة موثقة. راجع سجل الحيوان وحدد الحاجة إلى الجرعات التأسيسية والمنتج والفاصل مع الطبيب؛ هذا موعد مراجعة وليس أمراً بإعطاء جرعة."
+                    else -> "موعد مراجعة بعد مرور سنة على آخر جرعة مسجلة. تحقق من مدة المناعة ونشرة المنتج والبرنامج المحلي قبل تحديد الجرعة."
+                },
+                if (noHistory) "مراجعة تأسيسية" else if (isPreLambing) "قبل الولادة" else "مراجعة سنوية"
             )
-        } else {
-            val latest = doses.last()
-            val hasProductNextDate = latest.nextDate.isNotBlank() &&
-                runCatching { LocalDate.parse(latest.nextDate) }.isSuccess
-            if (!hasProductNextDate) {
-                val review = runCatching { LocalDate.parse(latest.date).plusYears(1) }.getOrNull()
-                if (review != null && smartAnnualWindowContains(review, today)) {
-                    out += AnnualVaccineTask(
-                        "lactating-annual-review-$id", id, "مراجعة الاستحقاق السنوي • $title", review,
-                        "مرّ عام على الجرعة المسجلة. راجع نشرة المنتج والبرنامج المحلي والطبيب لتحديد الحاجة والموعد؛ لا تُعطَ جرعة تلقائياً.",
-                        "مراجعة سنوية"
-                    )
-                }
-            }
         }
     }
     return out
@@ -201,8 +218,7 @@ private fun annualTasks(c:Context,category:String,a:HerdAnimal,history:List<Annu
    }
   }
  }
- if(category=="lactating"){out+=smartLactatingAnnualReviewTasks(history,today)}
- if(category=="pregnant"){val birth=runCatching{LocalDate.parse(a.expectedBirthDate)}.getOrNull();if(birth!=null){val d=birth.minusDays(21);if(smartAnnualWindowContains(d,today)&&history.none{it.vaccineId=="clostridial"&&runCatching{LocalDate.parse(it.date).isAfter(d.minusDays(300))}.getOrDefault(false)})out+=AnnualVaccineTask("prelambing-review","clostridial","مراجعة تحصين ما قبل الولادة",d,"موعد مراجعة قبل الولادة المتوقعة بثلاثة أسابيع؛ ليس أمراً بإعطاء جرعة. تحقق من الجرعات السابقة ونشرة المنتج والطبيب.","تاريخ الولادة المتوقع")}}
+ if(category in setOf("dry","pregnant","lactating","ram")) out += smartAdultAnnualCoreTasks(category,history,today,a.expectedBirthDate)
  val dated=out.map{it.vaccineId}.toSet()
  ANNUAL_VACCINE_CATALOG.filter{category in it.applicable&&it.id !in dated}.forEach{v->out+=AnnualVaccineTask("conditional-${v.id}",v.id,v.title,null,v.guidance,when(v.id){"ppr","fmd","pox","anthrax"->"حملة رسمية";"pasteurella","footrot","caseous","orf","chlamydia","campylobacter","bluetongue","rabies"->"حسب الخطر";else->"مراجعة السجل"})}
  return out.sortedWith(compareBy<AnnualVaccineTask>({it.due==null},{it.due?:LocalDate.MAX},{it.title}))
