@@ -258,7 +258,7 @@ internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pastur
    LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(9.dp),contentPadding=PaddingValues(bottom=16.dp)){
     items(visibleHerd,key={it.id}){animal->
      val weight=animal.weightKg?.takeIf{it>0}
-     val need=weight?.let{SheepNutrition.calculate(FeedAnimalInput(animal.tag,it,animal.productionState,animal.pregnancyStage,animal.fetusCount,animal.nursingLambs,animal.ageMonths),pasture)}
+     val need=weight?.let{SheepNutrition.calculate(FeedAnimalInput(animal.tag,it,animal.productionState,animal.pregnancyStage,animal.fetusCount,animal.nursingLambs,herdAnimalAgeMonths(animal)),pasture)}
      val expanded=expandedTag==animal.tag
      Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=androidx.compose.foundation.BorderStroke(1.dp,FeedLine),modifier=Modifier.fillMaxWidth().clickable{expandedTag=if(expanded)"" else animal.tag}){
       Column(Modifier.padding(13.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
@@ -269,7 +269,7 @@ internal fun applyDailyFeedConsumption(c:Context,animals:List<HerdAnimal>,pastur
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)){
          Text(animal.tag,color=FeedInk,fontWeight=FontWeight.ExtraBold,fontSize=14.sp)
-         Text("${animal.kind} • ${animal.ageMonths} شهر • ${animal.health}",color=FeedMuted,fontSize=10.sp)
+         Text("${animal.kind} • ${herdAnimalAgeLabel(animal)} • ${animal.health}",color=FeedMuted,fontSize=10.sp)
         }
         Text(if(expanded)"إخفاء" else "التفاصيل",color=FeedGreen,fontSize=10.sp,fontWeight=FontWeight.Bold)
        }
