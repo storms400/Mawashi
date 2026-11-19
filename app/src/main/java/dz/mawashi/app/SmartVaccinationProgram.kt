@@ -131,6 +131,47 @@ internal fun smartLambClostridialFirstDoseDate(birth:LocalDate,damVaccinated:Boo
 internal fun smartLambClostridialBoosterDate(first:LocalDate,days:Int=28)=first.plusDays(days.coerceIn(21,28).toLong())
 internal fun smartAnnualWindowContains(date:LocalDate,today:LocalDate)=!date.isBefore(today.minusDays(30))&&!date.isAfter(today.plusYears(1))
 
+/**
+ * Lactating ewes need an explicit review path even when no dose date is justified.
+ * Missing history creates a review due now, never an automatic injection order.
+ * A documented annual vaccine without a product-specific nextDate gets a review
+ * at the one-year point, not an assumed administration date.
+ */
+internal fun smartLactatingAnnualReviewTasks(
+    history: List<AnnualVaccineRecord>,
+    today: LocalDate
+): List<AnnualVaccineTask> {
+    val out = mutableListOf<AnnualVaccineTask>()
+    listOf(
+        "clostridial" to "التسمم المعوي والكزاز",
+        "pasteurella" to "الباستوريلا"
+    ).forEach { (id, title) ->
+        val doses = history.filter { it.vaccineId == id }.sortedBy { it.date }
+        if (doses.isEmpty()) {
+            out += AnnualVaccineTask(
+                "lactating-review-$id", id, "مراجعة سجل التحصين • $title", today,
+                "لا توجد جرعة موثقة لهذا اللقاح في بطاقة الحيوان. تحقّق من السجل والمنتج مع الطبيب؛ هذا موعد مراجعة وليس أمراً بإعطاء جرعة.",
+                "مراجعة تأسيسية"
+            )
+        } else {
+            val latest = doses.last()
+            val hasProductNextDate = latest.nextDate.isNotBlank() &&
+                runCatching { LocalDate.parse(latest.nextDate) }.isSuccess
+            if (!hasProductNextDate) {
+                val review = runCatching { LocalDate.parse(latest.date).plusYears(1) }.getOrNull()
+                if (review != null && smartAnnualWindowContains(review, today)) {
+                    out += AnnualVaccineTask(
+                        "lactating-annual-review-$id", id, "مراجعة الاستحقاق السنوي • $title", review,
+                        "مرّ عام على الجرعة المسجلة. راجع نشرة المنتج والبرنامج المحلي والطبيب لتحديد الحاجة والموعد؛ لا تُعطَ جرعة تلقائياً.",
+                        "مراجعة سنوية"
+                    )
+                }
+            }
+        }
+    }
+    return out
+}
+
 private fun annualJsonArray(c:Context,pref:String,key:String):JSONArray =
  runCatching { JSONArray(c.getSharedPreferences(pref,Context.MODE_PRIVATE).getString(key,"[]") ?: "[]") }.getOrElse { JSONArray() }
 
@@ -160,6 +201,7 @@ private fun annualTasks(c:Context,category:String,a:HerdAnimal,history:List<Annu
    }
   }
  }
+ if(category=="lactating"){out+=smartLactatingAnnualReviewTasks(history,today)}
  if(category=="pregnant"){val birth=runCatching{LocalDate.parse(a.expectedBirthDate)}.getOrNull();if(birth!=null){val d=birth.minusDays(21);if(smartAnnualWindowContains(d,today)&&history.none{it.vaccineId=="clostridial"&&runCatching{LocalDate.parse(it.date).isAfter(d.minusDays(300))}.getOrDefault(false)})out+=AnnualVaccineTask("prelambing-review","clostridial","مراجعة تحصين ما قبل الولادة",d,"موعد مراجعة قبل الولادة المتوقعة بثلاثة أسابيع؛ ليس أمراً بإعطاء جرعة. تحقق من الجرعات السابقة ونشرة المنتج والطبيب.","تاريخ الولادة المتوقع")}}
  val dated=out.map{it.vaccineId}.toSet()
  ANNUAL_VACCINE_CATALOG.filter{category in it.applicable&&it.id !in dated}.forEach{v->out+=AnnualVaccineTask("conditional-${v.id}",v.id,v.title,null,v.guidance,when(v.id){"ppr","fmd","pox","anthrax"->"حملة رسمية";"pasteurella","footrot","caseous","orf","chlamydia","campylobacter","bluetongue","rabies"->"حسب الخطر";else->"مراجعة السجل"})}
@@ -185,10 +227,10 @@ internal fun SmartAnnualVaccinationScreen(category:String,animal:HerdAnimal?,mod
     Text("البرنامج السنوي الذكي • ${animal.tag}",color=Color(0xFF27332A),fontSize=16.sp,fontWeight=FontWeight.Bold)
     Text("العمر: ${herdAnimalAgeLabel(animal)} • الوزن: ${animal.weightKg?.let{"%.1f كغ".format(java.util.Locale.US,it)}?:"غير مسجل"}",color=Color(0xFF778078),fontSize=12.sp)
     Text("الفترة: $today إلى ${today.plusYears(1)}",color=Color(0xFF526B55),fontSize=12.sp)
-    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){AnnualMetric("مواعيد محسوبة",dated.size.toString(),Modifier.weight(1f));AnnualMetric("متأخرة",dated.count{it.due!!.isBefore(today)}.toString(),Modifier.weight(1f));AnnualMetric("جرعات موثقة",records.size.toString(),Modifier.weight(1f))}
+    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){AnnualMetric("مواعيد ومراجعات",dated.size.toString(),Modifier.weight(1f));AnnualMetric("متأخرة",dated.count{it.due!!.isBefore(today)}.toString(),Modifier.weight(1f));AnnualMetric("جرعات موثقة",records.size.toString(),Modifier.weight(1f))}
    }}
    Text("برنامج الاثني عشر شهراً",color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=15.sp)
-   if(dated.isEmpty())Text("لا توجد جرعات بتاريخ مؤكد ضمن هذه الفترة. لن يخترع التطبيق مواعيد للقاحات المرتبطة بالحملات أو المخاطر.",color=Color(0xFF778078),fontSize=12.sp)
+   if(dated.isEmpty())Text("لا توجد جرعات أو مراجعات مؤرخة ضمن هذه الفترة. اللقاحات المرتبطة بالحملات أو المخاطر تظهر للمراجعة دون تحديد موعد أو إعطاء تلقائي.",color=Color(0xFF778078),fontSize=12.sp)
    dated.forEach{t->val d=t.due!!;val state=when{d.isBefore(today)->"متأخر";d==today->"مستحق اليوم";else->"قادم"};Surface(color=Color.White,shape=RoundedCornerShape(12.dp),border=BorderStroke(1.dp,Color(0xFFE8E4DA))){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text(t.title,Modifier.weight(1f),color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=13.sp);Text(state,color=if(state=="متأخر")Color(0xFFB35C43)else Color(0xFF526B55),fontSize=11.sp,fontWeight=FontWeight.Bold)};Text("$d • ${t.group}",color=Color(0xFF526B55),fontSize=11.sp);Text(t.reason,color=Color(0xFF778078),fontSize=11.sp)}}}
    Text("لقاحات مرتبطة بالحملات أو تقييم الخطر",color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=15.sp)
    tasks.filter{it.due==null}.forEach{t->Surface(color=Color.White,shape=RoundedCornerShape(12.dp),border=BorderStroke(1.dp,Color(0xFFE8E4DA))){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(t.title,color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=13.sp);Text(t.group,color=Color(0xFF526B55),fontSize=11.sp);Text(t.reason,color=Color(0xFF778078),fontSize=11.sp)}}}
