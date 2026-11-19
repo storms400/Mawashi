@@ -120,6 +120,16 @@ class SmartVaccinationProgramTest {
         assertFalse(tasks.any { it.vaccineId == "clostridial" })
     }
 
+    @Test fun lambCampaignReviewsAreCalculatedFromBirthAndSex() {
+        val eweLamb = HerdAnimal(id="a", tag="L-2", kind="حمل/رخلة", ageMonths=0, health="جيدة", notes="", birthDate="2026-11-19", sex="أنثى")
+        val tasks = smartLambCampaignReviewTasks(eweLamb)
+        assertEquals(LocalDate.parse("2027-02-19"), tasks.single { it.vaccineId == "brucella" }.due)
+        listOf("pox", "ppr", "fmd").forEach { id -> assertEquals(LocalDate.parse("2027-03-19"), tasks.single { it.vaccineId == id }.due) }
+        assertTrue(tasks.all { it.reason.contains("ليس أمراً تلقائياً") || it.reason.contains("لا يُعطى") })
+        val ramLamb = eweLamb.copy(tag="L-3", sex="ذكر")
+        assertFalse(smartLambCampaignReviewTasks(ramLamb).any { it.vaccineId == "brucella" })
+    }
+
     @Test fun breedingSeasonCreatesCategorySpecificReviewDates() {
         val today = LocalDate.parse("2026-11-19")
         val start = LocalDate.parse("2027-02-01")
