@@ -253,7 +253,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
                 LactatingEweStore.savePreventive(context, updated)
                 if (record.nextDate.isNotBlank()) {
                     val reminders = readHerdCare(context).filterNot { it.id == "lactating-" + record.id }
-                    saveHerdCare(context, reminders + HerdCareReminder("lactating-" + record.id, record.tag, "برنامج النعاج المرضعة", record.type + " • " + record.item, record.nextDate, "موعد مراجعة مسجل؛ تحقق من فترة السحب وملاءمة المنتج للرضاعة.", false))
+                    saveHerdCare(context, reminders + HerdCareReminder(id = "lactating-" + record.id, tag = record.tag, kind = "برنامج النعاج المرضعة", title = record.type + " • " + record.item, date = record.nextDate, notes = "موعد مراجعة مسجل؛ تحقق من فترة السحب وملاءمة المنتج للرضاعة.", completed = false))
                 }
             }.onSuccess {
                 preventive = updated; recordDialog = false
