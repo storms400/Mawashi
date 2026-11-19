@@ -494,7 +494,7 @@ private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
      if(selected.pregnancyScanOutcome=="غير حاسم"){
       Text("نتيجة السونار غير حاسمة؛ يلزم إعادة الفحص في الموعد المحدد، ولا تُعد النعجة غير حامل.",fontSize=10.sp,color=Color(0xFFA66B16))
      }
-     if(selected.kind.contains("حمل")||selected.ageMonths<6){
+     if(selected.kind.contains("حمل")||herdAnimalAgeMonths(selected)<6){
       Text("متابعة المواليد: راقب الرضاعة وتناول اللبأ في الساعات الأولى، وسجّل وزن الميلاد ثم أعد الوزن دورياً، وراقب السرة والإسهال والتنفس والنشاط. أي خمول أو امتناع عن الرضاعة يستدعي تقييماً بيطرياً عاجلاً.",fontSize=10.sp,color=FinGreen,lineHeight=15.sp)
      }
      if(selected.productionState.contains("حامل")||selected.pregnancyStage!="غير حامل"){
