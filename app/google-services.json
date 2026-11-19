@@ -175,6 +175,25 @@
           "other_platform_oauth_client": []
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1015102317393:android:3223f96d3c91b88f3ce970",
+        "android_client_info": {
+          "package_name": "dz.mawashi.app.independent.v53"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5y4GG4XuqubYtG8wAVnAn3Wz2bXDKxec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     }
   ],
   "configuration_version": "1"
