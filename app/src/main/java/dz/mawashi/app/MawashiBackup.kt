@@ -44,7 +44,8 @@ internal object MawashiBackup {
         "mawashi_pregnant_ewe_program_v1",
         "mawashi_lactating_ewe_program_v1",
         "mawashi_lamb_prevention_v1",
-        "mawashi_ram_program_v1"
+        "mawashi_ram_program_v1",
+        "mawashi_annual_vaccination_v1"
     )
 
     fun export(context: Context, output: OutputStream, passphrase: String? = null) {
