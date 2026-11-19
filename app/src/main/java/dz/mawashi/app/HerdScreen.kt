@@ -404,7 +404,8 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
         Text("مرحلة الحمل: ${a.pregnancyStage} • ${if(a.fetusCount>=2)"توأم" else "جنين واحد"}",fontSize=15.sp,color=HerdInk)
         Text("بداية الحمل: ${a.pregnancyStartDate.ifBlank{"غير مسجلة"}}",fontSize=14.sp,color=HerdMuted)
         Text("الولادة المتوقعة: ${a.expectedBirthDate.ifBlank{"غير مسجلة"}}",fontSize=14.sp,color=HerdMuted)
-        if(a.pregnancyScanDate.isNotBlank())Text("السونار: ${a.pregnancyScanDate} • النتيجة: ${a.pregnancyScanOutcome}",fontSize=14.sp,color=HerdGreen)\n        if(a.repeatScanDate.isNotBlank())Text("إعادة السونار: ${a.repeatScanDate}",fontSize=14.sp,color=HerdGreen)
+        if(a.pregnancyScanDate.isNotBlank())Text("السونار: ${a.pregnancyScanDate} • النتيجة: ${a.pregnancyScanOutcome}",fontSize=14.sp,color=HerdGreen)
+        if(a.repeatScanDate.isNotBlank())Text("إعادة السونار: ${a.repeatScanDate}",fontSize=14.sp,color=HerdGreen)
        }
       }
      }
