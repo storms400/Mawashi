@@ -152,6 +152,7 @@ internal fun savePregnancyScanToHerd(
   runCatching { saveHerdCare(c, retained) }.isSuccess
  }
  if(!reminderSaved) android.widget.Toast.makeText(c, "تم حفظ بيانات النعجة لكن تعذرت جدولة التنبيه.", android.widget.Toast.LENGTH_LONG).show()
+ runCatching { refreshAnnualVaccinationCalendar(c) }
  return true
 }
 
@@ -167,7 +168,9 @@ internal fun confirmEweBirth(context:Context, tag:String, actualBirthDate:String
  animals[index]=mother.copy(productionState="نعجة مرضعة",birthConfirmedDate=date.toString(),weaningConfirmedDate="",nursingLambs=mother.fetusCount.coerceIn(1,3))
  saveHerd(context,animals)
  val saved=loadHerd(context).firstOrNull{it.id==mother.id} ?: return false
- return saved.productionState=="نعجة مرضعة" && saved.birthConfirmedDate==date.toString()
+ val success = saved.productionState=="نعجة مرضعة" && saved.birthConfirmedDate==date.toString()
+ if (success) runCatching { refreshAnnualVaccinationCalendar(context) }
+ return success
 }
 
 internal fun confirmEweWeaning(context:Context, tag:String, weaningDate:String, today:LocalDate=LocalDate.now()):Boolean {
@@ -183,7 +186,9 @@ internal fun confirmEweWeaning(context:Context, tag:String, weaningDate:String, 
  animals[index]=mother.copy(productionState="نعجة جافة",weaningConfirmedDate=date.toString(),nursingLambs=0)
  linked.forEach { child -> val i=animals.indexOfFirst{it.id==child.id}; if(i>=0) animals[i]=animals[i].copy(productionState="خروف") }
  saveHerd(context,animals)
- return loadHerd(context).firstOrNull{it.id==mother.id}?.productionState=="نعجة جافة"
+ val success = loadHerd(context).firstOrNull{it.id==mother.id}?.productionState=="نعجة جافة"
+ if (success) runCatching { refreshAnnualVaccinationCalendar(context) }
+ return success
 }
 
 /** Reclassifies the existing animal record; identity, tag, and mother link never change. */
