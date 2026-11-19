@@ -127,10 +127,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
 
     LaunchedEffect(Unit) {
         val herd = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" }
-        val linkedMotherTags = herd.filter { it.kind == "حمل/رخلة" }.mapNotNull { lamb ->
-            runCatching { lamb.javaClass.getDeclaredField("motherTag").apply { isAccessible = true }.get(lamb)?.toString() }.getOrNull()
-        }.toSet()
-        animals = herd.filter { (it.kind.trim() == "نعجة" || it.sex == "أنثى") && (it.productionState.contains("مرضعة") || it.tag in linkedMotherTags) }
+        animals = herd.filter { (it.kind.trim() == "نعجة" || it.sex == "أنثى") && it.productionState == "نعجة مرضعة" && it.lifecycleStatus == "نشط" }
         if (animals.none { it.tag.equals(selectedTag, true) }) selectedTag = animals.firstOrNull()?.tag.orEmpty()
         care = LactatingEweStore.care(context)
         preventive = LactatingEweStore.preventive(context)
