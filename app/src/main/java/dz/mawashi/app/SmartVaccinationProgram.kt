@@ -159,8 +159,8 @@ internal fun smartAdultAnnualCoreTasks(
 
         val due = if (id == "clostridial" && category == "pregnant") {
             val lambing = runCatching { LocalDate.parse(expectedBirthDate) }.getOrNull()
-            lambing?.minusDays(21)
-                ?.takeIf { doses.none { r -> runCatching { LocalDate.parse(r.date).isAfter(it.minusDays(300)) }.getOrDefault(false) } }
+            if (lambing == null) today else lambing.minusDays(21)
+                .takeIf { doses.none { r -> runCatching { LocalDate.parse(r.date).isAfter(it.minusDays(300)) }.getOrDefault(false) } }
         } else if (latest != null) {
             runCatching { LocalDate.parse(latest.date).plusYears(1) }.getOrNull()
         } else today
