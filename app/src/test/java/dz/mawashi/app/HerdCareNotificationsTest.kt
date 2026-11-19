@@ -14,6 +14,21 @@ class HerdCareNotificationsTest {
         assertEquals(false, isActiveHerdCareReminder(listOf(active, completed), "deleted"))
     }
 
+    @Test fun overdueReminderIsRecognizedForCatchUpDelivery() {
+        val today = LocalDate.parse("2026-11-19")
+        assertEquals(true, HerdCareNotifications.isOverdue(LocalDate.parse("2026-11-18"), today))
+        assertEquals(false, HerdCareNotifications.isOverdue(today, today))
+        assertEquals(false, HerdCareNotifications.isOverdue(LocalDate.parse("2026-11-20"), today))
+    }
+
+    @Test fun deliveryKeyChangesWhenReminderDateChangesAndStaysStableOtherwise() {
+        assertEquals("annual-1|2026-11-18", HerdCareNotifications.deliveryKey("annual-1", "2026-11-18"))
+        assertEquals(HerdCareNotifications.deliveryKey("annual-1", "2026-11-18"),
+            HerdCareNotifications.deliveryKey("annual-1", "2026-11-18"))
+        assertNotEquals(HerdCareNotifications.deliveryKey("annual-1", "2026-11-18"),
+            HerdCareNotifications.deliveryKey("annual-1", "2026-11-19"))
+    }
+
     @Test fun schedulesReminderAtNineInLocalTime() {
         val zone = ZoneId.of("Africa/Algiers")
         val date = LocalDate.of(2026, 11, 14)
