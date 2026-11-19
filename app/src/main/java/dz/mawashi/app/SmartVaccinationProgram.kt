@@ -155,7 +155,7 @@ private object AnnualVaxStore {
 }
 
 internal fun smartLambClostridialFirstDoseDate(birth:LocalDate,damVaccinated:Boolean)=birth.plusDays(if(damVaccinated)42 else 14)
-internal fun smartLambClostridialBoosterDate(first:LocalDate,days:Int=28)=first.plusDays(days.coerceIn(21,28).toLong())
+internal fun smartLambClostridialBoosterDate(first:LocalDate,days:Int=28)=first.plusDays(days.coerceIn(1,365).toLong())
 internal fun smartAnnualWindowContains(date:LocalDate,today:LocalDate)=!date.isAfter(today.plusYears(1))
 
 /**
