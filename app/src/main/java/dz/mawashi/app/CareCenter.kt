@@ -37,12 +37,13 @@ internal fun CareCenterScreen(modifier: Modifier = Modifier) {
   "tasks" -> CareTasksScreen(modifier) { page = "home" }
   "health" -> HerdHealthMonitor(modifier) { page = "home" }
   "lambs" -> LambPreventionScreen(modifier) { page = "home" }
-  else -> CareHomeScreen(modifier, { page = "vaccines" }, { page = "tasks" }, { page = "health" }, { page = "lambs" })
+  "dry_ewes" -> DryEweProgramScreen(modifier) { page = "home" }
+  else -> CareHomeScreen(modifier, { page = "vaccines" }, { page = "tasks" }, { page = "health" }, { page = "lambs" }, { page = "dry_ewes" })
  }
 }
 
 @Composable
-private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -> Unit, health: () -> Unit, lambs: () -> Unit) {
+private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -> Unit, health: () -> Unit, lambs: () -> Unit, dryEwes: () -> Unit) {
  val c = LocalContext.current
  var animals by remember { mutableStateOf(loadHerd(c).filter { it.lifecycleStatus != "مؤرشف" }) }
  var reminders by remember { mutableStateOf(readHerdCare(c)) }
@@ -71,6 +72,7 @@ private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -
   Spacer(Modifier.height(8.dp))
   LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
    item { CareTile("برنامج وقاية الحملان", "الرعاية والفحوصات واللقاحات من الولادة حتى الفطام", Icons.Outlined.Vaccines, lambs) }
+   item { CareTile("برنامج النعاج الجافة", "الرعاية والتحصينات من الفطام حتى الاستعداد للتلقيح", Icons.Outlined.Pets, dryEwes) }
    item { CareTile("برنامج التطعيمات", "تسجيل المواعيد والجرعات وربطها بالحيوان", Icons.Outlined.Vaccines, vaccines) }
    item { CareTile("الفحوص والمتابعة الصحية", "الملف الصحي والوزن وتقييم حالة الجسم", Icons.Outlined.MonitorHeart, health) }
    item { CareTile("متابعة النمو والوزن", "قياسات الوزن وسجل التقييمات", Icons.Outlined.MonitorWeight, health) }
