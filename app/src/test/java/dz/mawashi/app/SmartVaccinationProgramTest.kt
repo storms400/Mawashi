@@ -54,11 +54,11 @@ class SmartVaccinationProgramTest {
         assertEquals(LocalDate.parse("2027-01-29"), smartLambClostridialBoosterDate(first, 40))
     }
 
-    @Test fun annualWindowKeepsOverdueAndNextTwelveMonthsOnly() {
+    @Test fun annualWindowKeepsAllUnresolvedOverdueAndNextTwelveMonths() {
         val today = LocalDate.parse("2027-01-01")
         assertTrue(smartAnnualWindowContains(LocalDate.parse("2026-12-15"), today))
         assertTrue(smartAnnualWindowContains(LocalDate.parse("2027-12-31"), today))
-        assertFalse(smartAnnualWindowContains(LocalDate.parse("2026-11-01"), today))
+        assertTrue(smartAnnualWindowContains(LocalDate.parse("2026-11-01"), today))
         assertFalse(smartAnnualWindowContains(LocalDate.parse("2028-01-02"), today))
     }
 
