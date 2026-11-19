@@ -128,7 +128,7 @@ internal fun maternalVaccinationSummary(context: Context, motherTag: String): St
 @Composable
 internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
     val context = LocalContext.current
-    var animals by remember { mutableStateOf(loadHerd(context).filter { (it.kind.contains("نعجة") || it.sex == "أنثى") && it.lifecycleStatus != "مؤرشف" }) }
+    var animals by remember { mutableStateOf(loadHerd(context).filter { it.productionState == "نعجة حامل" && it.lifecycleStatus == "نشط" && (it.kind.trim() == "نعجة" || it.sex == "أنثى") }) }
     var records by remember { mutableStateOf(PregnantEweStore.records(context)) }
     var selectedTag by rememberSaveable { mutableStateOf("") }
     var section by rememberSaveable { mutableStateOf("care") }
@@ -138,7 +138,7 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
     var showStageDialog by remember { mutableStateOf<PregnantStage?>(null) }
 
     LaunchedEffect(Unit) {
-        animals = loadHerd(context).filter { it.kind.contains("نعجة") || it.sex == "أنثى" }
+        animals = loadHerd(context).filter { it.productionState == "نعجة حامل" && it.lifecycleStatus == "نشط" && (it.kind.trim() == "نعجة" || it.sex == "أنثى") }
         records = PregnantEweStore.records(context)
         if (animals.none { it.tag.equals(selectedTag, true) }) selectedTag = animals.firstOrNull()?.tag.orEmpty()
     }
