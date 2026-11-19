@@ -166,12 +166,15 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
                     }
                 }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        FilterChip(section == "care", { section = "care" }, label = { Text("الرعاية والمتابعة") })
-                        FilterChip(section == "preventive", { section = "preventive" }, label = { Text("التطعيمات والفيتامينات") })
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        FilterChip(section == "care", { section = "care" }, label = { Text("الرعاية والفحوصات", fontSize = 10.sp) }, modifier = Modifier.weight(1f))
+                        FilterChip(section == "preventive", { section = "preventive" }, label = { Text("اللقاحات والتحصينات", fontSize = 10.sp) }, modifier = Modifier.weight(1f))
+                        FilterChip(section == "reminders", { section = "reminders" }, label = { Text("المواعيد والتنبيهات", fontSize = 10.sp) }, modifier = Modifier.weight(1f))
                     }
                 }
-                if (section == "care") {
+                if (section == "reminders") {
+                    item { CareRemindersPanel(selectedTag) }
+                } else if (section == "care") {
                     item {
                         Surface(color = Color.White, shape = RoundedCornerShape(15.dp), border = BorderStroke(1.dp, LactLine)) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
