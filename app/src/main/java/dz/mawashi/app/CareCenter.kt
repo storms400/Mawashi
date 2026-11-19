@@ -39,12 +39,13 @@ internal fun CareCenterScreen(modifier: Modifier = Modifier) {
   "lambs" -> LambPreventionScreen(modifier) { page = "home" }
   "dry_ewes" -> DryEweProgramScreen(modifier) { page = "home" }
   "pregnant_ewes" -> PregnantEweProgramScreen(modifier) { page = "home" }
-  else -> CareHomeScreen(modifier, { page = "vaccines" }, { page = "tasks" }, { page = "health" }, { page = "lambs" }, { page = "dry_ewes" }, { page = "pregnant_ewes" })
+  "lactating_ewes" -> LactatingEweProgramScreen(modifier) { page = "home" }
+  else -> CareHomeScreen(modifier, { page = "vaccines" }, { page = "tasks" }, { page = "health" }, { page = "lambs" }, { page = "dry_ewes" }, { page = "pregnant_ewes" }, { page = "lactating_ewes" })
  }
 }
 
 @Composable
-private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -> Unit, health: () -> Unit, lambs: () -> Unit, dryEwes: () -> Unit, pregnantEwes: () -> Unit) {
+private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -> Unit, health: () -> Unit, lambs: () -> Unit, dryEwes: () -> Unit, pregnantEwes: () -> Unit, lactatingEwes: () -> Unit) {
  val c = LocalContext.current
  var animals by remember { mutableStateOf(loadHerd(c).filter { it.lifecycleStatus != "مؤرشف" }) }
  var reminders by remember { mutableStateOf(readHerdCare(c)) }
@@ -75,6 +76,7 @@ private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -
    item { CareTile("برنامج وقاية الحملان", "الرعاية والفحوصات واللقاحات من الولادة حتى الفطام", Icons.Outlined.Vaccines, lambs) }
    item { CareTile("برنامج النعاج الجافة", "الرعاية والتحصينات من الفطام حتى الاستعداد للتلقيح", Icons.Outlined.Vaccines, dryEwes) }
    item { CareTile("برنامج النعاج الحوامل", "المراحل الخمس والسجل الوقائي وربط المواليد بالأم", Icons.Outlined.Favorite, pregnantEwes) }
+   item { CareTile("برنامج النعاج المرضعة", "الرعاية بعد الولادة ومتابعة الضرع والرضاعة والفطام", Icons.Outlined.FavoriteBorder, lactatingEwes) }
    item { CareTile("برنامج التطعيمات", "تسجيل المواعيد والجرعات وربطها بالحيوان", Icons.Outlined.Vaccines, vaccines) }
    item { CareTile("الفحوص والمتابعة الصحية", "الملف الصحي والوزن وتقييم حالة الجسم", Icons.Outlined.MonitorHeart, health) }
    item { CareTile("متابعة النمو والوزن", "قياسات الوزن وسجل التقييمات", Icons.Outlined.MonitorWeight, health) }
