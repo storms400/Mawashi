@@ -39,7 +39,8 @@ internal object MawashiBackup {
         "mawashi_herd_local",
         "mawashi_feed_stock",
         "mawashi_finance_v24",
-        "mawashi_herd_care_v27"
+        "mawashi_herd_care_v27",
+        "mawashi_dry_ewe_program_v1"
     )
 
     fun export(context: Context, output: OutputStream, passphrase: String? = null) {
@@ -171,7 +172,7 @@ internal object MawashiBackup {
         val stores = payload.optJSONObject("stores") ?: error("بيانات الأقسام غير موجودة في النسخة الاحتياطية")
         val decoded = linkedMapOf<String, Map<String, Any?>>()
         storeNames.forEach { name ->
-            val store = stores.optJSONObject(name) ?: error("النسخة الاحتياطية ناقصة: $name")
+            val store = stores.optJSONObject(name) ?: if (name == "mawashi_dry_ewe_program_v1") JSONObject() else error("النسخة الاحتياطية ناقصة: $name")
             val values = linkedMapOf<String, Any?>()
             val keys = store.keys()
             while (keys.hasNext()) {
