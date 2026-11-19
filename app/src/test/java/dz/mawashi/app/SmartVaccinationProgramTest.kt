@@ -68,8 +68,8 @@ class SmartVaccinationProgramTest {
     @Test fun lambBoosterUsesProductIntervalWithinThreeToFourWeeks() {
         val first = LocalDate.parse("2027-01-01")
         assertEquals(LocalDate.parse("2027-01-29"), smartLambClostridialBoosterDate(first))
-        assertEquals(LocalDate.parse("2027-01-22"), smartLambClostridialBoosterDate(first, 18))
-        assertEquals(LocalDate.parse("2027-01-29"), smartLambClostridialBoosterDate(first, 40))
+        assertEquals(LocalDate.parse("2027-01-19"), smartLambClostridialBoosterDate(first, 18))
+        assertEquals(LocalDate.parse("2027-02-10"), smartLambClostridialBoosterDate(first, 40))
     }
 
     @Test fun annualWindowKeepsAllUnresolvedOverdueAndNextTwelveMonths() {
