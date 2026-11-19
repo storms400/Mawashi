@@ -45,6 +45,49 @@ internal fun CareCenterScreen(modifier: Modifier = Modifier) {
  }
 }
 
+
+@Composable
+internal fun CareRemindersPanel(animalTag: String) {
+    val context = LocalContext.current
+    var records by remember(animalTag) { mutableStateOf(readHerdCare(context).filter { it.tag.equals(animalTag, true) }.sortedBy { it.date }) }
+    val today = LocalDate.now()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Surface(color = Color.White, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, CareLine)) {
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("مواعيد النعجة وتنبيهاتها", color = CareInk, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("تظهر هنا المواعيد المرتبطة بملف هذه النعجة فقط.", color = CareMuted, fontSize = 11.sp)
+            }
+        }
+        if (records.isEmpty()) {
+            Text("لا توجد مواعيد أو تنبيهات مسجلة لهذه النعجة حالياً.", color = CareMuted, fontSize = 12.sp)
+        } else {
+            records.forEach { task ->
+                val state = runCatching {
+                    val d = LocalDate.parse(task.date)
+                    when { task.completed -> "مكتمل"; d.isBefore(today) -> "متأخر"; d == today -> "اليوم"; else -> "قادم" }
+                }.getOrDefault("تاريخ غير صالح")
+                Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, CareLine)) {
+                    Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = task.completed, onCheckedChange = { done ->
+                            val all = readHerdCare(context)
+                            val changed = all.map { if (it.id == task.id) it.copy(completed = done) else it }
+                            runCatching { saveHerdCare(context, changed) }.onSuccess {
+                                records = changed.filter { it.tag.equals(animalTag, true) }.sortedBy { it.date }
+                            }
+                        })
+                        Column(Modifier.weight(1f)) {
+                            Text(task.title, color = CareInk, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(task.date + " • " + task.kind, color = CareMuted, fontSize = 10.sp)
+                            Text(state, color = if (state == "متأخر") Color(0xFFB54D42) else CareGreen, fontSize = 10.sp)
+                            if (task.notes.isNotBlank()) Text(task.notes, color = CareMuted, fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -> Unit, health: () -> Unit, lambs: () -> Unit, dryEwes: () -> Unit, pregnantEwes: () -> Unit, lactatingEwes: () -> Unit, rams: () -> Unit) {
  val c = LocalContext.current
