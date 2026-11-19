@@ -233,6 +233,8 @@ internal fun LambPreventionScreen(modifier: Modifier = Modifier, onBack: (() -> 
                                     LambStat("الوزن", animal?.weightKg?.let { "%.2f كغ".format(java.util.Locale.US, it) } ?: "غير مسجل", Modifier.weight(1f))
                                 }
                                 Text("الأم: " + (animal?.motherTag?.ifBlank { "غير مسجلة" } ?: "—") + " • الميلاد: " + (animal?.birthDate?.ifBlank { "غير مسجل" } ?: "—"), color = LambMuted, fontSize = 12.sp)
+                                Text("تحصين الأم: " + maternalVaccinationStatus(context, animal?.motherTag.orEmpty(), "clostridial"), color = LambGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text(maternalVaccinationSummary(context, animal?.motherTag.orEmpty()), color = LambMuted, fontSize = 11.sp)
                             }
                         }
                     }
@@ -253,13 +255,13 @@ internal fun LambPreventionScreen(modifier: Modifier = Modifier, onBack: (() -> 
 
     actionDialog?.let { action ->
         LambCareDialog(action, { actionDialog = null }) { date, value, notes ->
-            val updated = care.filterNot { it.tag.equals(tag, true) && it.actionId == action.id } + LambCareRecord(UUID.randomUUID().toString(), tag, stageId, action.id, date, value, notes)
+            val updated = care + LambCareRecord(UUID.randomUUID().toString(), tag, stageId, action.id, date, value, notes)
             runCatching { LambPreventionStore.saveCare(context, updated) }.onSuccess { care = updated; actionDialog = null; Toast.makeText(context, "تم حفظ إجراء الرعاية", Toast.LENGTH_SHORT).show() }
                 .onFailure { Toast.makeText(context, "تعذر حفظ الإجراء", Toast.LENGTH_LONG).show() }
         }
     }
     planDialog?.let { vaccine ->
-        LambPlanDialog(tag, vaccine, plans.firstOrNull { it.tag.equals(tag, true) && it.vaccineId == vaccine.id }, { planDialog = null }) { plan ->
+        LambPlanDialog(tag, vaccine, plans.firstOrNull { it.tag.equals(tag, true) && it.vaccineId == vaccine.id }, maternalVaccinationStatus(context, animal?.motherTag.orEmpty(), vaccine.id), { planDialog = null }) { plan ->
             val updated = plans.filterNot { it.tag.equals(tag, true) && it.vaccineId == vaccine.id } + plan
             runCatching { LambPreventionStore.savePlans(context, updated); syncLambVaccineReminders(context, animals, updated, doses) }.onSuccess { plans = updated; planDialog = null; Toast.makeText(context, "تم حفظ خطة اللقاح وتحديث التنبيهات", Toast.LENGTH_SHORT).show() }
                 .onFailure { Toast.makeText(context, "تعذر حفظ الخطة", Toast.LENGTH_LONG).show() }
@@ -442,8 +444,8 @@ private fun LambCareDialog(action: LambAction, onDismiss: () -> Unit, onSave: (S
 }
 
 @Composable
-private fun LambPlanDialog(tag: String, vaccine: LambVaccine, initial: LambVaccinePlan?, onDismiss: () -> Unit, onSave: (LambVaccinePlan) -> Unit) {
-    var mother by rememberSaveable { mutableStateOf(initial?.motherStatus ?: "مجهولة") }
+private fun LambPlanDialog(tag: String, vaccine: LambVaccine, initial: LambVaccinePlan?, inheritedMotherStatus: String, onDismiss: () -> Unit, onSave: (LambVaccinePlan) -> Unit) {
+    var mother by rememberSaveable { mutableStateOf(initial?.motherStatus ?: inheritedMotherStatus) }
     var age by rememberSaveable { mutableStateOf(initial?.firstAgeDays?.toString().orEmpty()) }
     var booster by rememberSaveable { mutableStateOf(initial?.boosterDays?.toString().orEmpty()) }
     var product by rememberSaveable { mutableStateOf(initial?.product.orEmpty()) }
@@ -451,7 +453,8 @@ private fun LambPlanDialog(tag: String, vaccine: LambVaccine, initial: LambVacci
         text = {
             Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("أدخل الأعمار والفواصل من نشرة المنتج أو توجيه الطبيب البيطري، وليس كتوصية ثابتة من التطبيق.", color = LambMuted, fontSize = 12.sp)
-                Text("حالة تحصين الأم", color = LambInk, fontWeight = FontWeight.SemiBold)
+                Text("حالة تحصين الأم (من ملف الأم المرتبط)", color = LambInk, fontWeight = FontWeight.SemiBold)
+                Text("تُملأ تلقائياً من سجل النعجة. لا تعتبر الجرعة حماية مؤكدة إلا إذا سُجل تقييم بيطري مناسب لتوقيتها.", color = LambMuted, fontSize = 11.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { listOf("محصنة", "غير محصنة", "مجهولة").forEach { FilterChip(mother == it, { mother = it }, label = { Text(it, fontSize = 11.sp) }) } }
                 OutlinedTextField(age, { age = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(), label = { Text("عمر الجرعة الأولى بالأيام") })
                 OutlinedTextField(booster, { booster = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(), label = { Text("الفاصل للجرعة المنشطة بالأيام (إن لزمت)") })
