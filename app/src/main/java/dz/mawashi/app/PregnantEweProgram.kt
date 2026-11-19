@@ -180,11 +180,14 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
                 }
             }
             Spacer(Modifier.height(9.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                FilterChip(section == "care", { section = "care" }, label = { Text("الرعاية والمتابعة", fontSize = 12.sp) }, modifier = Modifier.weight(1f))
-                FilterChip(section == "prevention", { section = "prevention" }, label = { Text("التطعيمات والفيتامينات", fontSize = 12.sp) }, modifier = Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                FilterChip(section == "care", { section = "care" }, label = { Text("الرعاية والفحوصات", fontSize = 11.sp) }, modifier = Modifier.weight(1f))
+                FilterChip(section == "prevention", { section = "prevention" }, label = { Text("اللقاحات والتحصينات", fontSize = 11.sp) }, modifier = Modifier.weight(1f))
+                FilterChip(section == "reminders", { section = "reminders" }, label = { Text("المواعيد والتنبيهات", fontSize = 11.sp) }, modifier = Modifier.weight(1f))
             }
-            if (section == "care") {
+            if (section == "reminders") {
+                CareRemindersPanel(selectedTag)
+            } else if (section == "care") {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
                     item {
                         Surface(color = Color(0xFFE8F0E5), shape = RoundedCornerShape(14.dp)) {
