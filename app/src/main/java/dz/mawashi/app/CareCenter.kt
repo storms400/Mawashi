@@ -376,7 +376,11 @@ private fun CareAnnualCalendarScreen(modifier: Modifier, back: () -> Unit) {
   records = reconciled
  }
  val today = LocalDate.now()
- val annual = records.filter { it.kind == "التطعيمات السنوية" && animals.any { a -> a.tag.equals(it.tag, true) } }
+ val annual = records.filter { task ->
+  val sectionVaccine = task.kind in setOf("برنامج النعاج الجافة", "برنامج النعاج الحوامل", "برنامج النعاج المرضعة", "وقاية الحملان") &&
+   (task.title.contains("لقاح", true) || task.title.contains("تحصين", true) || task.notes.contains("لقاح", true) || task.notes.contains("تحصين", true))
+  (task.kind == "التطعيمات السنوية" || sectionVaccine) && animals.any { a -> a.tag.equals(task.tag, true) }
+ }
  val open = annual.filterNot { it.completed }
  val overdue = open.count { runCatching { LocalDate.parse(it.date).isBefore(today) }.getOrDefault(false) }
  val dueToday = open.count { runCatching { LocalDate.parse(it.date) == today }.getOrDefault(false) }
