@@ -377,7 +377,7 @@ private fun CareAnnualCalendarScreen(modifier: Modifier, back: () -> Unit) {
  }
  val today = LocalDate.now()
  val annual = records.filter { task ->
-  val sectionVaccine = task.kind in setOf("برنامج النعاج الجافة", "برنامج النعاج الحوامل", "برنامج النعاج المرضعة", "وقاية الحملان") &&
+  val sectionVaccine = task.kind in setOf("برنامج النعاج الجافة", "برنامج النعاج الحوامل", "برنامج النعاج المرضعة", "برنامج الفحول", "وقاية الحملان") &&
    (task.title.contains("لقاح", true) || task.title.contains("تحصين", true) || task.notes.contains("لقاح", true) || task.notes.contains("تحصين", true))
   (task.kind == "التطعيمات السنوية" || sectionVaccine) && animals.any { a -> a.tag.equals(task.tag, true) }
  }
@@ -426,7 +426,16 @@ private fun CareAnnualCalendarScreen(modifier: Modifier, back: () -> Unit) {
       })
       Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
        Text(task.title, color = CareInk, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-       Text("🐑 ${task.tag} • ${animal?.productionState ?: animal?.kind.orEmpty()}", color = CareGreen, fontSize = 11.sp)
+       val categoryLabel = when {
+        animal == null -> ""
+        animal.productionState == "نعجة حامل" -> "نعجة حامل"
+        animal.productionState == "نعجة مرضعة" -> "نعجة مرضعة"
+        animal.productionState == "نعجة جافة" && animal.kind == "نعجة" -> "نعجة جافة"
+        animal.kind == "كبش" || animal.kind.contains("فحل") -> "فحل"
+        animal.kind.contains("حمل") || animal.kind.contains("رخلة") -> "حمل"
+        else -> animal.kind
+       }
+       Text("🐑 ${task.tag} • $categoryLabel", color = CareGreen, fontSize = 11.sp)
        Text("${task.date} • $state", color = if (state == "متأخر") Color(0xFFB54D42) else CareMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
        val reason = task.notes.substringAfter("\\n", "")
        if (reason.isNotBlank()) Text(reason, color = CareMuted, fontSize = 10.sp)
