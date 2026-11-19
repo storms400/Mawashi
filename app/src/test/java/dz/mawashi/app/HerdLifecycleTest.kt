@@ -82,6 +82,27 @@ class HerdLifecycleTest {
     }
 
     @Test
+    fun estimatedAgeAdvancesByElapsedDaysWhenBirthDateIsUnknown() {
+        val registered = animal.copy(ageMonths = 6, birthDate = "", ageRecordedDate = "2026-11-19")
+        val registrationDay = LocalDate.parse("2026-11-19")
+        val oneMonthLater = LocalDate.parse("2026-12-19")
+        assertEquals(180L, herdAnimalAgeDays(registered, registrationDay))
+        assertEquals(210L, herdAnimalAgeDays(registered, oneMonthLater))
+        assertEquals(6, herdAnimalAgeMonths(registered, registrationDay))
+        assertEquals(7, herdAnimalAgeMonths(registered, oneMonthLater))
+        assertTrue(herdAnimalAgeLabel(registered, oneMonthLater).contains("7 شهر"))
+    }
+
+    @Test
+    fun knownBirthDateUsesExactCalendarAgeInsteadOfEstimatedAnchor() {
+        val registered = animal.copy(ageMonths = 6, birthDate = "2026-05-19", ageRecordedDate = "2026-11-19")
+        val today = LocalDate.parse("2026-12-19")
+        assertEquals(214L, herdAnimalAgeDays(registered, today))
+        assertEquals(7, herdAnimalAgeMonths(registered, today))
+        assertTrue(herdAnimalAgeLabel(registered, today).contains("7 شهر"))
+    }
+
+    @Test
     fun acceptsOnlyRegisteredEweAsMotherAndRejectsSelfOrOtherKinds() {
         val ewe = animal.copy(id = "mother", tag = "E-1", kind = "نعجة")
         val ram = animal.copy(id = "ram", tag = "R-1", kind = "كبش")
