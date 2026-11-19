@@ -210,7 +210,7 @@ internal fun DryEweProgramScreen(modifier: Modifier = Modifier, onBack: (() -> U
             Spacer(Modifier.height(8.dp))
             when (page) {
                 "care" -> DryCarePage(animal, stageId, { stageId = it }, animalCare) { careDialog = it }
-                "vaccines" -> DryVaccinesPage(animal, DRY_VACCINES, animalPlans, animalDoses, { planDialog = it }, { doseDialog = it })
+                "vaccines" -> SmartAnnualVaccinationScreen("dry", animal, Modifier.weight(1f))
                 "reminders" -> DryRemindersPage(animal, reminders)
                 else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
                     item {

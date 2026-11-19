@@ -8,12 +8,12 @@ android {
     namespace = "dz.mawashi.app"
     compileSdk = 35
     defaultConfig {
-        // v50 package identity: independently installable alongside prior Mawashi APKs.
-        applicationId = "dz.mawashi.app.independent.v50"
+        // v51 package identity: independently installable alongside prior Mawashi APKs.
+        applicationId = "dz.mawashi.app.independent.v51"
         minSdk = 26
         targetSdk = 35
-        versionCode = 50
-        versionName = "1.0.50"
+        versionCode = 51
+        versionName = "1.0.51"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

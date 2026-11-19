@@ -40,4 +40,25 @@ class SmartVaccinationProgramTest {
         assertTrue(reconciled.any { it.notes == "SMART_VAX_PENDING:stage1_enteric" })
         assertFalse(reconciled.any { it.notes == "SMART_VAX_PENDING:stage2_hemorrhagic" })
     }
+
+    @Test fun lambClostridialFirstDoseUsesDamStatus() {
+        val birth = LocalDate.parse("2026-11-19")
+        assertEquals(LocalDate.parse("2026-12-31"), smartLambClostridialFirstDoseDate(birth, true))
+        assertEquals(LocalDate.parse("2026-12-03"), smartLambClostridialFirstDoseDate(birth, false))
+    }
+
+    @Test fun lambBoosterUsesProductIntervalWithinThreeToFourWeeks() {
+        val first = LocalDate.parse("2027-01-01")
+        assertEquals(LocalDate.parse("2027-01-29"), smartLambClostridialBoosterDate(first))
+        assertEquals(LocalDate.parse("2027-01-22"), smartLambClostridialBoosterDate(first, 18))
+        assertEquals(LocalDate.parse("2027-01-29"), smartLambClostridialBoosterDate(first, 40))
+    }
+
+    @Test fun annualWindowKeepsOverdueAndNextTwelveMonthsOnly() {
+        val today = LocalDate.parse("2027-01-01")
+        assertTrue(smartAnnualWindowContains(LocalDate.parse("2026-12-15"), today))
+        assertTrue(smartAnnualWindowContains(LocalDate.parse("2027-12-31"), today))
+        assertFalse(smartAnnualWindowContains(LocalDate.parse("2026-11-01"), today))
+        assertFalse(smartAnnualWindowContains(LocalDate.parse("2028-01-02"), today))
+    }
 }

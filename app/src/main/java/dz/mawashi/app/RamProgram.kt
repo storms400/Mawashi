@@ -215,7 +215,7 @@ internal fun RamProgramScreen(modifier: Modifier = Modifier, onBack: () -> Unit)
             }
             when(section) {
                 "care" -> RamCareSection(stageId, { stageId = it }, animalRecords, { action -> dialog = Triple("رعاية", action.title, action.hint) })
-                "vaccines" -> RamCatalogSection("اللقاحات", RAM_VACCINES, animalRecords, "لقاح") { item -> dialog = Triple("لقاح", item.title, item.guidance) }
+                "vaccines" -> SmartAnnualVaccinationScreen("ram", animal, Modifier.weight(1f))
                 "supplements" -> RamCatalogSection("الفيتامينات والمعادن", RAM_SUPPLEMENTS, animalRecords, "مكمل") { item -> dialog = Triple("مكمل", item.title, item.guidance) }
                 "fertility" -> RamSimpleListSection("فحوصات الخصوبة", RAM_FERTILITY, animalRecords, "خصوبة") { item -> dialog = Triple("خصوبة", item, "سجل النتيجة وفق فحص الطبيب أو المختبر.") }
                 "offspring" -> RamSimpleListSection("متابعة نسل الفحل", listOf("تسجيل مولود مرتبط بالفحل", "وزن الميلاد والحيوية", "متابعة النمو والوزن", "المشكلات الصحية أو العيوب المسجلة"), animalRecords, "نسل") { item -> dialog = Triple("نسل", item, "أدخل وسم المولود والنتيجة والوزن والملاحظات. الربط هنا توثيق يدوي ولا يستنتج الأبوة تلقائياً.") }

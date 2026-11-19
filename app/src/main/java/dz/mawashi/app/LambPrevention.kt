@@ -226,7 +226,7 @@ internal fun LambPreventionScreen(modifier: Modifier = Modifier, onBack: (() -> 
             Spacer(Modifier.height(7.dp))
             when (page) {
                 "care" -> LambCarePage(animal, stageId, { stageId = it }, care) { actionDialog = it }
-                "vaccines" -> LambVaccinesPage(animal, plans, doses, { planDialog = it }, { doseDialog = it })
+                "vaccines" -> SmartAnnualVaccinationScreen("lamb", animal, Modifier.weight(1f))
                 "reminders" -> LambRemindersPage(animal, plans, doses, care)
                 else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
                     item {

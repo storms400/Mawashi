@@ -185,7 +185,7 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
                 FilterChip(section == "prevention", { section = "prevention" }, label = { Text("اللقاحات والتحصينات", fontSize = 11.sp) }, modifier = Modifier.weight(1f))
                 FilterChip(section == "reminders", { section = "reminders" }, label = { Text("المواعيد والتنبيهات", fontSize = 11.sp) }, modifier = Modifier.weight(1f))
             }
-            if (section == "reminders") {
+            if (section == "prevention") {\n                SmartAnnualVaccinationScreen("pregnant", ewe, Modifier.weight(1f))\n            } else if (section == "reminders") {
                 CareRemindersPanel(selectedTag)
             } else if (section == "care") {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 18.dp)) {

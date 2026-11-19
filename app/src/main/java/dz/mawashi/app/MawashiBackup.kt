@@ -176,7 +176,7 @@ internal object MawashiBackup {
         val stores = payload.optJSONObject("stores") ?: error("بيانات الأقسام غير موجودة في النسخة الاحتياطية")
         val decoded = linkedMapOf<String, Map<String, Any?>>()
         storeNames.forEach { name ->
-            val store = stores.optJSONObject(name) ?: if (name == "mawashi_dry_ewe_program_v1" || name == "mawashi_pregnant_ewe_program_v1" || name == "mawashi_lactating_ewe_program_v1" || name == "mawashi_lamb_prevention_v1" || name == "mawashi_ram_program_v1") JSONObject() else error("النسخة الاحتياطية ناقصة: $name")
+            val store = stores.optJSONObject(name) ?: if (name == "mawashi_dry_ewe_program_v1" || name == "mawashi_pregnant_ewe_program_v1" || name == "mawashi_lactating_ewe_program_v1" || name == "mawashi_lamb_prevention_v1" || name == "mawashi_ram_program_v1" || name == "mawashi_annual_vaccination_v1") JSONObject() else error("النسخة الاحتياطية ناقصة: $name")
             val values = linkedMapOf<String, Any?>()
             val keys = store.keys()
             while (keys.hasNext()) {

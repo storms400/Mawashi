@@ -172,7 +172,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
                         FilterChip(section == "reminders", { section = "reminders" }, label = { Text("المواعيد والتنبيهات", fontSize = 10.sp) }, modifier = Modifier.weight(1f))
                     }
                 }
-                if (section == "reminders") {
+                if (section == "preventive") {\n                    item { SmartAnnualVaccinationScreen("lactating", animals.firstOrNull { it.tag.equals(selectedTag, true) }) }\n                } else if (section == "reminders") {
                     item { CareRemindersPanel(selectedTag) }
                 } else if (section == "care") {
                     item {
