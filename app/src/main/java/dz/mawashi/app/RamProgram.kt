@@ -14,12 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.MedicalServices
-import androidx.compose.material.icons.outlined.Science
-import androidx.compose.material.icons.outlined.Vaccines
-import androidx.compose.material.icons.outlined.EventNote
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
