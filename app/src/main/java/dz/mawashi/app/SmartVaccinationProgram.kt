@@ -140,6 +140,23 @@ private fun annualTasks(c:Context,category:String,a:HerdAnimal,history:List<Annu
   val age=plan?.optInt("age",-1)?.takeIf{it>=0};val date=when{age!=null->birth.plusDays(age.toLong());dam=="محصنة"->smartLambClostridialFirstDoseDate(birth,true);dam=="غير محصنة"->smartLambClostridialFirstDoseDate(birth,false);else->null}
   out+=AnnualVaccineTask("lamb-first","clostridial","الجرعة الأولى • التسمم المعوي والكزاز",date,when{age!=null->"حُسب من الخطة المحفوظة.";dam=="محصنة"->"موعد إرشادي عند 6 أسابيع مع أم مسجلة محصنة؛ راجع نشرة المنتج والطبيب.";dam=="غير محصنة"->"موعد إرشادي عند أسبوعين مع أم مسجلة غير محصنة؛ راجع نشرة المنتج والطبيب.";else->"حالة تحصين الأم مجهولة؛ تحقق منها قبل تحديد الموعد."},"تحصين أساسي مشروط")
  }else if(ds.size==1){val first=LocalDate.parse(ds.first().date);val days=runCatching{val rows=arr(c,"mawashi_lamb_prevention_v1","plans");(0 until rows.length()).map{rows.getJSONObject(it)}.firstOrNull{it.optString("tag").equals(a.tag,true)&&it.optString("vaccine")=="clostridial"}?.optInt("booster",-1)?.takeIf{it>0}}.getOrNull()?:28;out+=AnnualVaccineTask("lamb-booster","clostridial","الجرعة المنشطة • التسمم المعوي والكزاز",smartLambClostridialBoosterDate(first,days),"فاصل إرشادي 3–4 أسابيع أو الفاصل المحفوظ في خطة المنتج؛ راجع النشرة.","تاريخ الجرعة الأولى")}}}
+ if(category=="dry"){
+  val rows=runCatching{JSONArray(c.getSharedPreferences("mawashi_dry_ewe_program_v1",Context.MODE_PRIVATE).getString("plans","[]")?:"[]")}.getOrElse{JSONArray()}
+  for(i in 0 until rows.length()){
+   val p=runCatching{rows.getJSONObject(i)}.getOrNull()?:continue
+   if(!p.optString("tag").equals(a.tag,true))continue
+   val id=p.optString("vaccine");if(out.any{it.vaccineId==id&&it.due!=null})continue
+   val doses=history.filter{it.vaccineId==id}.sortedBy{it.date}
+   val interval=p.optInt("interval",-1).takeIf{it>0}
+   val due=if(doses.isEmpty())runCatching{LocalDate.parse(p.optString("firstDue"))}.getOrNull()
+           else interval?.let{runCatching{LocalDate.parse(doses.last().date).plusDays(it.toLong())}.getOrNull()}
+   if(due!=null&&smartAnnualWindowContains(due,today)){
+    val title=ANNUAL_VACCINE_CATALOG.firstOrNull{it.id==id}?.title?:id
+    out+=AnnualVaccineTask("dry-plan-$id",id,"موعد الخطة المحفوظة • $title",due,
+      "حُسب من تاريخ الخطة أو آخر جرعة والفاصل الذي سبق حفظه؛ راجع نشرة المنتج قبل التنفيذ.","خطة المنتج المحفوظة")
+   }
+  }
+ }
  if(category=="pregnant"){val birth=runCatching{LocalDate.parse(a.expectedBirthDate)}.getOrNull();if(birth!=null){val d=birth.minusDays(21);if(smartAnnualWindowContains(d,today)&&history.none{it.vaccineId=="clostridial"&&runCatching{LocalDate.parse(it.date).isAfter(d.minusDays(300))}.getOrDefault(false)})out+=AnnualVaccineTask("prelambing-review","clostridial","مراجعة تحصين ما قبل الولادة",d,"موعد مراجعة قبل الولادة المتوقعة بثلاثة أسابيع؛ ليس أمراً بإعطاء جرعة. تحقق من الجرعات السابقة ونشرة المنتج والطبيب.","تاريخ الولادة المتوقع")}}
  val dated=out.map{it.vaccineId}.toSet()
  ANNUAL_VACCINE_CATALOG.filter{category in it.applicable&&it.id !in dated}.forEach{v->out+=AnnualVaccineTask("conditional-${v.id}",v.id,v.title,null,v.guidance,when(v.id){"ppr","fmd","pox","anthrax"->"حملة رسمية";"pasteurella","footrot","caseous","orf","chlamydia","campylobacter","bluetongue","rabies"->"حسب الخطر";else->"مراجعة السجل"})}
@@ -171,7 +188,7 @@ internal fun SmartAnnualVaccinationScreen(category:String,animal:HerdAnimal?,mod
    if(dated.isEmpty())Text("لا توجد جرعات بتاريخ مؤكد ضمن هذه الفترة. لن يخترع التطبيق مواعيد للقاحات المرتبطة بالحملات أو المخاطر.",color=Color(0xFF778078),fontSize=12.sp)
    dated.forEach{t->val d=t.due!!;val state=when{d.isBefore(today)->"متأخر";d==today->"مستحق اليوم";else->"قادم"};Surface(color=Color.White,shape=RoundedCornerShape(12.dp),border=BorderStroke(1.dp,Color(0xFFE8E4DA))){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text(t.title,Modifier.weight(1f),color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=13.sp);Text(state,color=if(state=="متأخر")Color(0xFFB35C43)else Color(0xFF526B55),fontSize=11.sp,fontWeight=FontWeight.Bold)};Text("$d • ${t.group}",color=Color(0xFF526B55),fontSize=11.sp);Text(t.reason,color=Color(0xFF778078),fontSize=11.sp)}}}
    Text("لقاحات مرتبطة بالحملات أو تقييم الخطر",color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=15.sp)
-   catalog.filter{v->tasks.any{it.vaccineId==v.id&&it.due==null}}.forEach{v->Surface(color=Color.White,shape=RoundedCornerShape(12.dp),border=BorderStroke(1.dp,Color(0xFFE8E4DA))){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(v.title,color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=13.sp);Text(v.group,color=Color(0xFF526B55),fontSize=11.sp);Text(v.guidance,color=Color(0xFF778078),fontSize=11.sp)}}}
+   tasks.filter{it.due==null}.forEach{t->Surface(color=Color.White,shape=RoundedCornerShape(12.dp),border=BorderStroke(1.dp,Color(0xFFE8E4DA))){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(t.title,color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=13.sp);Text(t.group,color=Color(0xFF526B55),fontSize=11.sp);Text(t.reason,color=Color(0xFF778078),fontSize=11.sp)}}}
    Button(onClick={dialog=true},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF526B55))){Text("تسجيل جرعة منفذة فعلياً")}
    Text("المواعيد تُحسب من الميلاد والسجل وخطة المنتج والحالة الإنتاجية. الحملات تتبع تعليمات المصالح البيطرية الجزائرية. لا تُسجّل جرعة تلقائياً، ولا تُحدد جرعة الدواء أو المكمل من الوزن وحده.",color=Color(0xFF778078),fontSize=11.sp)
    Text("السجل السابق",color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=15.sp)
