@@ -133,6 +133,34 @@ private object LambPreventionStore {
     }
 }
 
+private fun syncLambVaccineReminders(context: Context, animals: List<HerdAnimal>, plans: List<LambVaccinePlan>, doses: List<LambDose>) {
+    val existing = readHerdCare(context).filterNot { it.kind == "وقاية الحملان" }
+    val generated = mutableListOf<HerdCareReminder>()
+    animals.filter { it.lifecycleStatus != "مؤرشف" && it.birthDate.isNotBlank() }.forEach { animal ->
+        LAMB_VACCINES.forEach { vaccine ->
+            val plan = plans.firstOrNull { it.tag.equals(animal.tag, true) && it.vaccineId == vaccine.id } ?: return@forEach
+            val first = doses.firstOrNull { it.tag.equals(animal.tag, true) && it.vaccineId == vaccine.id && it.doseNumber == 1 }
+            val secondDone = doses.any { it.tag.equals(animal.tag, true) && it.vaccineId == vaccine.id && it.doseNumber == 2 }
+            val due = when {
+                first == null && plan.firstAgeDays != null -> runCatching { LocalDate.parse(animal.birthDate).plusDays(plan.firstAgeDays.toLong()) }.getOrNull()
+                first != null && !secondDone && plan.boosterDays != null -> runCatching { LocalDate.parse(first.date).plusDays(plan.boosterDays.toLong()) }.getOrNull()
+                else -> null
+            } ?: return@forEach
+            val doseLabel = if (first == null) "الجرعة الأولى" else "الجرعة المنشطة"
+            generated += HerdCareReminder(
+                id = "lamb-vaccine-" + animal.tag + "-" + vaccine.id,
+                tag = animal.tag,
+                kind = "وقاية الحملان",
+                title = doseLabel + " • " + vaccine.title,
+                date = due.toString(),
+                notes = "موعد محسوب من خطة اللقاح المعتمدة ونشرة المنتج",
+                completed = false
+            )
+        }
+    }
+    saveHerdCare(context, existing + generated)
+}
+
 @Composable
 internal fun LambPreventionScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -148,9 +176,13 @@ internal fun LambPreventionScreen(modifier: Modifier = Modifier) {
     var doseDialog by remember { mutableStateOf<LambVaccine?>(null) }
 
     LaunchedEffect(Unit) {
-        animals = loadHerd(context).filter { it.kind == "حمل/رخلة" && it.lifecycleStatus != "مؤرشف" }
-        care = LambPreventionStore.care(context); plans = LambPreventionStore.plans(context); doses = LambPreventionStore.doses(context)
-        if (animals.none { it.tag == tag }) tag = animals.firstOrNull()?.tag.orEmpty()
+        val currentAnimals = loadHerd(context).filter { it.kind == "حمل/رخلة" && it.lifecycleStatus != "مؤرشف" }
+        val currentPlans = LambPreventionStore.plans(context)
+        val currentDoses = LambPreventionStore.doses(context)
+        animals = currentAnimals
+        care = LambPreventionStore.care(context); plans = currentPlans; doses = currentDoses
+        if (currentAnimals.none { it.tag == tag }) tag = currentAnimals.firstOrNull()?.tag.orEmpty()
+        syncLambVaccineReminders(context, currentAnimals, currentPlans, currentDoses)
     }
     val animal = animals.firstOrNull { it.tag.equals(tag, true) }
     val today = LocalDate.now()
@@ -228,7 +260,7 @@ internal fun LambPreventionScreen(modifier: Modifier = Modifier) {
     planDialog?.let { vaccine ->
         LambPlanDialog(tag, vaccine, plans.firstOrNull { it.tag.equals(tag, true) && it.vaccineId == vaccine.id }, { planDialog = null }) { plan ->
             val updated = plans.filterNot { it.tag.equals(tag, true) && it.vaccineId == vaccine.id } + plan
-            runCatching { LambPreventionStore.savePlans(context, updated) }.onSuccess { plans = updated; planDialog = null; Toast.makeText(context, "تم حفظ خطة اللقاح", Toast.LENGTH_SHORT).show() }
+            runCatching { LambPreventionStore.savePlans(context, updated); syncLambVaccineReminders(context, animals, updated, doses) }.onSuccess { plans = updated; planDialog = null; Toast.makeText(context, "تم حفظ خطة اللقاح وتحديث التنبيهات", Toast.LENGTH_SHORT).show() }
                 .onFailure { Toast.makeText(context, "تعذر حفظ الخطة", Toast.LENGTH_LONG).show() }
         }
     }
@@ -236,7 +268,7 @@ internal fun LambPreventionScreen(modifier: Modifier = Modifier) {
         val firstDone = doses.any { it.tag.equals(tag, true) && it.vaccineId == vaccine.id && it.doseNumber == 1 }
         LambDoseDialog(tag, vaccine, if (firstDone) 2 else 1, { doseDialog = null }) { dose ->
             val updated = doses + dose
-            runCatching { LambPreventionStore.saveDoses(context, updated) }.onSuccess { doses = updated; doseDialog = null; Toast.makeText(context, "تم توثيق الجرعة المنفذة", Toast.LENGTH_SHORT).show() }
+            runCatching { LambPreventionStore.saveDoses(context, updated); syncLambVaccineReminders(context, animals, plans, updated) }.onSuccess { doses = updated; doseDialog = null; Toast.makeText(context, "تم توثيق الجرعة وتحديث التنبيهات", Toast.LENGTH_SHORT).show() }
                 .onFailure { Toast.makeText(context, "تعذر حفظ الجرعة", Toast.LENGTH_LONG).show() }
         }
     }
