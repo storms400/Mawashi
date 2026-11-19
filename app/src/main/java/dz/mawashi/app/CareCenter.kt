@@ -366,6 +366,13 @@ private fun CareAnnualCalendarScreen(modifier: Modifier, back: () -> Unit) {
  val context = LocalContext.current
  var records by remember { mutableStateOf(readHerdCare(context)) }
  val animals = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" }
+ LaunchedEffect(Unit) {
+  val freshHerd = reconcileHerdLifecycle(context)
+  val freshRecords = readHerdCare(context)
+  val reconciled = reconcileAnnualVaccinationCalendar(context, freshHerd, freshRecords)
+  if (reconciled != freshRecords) saveHerdCare(context, reconciled)
+  records = reconciled
+ }
  val today = LocalDate.now()
  val annual = records.filter { it.kind == "التطعيمات السنوية" && animals.any { a -> a.tag.equals(it.tag, true) } }
  val open = annual.filterNot { it.completed }
@@ -449,7 +456,8 @@ private fun CareTasksScreen(modifier: Modifier, back: () -> Unit) {
      Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
       Checkbox(task.completed, { done ->
        val changed = records.map { if (it.id == task.id) it.copy(completed = done) else it }
-       runCatching { saveHerdCare(c, changed) }.onSuccess { records = changed }
+       val refreshed = reconcileAnnualVaccinationCalendar(c, activeAnimals, changed, LocalDate.now())
+       runCatching { saveHerdCare(c, refreshed) }.onSuccess { records = refreshed }
       })
       Column(Modifier.weight(1f)) {
        Text(task.tag + " • " + task.title, color = CareInk, fontWeight = FontWeight.Bold, fontSize = 11.sp)
