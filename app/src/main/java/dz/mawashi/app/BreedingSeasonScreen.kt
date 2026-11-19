@@ -118,7 +118,7 @@ private fun SeasonMiniMetric(label: String, value: String, modifier: Modifier = 
 @Composable
 fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
     val context = LocalContext.current
-    val animals = remember { mutableStateListOf<HerdAnimal>().apply { addAll(loadHerd(context)) } }
+    val animals = remember { mutableStateListOf<HerdAnimal>().apply { addAll(reconcileHerdLifecycle(context)) } }
     val allEwes = animals.filter { it.kind == "نعجة" }
     val ewes = allEwes.filter { it.lifecycleStatus == "نشط" }
     val rams = animals.filter { it.kind == "كبش" && it.lifecycleStatus == "نشط" }
