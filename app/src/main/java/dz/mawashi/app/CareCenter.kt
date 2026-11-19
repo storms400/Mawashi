@@ -80,8 +80,10 @@ internal fun CareRemindersPanel(animalTag: String) {
                         Checkbox(checked = task.completed, onCheckedChange = { done ->
                             val all = readHerdCare(context)
                             val changed = all.map { if (it.id == task.id) it.copy(completed = done) else it }
-                            runCatching { saveHerdCare(context, changed) }.onSuccess {
-                                records = changed.filter { it.tag.equals(animalTag, true) }.sortedBy { it.date }
+                            val herd = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" }
+                            val refreshed = reconcileAnnualVaccinationCalendar(context, herd, changed, LocalDate.now())
+                            runCatching { saveHerdCare(context, refreshed) }.onSuccess {
+                                records = refreshed.filter { it.tag.equals(animalTag, true) }.sortedBy { it.date }
                             }
                         })
                         Column(Modifier.weight(1f)) {
