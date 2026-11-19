@@ -64,6 +64,9 @@ internal object HerdCareNotifications {
                 val due = runCatching { triggerAt(LocalDate.parse(item.date)) }.getOrNull()
                 if (due != null && due > System.currentTimeMillis()) {
                     manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pending)
+                } else if (runCatching { LocalDate.parse(item.date) == LocalDate.now() }.getOrDefault(false)) {
+                    // A due-today item added after 09:00 still receives a near-term reminder.
+                    manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 60_000L, pending)
                 } else {
                     manager.cancel(pending)
                     NotificationManagerCompat.from(context).cancel(id)
