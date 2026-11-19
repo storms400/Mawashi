@@ -312,7 +312,7 @@ fun FinanceScreen(modifier:Modifier=Modifier){
       writeInvoice(c,FinanceInvoice(id,"sale",type.title,buyer,item,q,if(type==SaleType.ANIMAL)"رأس" else if(type==SaleType.WOOL||type==SaleType.FEED)"كغ" else "وحدة",p,total,totalCost,now,detail))
        if(type==SaleType.ANIMAL) saveHerdCare(c,readHerdCare(c).filter{!it.tag.equals(item,true)||it.completed})
      }
-     if(transaction.committed)done(if(type==SaleType.ANIMAL) "حُفظت فاتورة البيع "+id+" بقيمة "+dinar(total)+". أُخرج الرأس "+item+" من جميع القوائم النشطة، وأُلغيت مواعيده المفتوحة مع الاحتفاظ بسجله في الأرشيف." else "حُفظت فاتورة البيع "+id+" بقيمة "+dinar(total)+". تم خصم الكمية تلقائياً من القسم المعني.") else error=if(transaction.rollbackSucceeded)"تعذر حفظ الفاتورة؛ أُعيد المخزون إلى حالته السابقة." else "تعذر حفظ العملية واكتمل التراجع جزئياً فقط. راجع المخزون والفواتير قبل متابعة البيع." else error=if(transaction.rollbackSucceeded)"تعذر حفظ الفاتورة؛ أُعيد المخزون إلى حالته السابقة." else "تعذر حفظ العملية واكتمل التراجع جزئياً فقط. راجع المخزون والفواتير قبل متابعة البيع."
+      if(transaction.committed) done(if(type==SaleType.ANIMAL) "حُفظت فاتورة البيع "+id+" بقيمة "+dinar(total)+". أُخرج الرأس "+item+" من جميع القوائم النشطة، وأُلغيت مواعيده المفتوحة مع الاحتفاظ بسجله في الأرشيف." else "حُفظت فاتورة البيع "+id+" بقيمة "+dinar(total)+". تم خصم الكمية تلقائياً من القسم المعني.") else error=if(transaction.rollbackSucceeded) "تعذر حفظ الفاتورة؛ أُعيد المخزون إلى حالته السابقة." else "تعذر حفظ العملية واكتمل التراجع جزئياً فقط. راجع المخزون والفواتير قبل متابعة البيع."
     }
    }
   }
