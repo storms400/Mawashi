@@ -17,7 +17,7 @@ import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.MedicalServices
-import androidx.compose.material.icons.outlined.Syringe
+import androidx.compose.material.icons.outlined.Vaccines
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -192,7 +192,7 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
                         }
                     }
                     items(PREGNANT_STAGES) { stage ->
-                        val count = eweRecords.count { it.type == "فحص" && it.itemId == stage.id }
+                        val count = eweRecords.filter { it.type == "فحص" && it.itemId == stage.id }.map { it.itemName }.distinct().size
                         val expanded = expandedStage == stage.id
                         Surface(color = Color.White, shape = RoundedCornerShape(15.dp), border = BorderStroke(if (expanded) 2.dp else 1.dp, if (expanded) PregGreen else PregLine)) {
                             Column(Modifier.fillMaxWidth().clickable { expandedStage = if (expanded) "" else stage.id }.padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -210,7 +210,7 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
                                     stage.checks.forEachIndexed { index, check ->
                                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                             Text((index + 1).toString() + ". " + check, color = PregInk, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                            val last = eweRecords.lastOrNull { it.type == "فحص" && it.itemId == stage.id && it.itemName == check }
+                                            val last = eweRecords.firstOrNull { it.type == "فحص" && it.itemId == stage.id && it.itemName == check }
                                             Text(last?.let { "آخر متابعة: " + it.date + " • " + it.notes } ?: "لم تسجل بعد", color = PregMuted, fontSize = 11.sp)
                                         }
                                     }
@@ -235,7 +235,7 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                             Button(onClick = { recordType = "لقاح"; showRecordDialog = true }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = PregGreen)) {
-                                Icon(Icons.Outlined.Syringe, null); Spacer(Modifier.width(5.dp)); Text("تسجيل لقاح")
+                                Icon(Icons.Outlined.Vaccines, null); Spacer(Modifier.width(5.dp)); Text("تسجيل لقاح")
                             }
                             OutlinedButton(onClick = { recordType = "فيتامين"; showRecordDialog = true }, modifier = Modifier.weight(1f)) {
                                 Icon(Icons.Outlined.MedicalServices, null); Spacer(Modifier.width(5.dp)); Text("تسجيل فيتامين")
