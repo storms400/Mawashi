@@ -189,6 +189,24 @@ internal fun smartAdultAnnualCoreTasks(
     return out
 }
 
+internal fun smartConditionalAnnualReviewTasks(category: String, today: LocalDate): List<AnnualVaccineTask> =
+    ANNUAL_VACCINE_CATALOG.filter { category in it.applicable && it.id in setOf(
+        "pox", "ppr", "fmd", "brucella", "chlamydia", "campylobacter",
+        "footrot", "caseous", "orf", "anthrax", "bluetongue", "rabies"
+    ) }.map { vaccine ->
+        AnnualVaccineTask(
+            "conditional-review-$category-${vaccine.id}",
+            vaccine.id,
+            "مراجعة الأهلية والحملة • ${vaccine.title}",
+            today,
+            "موعد مراجعة ضمن الخطة السنوية للتحقق من وجود حملة رسمية أو خطر محلي أو مانع متعلق بالحالة. هذا ليس موعد إعطاء لقاح؛ لا يُحدد الإعطاء إلا بعد تأكيد الطبيب أو المصالح البيطرية.",
+            when (vaccine.id) {
+                "pox", "ppr", "fmd", "anthrax" -> "مراجعة الحملة الرسمية"
+                else -> "مراجعة الخطر والأهلية"
+            }
+        )
+    }
+
 private fun annualJsonArray(c:Context,pref:String,key:String):JSONArray =
  runCatching { JSONArray(c.getSharedPreferences(pref,Context.MODE_PRIVATE).getString(key,"[]") ?: "[]") }.getOrElse { JSONArray() }
 
@@ -220,7 +238,7 @@ private fun annualTasks(c:Context,category:String,a:HerdAnimal,history:List<Annu
  }
  if(category in setOf("dry","pregnant","lactating","ram")) out += smartAdultAnnualCoreTasks(category,history,today,a.expectedBirthDate).filterNot { task -> out.any { it.vaccineId == task.vaccineId && it.due != null } }
  val dated=out.map{it.vaccineId}.toSet()
- ANNUAL_VACCINE_CATALOG.filter{category in it.applicable&&it.id !in dated}.forEach{v->out+=AnnualVaccineTask("conditional-${v.id}",v.id,v.title,null,v.guidance,when(v.id){"ppr","fmd","pox","anthrax"->"حملة رسمية";"pasteurella","footrot","caseous","orf","chlamydia","campylobacter","bluetongue","rabies"->"حسب الخطر";else->"مراجعة السجل"})}
+ out += smartConditionalAnnualReviewTasks(category,today).filterNot { task -> out.any { it.vaccineId == task.vaccineId && it.due != null } }
  return out.sortedWith(compareBy<AnnualVaccineTask>({it.due==null},{it.due?:LocalDate.MAX},{it.title}))
 }
 
