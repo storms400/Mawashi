@@ -24,10 +24,18 @@ internal object HerdCareNotifications {
     private const val PREFS = "mawashi_herd_care_v27"
     private const val KEY = "scheduled_care"
     private const val IDS_KEY = "scheduled_care_alarm_ids"
+    private const val DELIVERED_KEY = "delivered_care_notifications"
     private const val CHANNEL = "herd_care_reminders"
 
     internal fun triggerAt(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Long =
         date.atTime(LocalTime.of(9, 0)).atZone(zone).toInstant().toEpochMilli()
+
+    internal fun deliveryKey(id: String, date: String): String = "$id|$date"
+
+    internal fun isOverdue(date: LocalDate, today: LocalDate): Boolean = date.isBefore(today)
+
+    private fun delivered(prefs: android.content.SharedPreferences, id: String, date: String): Boolean =
+        prefs.getStringSet(DELIVERED_KEY, emptySet()).orEmpty().contains(deliveryKey(id, date))
 
     fun scheduleAll(context: Context, reminders: List<HerdCareNotificationData>) {
         val manager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -61,15 +69,23 @@ internal object HerdCareNotifications {
                 manager.cancel(pending)
                 NotificationManagerCompat.from(context).cancel(id)
             } else {
-                val due = runCatching { triggerAt(LocalDate.parse(item.date)) }.getOrNull()
-                if (due != null && due > System.currentTimeMillis()) {
-                    manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pending)
-                } else if (runCatching { LocalDate.parse(item.date) == LocalDate.now() }.getOrDefault(false)) {
-                    // A due-today item added after 09:00 still receives a near-term reminder.
-                    manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 60_000L, pending)
-                } else {
+                val date = runCatching { LocalDate.parse(item.date) }.getOrNull()
+                if (date == null || delivered(prefs, item.id, item.date)) {
                     manager.cancel(pending)
-                    NotificationManagerCompat.from(context).cancel(id)
+                } else {
+                    val today = LocalDate.now()
+                    val due = triggerAt(date)
+                    when {
+                        date.isBefore(today) -> {
+                            // Catch up overdue items once, immediately; never silently discard them.
+                            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1_000L, pending)
+                        }
+                        date == today && due <= System.currentTimeMillis() -> {
+                            // Items entered after 09:00 still notify once shortly after creation.
+                            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 60_000L, pending)
+                        }
+                        else -> manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pending)
+                    }
                 }
             }
         }
@@ -103,9 +119,22 @@ internal object HerdCareNotifications {
             }.getOrNull()
         }
         if (!isActiveHerdCareReminder(current, id)) return
-        val tag = intent.getStringExtra("tag").orEmpty()
-        val title = intent.getStringExtra("title").orEmpty()
-        val date = intent.getStringExtra("date").orEmpty()
+        val latest = current.firstOrNull { it.id == id } ?: return
+        val parsedDate = runCatching { LocalDate.parse(latest.date) }.getOrNull() ?: return
+        val today = LocalDate.now()
+        if (parsedDate.isAfter(today)) return
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val key = deliveryKey(id, latest.date)
+        synchronized(HerdCareNotifications::class.java) {
+            val delivered = prefs.getStringSet(DELIVERED_KEY, emptySet()).orEmpty()
+            if (key in delivered) return
+            // Persist before posting so duplicate/racing alarms cannot show the same cycle twice.
+            if (!prefs.edit().putStringSet(DELIVERED_KEY, delivered + key).commit()) return
+        }
+        val tag = latest.tag
+        val title = latest.title
+        val date = latest.date
+        val overdue = isOverdue(parsedDate, today)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= 26) {
             manager.createNotificationChannel(NotificationChannel(CHANNEL, "مواعيد متابعة القطيع", NotificationManager.IMPORTANCE_DEFAULT))
@@ -114,9 +143,9 @@ internal object HerdCareNotifications {
         val content = open?.let { PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE) }
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("موعد متابعة القطيع")
+            .setContentTitle(if (overdue) "موعد متابعة متأخر" else "موعد متابعة القطيع")
             .setContentText("$tag • $title")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$tag • $title\nالتاريخ: $date"))
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$tag • $title\nالتاريخ: $date" + if (overdue) "\nهذا الموعد متأخر ويحتاج مراجعة." else ""))
             .setAutoCancel(true)
             .setContentIntent(content)
             .build()
