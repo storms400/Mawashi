@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -81,7 +82,11 @@ private fun MawashiApp() {
             onSurface = Ink
         )
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        val baseDensity = LocalDensity.current
+        CompositionLocalProvider(
+            LocalLayoutDirection provides LayoutDirection.Rtl,
+            LocalDensity provides Density(baseDensity.density, baseDensity.fontScale * 1.20f)
+        ) {
             Scaffold(
                 containerColor = Cream,
                 bottomBar = {
