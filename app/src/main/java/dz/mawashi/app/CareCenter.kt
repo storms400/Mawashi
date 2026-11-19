@@ -33,8 +33,15 @@ private val CareLine = Color(0xFFE8E4DA)
 internal fun CareCenterScreen(modifier: Modifier = Modifier) {
  val context = LocalContext.current
  remember(context) { reconcileHerdLifecycle(context) }
+ LaunchedEffect(context) {
+  val herd = reconcileHerdLifecycle(context)
+  val current = readHerdCare(context)
+  val annual = reconcileAnnualVaccinationCalendar(context, herd, current)
+  if (annual != current) runCatching { saveHerdCare(context, annual) }
+ }
  var page by rememberSaveable { mutableStateOf("home") }
  when (page) {
+  "annual" -> CareAnnualCalendarScreen(modifier) { page = "home" }
   "vaccines" -> CareVaccineScreen(modifier) { page = "home" }
   "tasks" -> CareTasksScreen(modifier) { page = "home" }
   "health" -> HerdHealthMonitor(modifier) { page = "home" }
@@ -43,7 +50,7 @@ internal fun CareCenterScreen(modifier: Modifier = Modifier) {
   "pregnant_ewes" -> PregnantEweProgramScreen(modifier) { page = "home" }
   "lactating_ewes" -> LactatingEweProgramScreen(modifier) { page = "home" }
   "rams" -> RamProgramScreen(modifier) { page = "home" }
-  else -> CareHomeScreen(modifier, { page = "vaccines" }, { page = "tasks" }, { page = "health" }, { page = "lambs" }, { page = "dry_ewes" }, { page = "pregnant_ewes" }, { page = "lactating_ewes" }, { page = "rams" })
+  else -> CareHomeScreen(modifier, { page = "annual" }, { page = "vaccines" }, { page = "tasks" }, { page = "health" }, { page = "lambs" }, { page = "dry_ewes" }, { page = "pregnant_ewes" }, { page = "lactating_ewes" }, { page = "rams" })
  }
 }
 
@@ -91,7 +98,7 @@ internal fun CareRemindersPanel(animalTag: String) {
 }
 
 @Composable
-private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -> Unit, health: () -> Unit, lambs: () -> Unit, dryEwes: () -> Unit, pregnantEwes: () -> Unit, lactatingEwes: () -> Unit, rams: () -> Unit) {
+private fun CareHomeScreen(modifier: Modifier, annual: () -> Unit, vaccines: () -> Unit, tasks: () -> Unit, health: () -> Unit, lambs: () -> Unit, dryEwes: () -> Unit, pregnantEwes: () -> Unit, lactatingEwes: () -> Unit, rams: () -> Unit) {
  val c = LocalContext.current
  var animals by remember { mutableStateOf(loadHerd(c).filter { it.lifecycleStatus != "مؤرشف" }) }
  var reminders by remember { mutableStateOf(readHerdCare(c)) }
@@ -119,6 +126,7 @@ private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -
   Text("أقسام المركز", color = CareInk, fontWeight = FontWeight.Bold, fontSize = 14.sp)
   Spacer(Modifier.height(8.dp))
   LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+   item { CareTile("الرزنامة السنوية للتطعيمات", "كل الاستحقاقات حسب الحيوان والفئة والتاريخ مع تذكيرات الهاتف", Icons.Outlined.EventNote, annual) }
    item { CareTile("برنامج وقاية الحملان", "الرعاية والفحوصات واللقاحات من الولادة حتى الفطام", Icons.Outlined.Vaccines, lambs) }
    item { CareTile("برنامج النعاج الجافة", "الرعاية والتحصينات من الفطام حتى الاستعداد للتلقيح", Icons.Outlined.Vaccines, dryEwes) }
    item { CareTile("برنامج النعاج الحوامل", "المراحل الخمس والسجل الوقائي وربط المواليد بالأم", Icons.Outlined.Favorite, pregnantEwes) }
@@ -349,6 +357,71 @@ private fun CareVaccineScreen(modifier: Modifier, back: () -> Unit) {
    dismissButton = { TextButton(onClick = { dialogOpen = false }) { Text("إلغاء", color = CareGreen) } },
    containerColor = CareCream
   )
+ }
+}
+
+
+@Composable
+private fun CareAnnualCalendarScreen(modifier: Modifier, back: () -> Unit) {
+ val context = LocalContext.current
+ var records by remember { mutableStateOf(readHerdCare(context)) }
+ val animals = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" }
+ val today = LocalDate.now()
+ val annual = records.filter { it.kind == "التطعيمات السنوية" && animals.any { a -> a.tag.equals(it.tag, true) } }
+ val open = annual.filterNot { it.completed }
+ val overdue = open.count { runCatching { LocalDate.parse(it.date).isBefore(today) }.getOrDefault(false) }
+ val dueToday = open.count { runCatching { LocalDate.parse(it.date) == today }.getOrDefault(false) }
+ val upcoming = open.count { runCatching { val d = LocalDate.parse(it.date); d.isAfter(today) && !d.isAfter(today.plusDays(30)) }.getOrDefault(false) }
+ val animalByTag = animals.associateBy { it.tag.lowercase() }
+ Column(modifier.fillMaxSize().background(CareCream).padding(14.dp)) {
+  Row(verticalAlignment = Alignment.CenterVertically) {
+   IconButton(onClick = back) { Icon(Icons.Outlined.ArrowBack, null, tint = CareGreen) }
+   Column(Modifier.weight(1f)) {
+    Text("الرزنامة السنوية للتطعيمات", color = CareInk, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+    Text("خطة القطيع خلال الاثني عشر شهراً القادمة", color = CareMuted, fontSize = 11.sp)
+   }
+  }
+  Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+   CareStat("متأخر", overdue.toString(), Modifier.weight(1f))
+   CareStat("اليوم", dueToday.toString(), Modifier.weight(1f))
+   CareStat("خلال 30 يوماً", upcoming.toString(), Modifier.weight(1f))
+  }
+  Spacer(Modifier.height(8.dp))
+  Text("كل موعد مرتبط برقم الحيوان وسجله الصحي. عند تغيير حالة القطيع أو بيانات موسم التلقيح يعاد احتساب المواعيد عند فتح مركز الرعاية.", color = CareMuted, fontSize = 11.sp)
+  LazyColumn(verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
+   if (annual.isEmpty()) item {
+    Surface(color = Color.White, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, CareLine)) {
+     Text("لا توجد مواعيد محسوبة بعد. تأكد من تسجيل تواريخ الميلاد، ونتائج السونار، وموسم التلقيح، وسجلات الجرعات وخطط المنتجات.", color = CareMuted, fontSize = 12.sp, modifier = Modifier.padding(13.dp))
+    }
+   }
+   items(annual.sortedWith(compareBy<HerdCareReminder> { it.completed }.thenBy { it.date }), key = { it.id }) { task ->
+    val animal = animalByTag[task.tag.lowercase()]
+    val due = runCatching { LocalDate.parse(task.date) }.getOrNull()
+    val state = when {
+     task.completed -> "مكتمل"
+     due == null -> "تاريخ غير صالح"
+     due.isBefore(today) -> "متأخر"
+     due == today -> "مستحق اليوم"
+     else -> "قادم"
+    }
+    Surface(color = Color.White, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, CareLine)) {
+     Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+      Checkbox(checked = task.completed, onCheckedChange = { done ->
+       val changed = readHerdCare(context).map { if (it.id == task.id) it.copy(completed = done) else it }
+       val refreshed = reconcileAnnualVaccinationCalendar(context, animals, changed, LocalDate.now())
+       runCatching { saveHerdCare(context, refreshed) }.onSuccess { records = refreshed }
+      })
+      Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+       Text(task.title, color = CareInk, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+       Text("🐑 ${task.tag} • ${animal?.productionState ?: animal?.kind.orEmpty()}", color = CareGreen, fontSize = 11.sp)
+       Text("${task.date} • $state", color = if (state == "متأخر") Color(0xFFB54D42) else CareMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+       val reason = task.notes.substringAfter("\\n", "")
+       if (reason.isNotBlank()) Text(reason, color = CareMuted, fontSize = 10.sp)
+      }
+     }
+    }
+   }
+  }
  }
 }
 
