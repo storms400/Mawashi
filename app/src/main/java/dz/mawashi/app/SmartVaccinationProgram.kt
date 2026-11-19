@@ -302,6 +302,13 @@ internal fun reconcileAnnualVaccinationCalendar(
     return (retained + generated).distinctBy { it.id }
 }
 
+internal fun refreshAnnualVaccinationCalendar(context: Context) {
+    val herd = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" }
+    val current = readHerdCare(context)
+    val updated = reconcileAnnualVaccinationCalendar(context, herd, current)
+    if (updated != current) saveHerdCare(context, updated)
+}
+
 private fun annualJsonArray(c:Context,pref:String,key:String):JSONArray =
  runCatching { JSONArray(c.getSharedPreferences(pref,Context.MODE_PRIVATE).getString(key,"[]") ?: "[]") }.getOrElse { JSONArray() }
 
