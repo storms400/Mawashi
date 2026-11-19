@@ -168,7 +168,7 @@ internal fun RamProgramScreen(modifier: Modifier = Modifier, onBack: () -> Unit)
     var dialog by remember { mutableStateOf<Triple<String,String,String>?>(null) }
 
     LaunchedEffect(Unit) {
-        animals = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" && (it.kind.trim() == "كبش" || it.kind.contains("فحل") || (it.sex == "ذكر" && it.ageMonths >= 8)) }
+        animals = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" && (it.kind.trim() == "كبش" || it.kind.contains("فحل") || (it.sex == "ذكر" && herdAnimalAgeMonths(it) >= 8)) }
         if (animals.none { it.tag.equals(selectedTag, true) }) selectedTag = animals.firstOrNull()?.tag.orEmpty()
     }
     LaunchedEffect(selectedTag) {
