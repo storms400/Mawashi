@@ -78,7 +78,7 @@ private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -
    item { CareTile("برنامج النعاج الجافة", "الرعاية والتحصينات من الفطام حتى الاستعداد للتلقيح", Icons.Outlined.Vaccines, dryEwes) }
    item { CareTile("برنامج النعاج الحوامل", "المراحل الخمس والسجل الوقائي وربط المواليد بالأم", Icons.Outlined.Favorite, pregnantEwes) }
    item { CareTile("برنامج النعاج المرضعة", "الرعاية بعد الولادة ومتابعة الضرع والرضاعة والفطام", Icons.Outlined.FavoriteBorder, lactatingEwes) }
-   item { CareTile("برنامج الفحول", "الرعاية والتحصينات والخصوبة ومتابعة جودة النسل", Icons.Outlined.Male, rams) }
+   item { CareTile("برنامج الفحول", "الرعاية والتحصينات والخصوبة ومتابعة جودة النسل", Icons.Outlined.Favorite, rams) }
    item { CareTile("برنامج التطعيمات", "تسجيل المواعيد والجرعات وربطها بالحيوان", Icons.Outlined.Vaccines, vaccines) }
    item { CareTile("الفحوص والمتابعة الصحية", "الملف الصحي والوزن وتقييم حالة الجسم", Icons.Outlined.MonitorHeart, health) }
    item { CareTile("متابعة النمو والوزن", "قياسات الوزن وسجل التقييمات", Icons.Outlined.MonitorWeight, health) }
