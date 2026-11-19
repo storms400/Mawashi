@@ -52,6 +52,9 @@ internal fun runFinanceTransaction(
                 restored = false
             }
         }
+        if ("mawashi_herd_care_v27" in snapshots) {
+            try { HerdCareNotifications.rescheduleFromStorage(context) } catch (_: Exception) { restored = false }
+        }
         FinanceTransactionResult(committed = false, rollbackSucceeded = restored)
     }
 }
