@@ -326,9 +326,9 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
  val context=LocalContext.current
  val animals=remember{mutableStateListOf<HerdAnimal>().apply{addAll(loadHerd(context))}}
  var search by rememberSaveable{mutableStateOf("")};var filter by rememberSaveable{mutableStateOf("الكل")}
- var editor by remember{mutableStateOf(false)};var selected by remember{mutableStateOf<HerdAnimal?>(null)};var deleting by remember{mutableStateOf<HerdAnimal?>(null)};var exitDate by rememberSaveable{mutableStateOf(LocalDate.now().toString())};var exitReason by rememberSaveable{mutableStateOf("بيع")};var exitError by remember{mutableStateOf<String?>(null)};var batchDialog by remember{mutableStateOf(false)};var batchCount by rememberSaveable{mutableStateOf("10")}
+ var editor by remember{mutableStateOf(false)};var selected by remember{mutableStateOf<HerdAnimal?>(null)};var deleting by remember{mutableStateOf<HerdAnimal?>(null)};var newbornDraft by remember{mutableStateOf<HerdAnimal?>(null)};var birthConfirmationFor by remember{mutableStateOf<HerdAnimal?>(null)};var actualBirthDate by rememberSaveable{mutableStateOf(LocalDate.now().toString())};var weaningConfirmationFor by remember{mutableStateOf<HerdAnimal?>(null)};var actualWeaningDate by rememberSaveable{mutableStateOf(LocalDate.now().toString())};var exitDate by rememberSaveable{mutableStateOf(LocalDate.now().toString())};var exitReason by rememberSaveable{mutableStateOf("بيع")};var exitError by remember{mutableStateOf<String?>(null)};var batchDialog by remember{mutableStateOf(false)};var batchCount by rememberSaveable{mutableStateOf("10")}
  LaunchedEffect(refreshKey) {
-  val latest=loadHerd(context)
+  val latest=reconcileHerdLifecycle(context)
   animals.clear(); animals.addAll(latest)
   selected=selected?.let { current -> latest.firstOrNull { it.id==current.id } }
  }
@@ -361,7 +361,7 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
   Text("مثال: Q-0001، Q-0002، Q-0003",color=HerdGreen,fontSize=11.sp)
   Text("تُنشأ البطاقات بنوع غير محدد لتعبئة العمر والوزن والحالة الصحية لاحقاً.",fontSize=11.sp,color=HerdMuted)
  }},confirmButton={TextButton(onClick={val n=batchCount.toIntOrNull();if(n!=null&&n in 1..500){generateHerdTags(animals.map{it.tag},n).forEach{tag->animals.add(HerdAnimal(UUID.randomUUID().toString(),tag,"غير محدد",0,"غير محددة",""))};saveHerd(context,animals.toList());batchDialog=false}}){Text("إنشاء الأرقام",color=HerdGreen)}},dismissButton={TextButton(onClick={batchDialog=false}){Text("إلغاء")}})
- if(editor)HerdEditor(selected,animals.toList(),{editor=false;selected=null}){a->val i=animals.indexOfFirst{it.id==a.id};if(i>=0){animals[i]=a;selected=a}else{animals.add(a);selected=null};saveHerd(context,animals.toList());editor=false}
+ if(editor)HerdEditor(newbornDraft?:selected,animals.toList(),{editor=false;newbornDraft=null;selected=null}){a->if(newbornDraft!=null){if(animals.none{it.tag.equals(a.tag,true)})animals.add(a);val mi=animals.indexOfFirst{it.tag.equals(a.motherTag,true)};if(mi>=0){val mother=animals[mi];animals[mi]=mother.copy(productionState="نعجة مرضعة",nursingLambs=animals.count{it.motherTag.equals(mother.tag,true)&&it.kind=="حمل/رخلة"}.coerceAtLeast(1))};newbornDraft=null}else{val i=animals.indexOfFirst{it.id==a.id};if(i>=0){animals[i]=a;selected=a}else{animals.add(a);selected=null}};saveHerd(context,animals.toList());editor=false}
  if(!editor)selected?.let{selectedAnimal->
   val a=animals.firstOrNull{it.id==selectedAnimal.id}?:selectedAnimal
   val qr=remember(a.id,a.tag){herdQrBitmap(a.id+"|"+a.tag)}
@@ -410,6 +410,28 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
        }
       }
      }
+     if(a.kind=="نعجة" && a.productionState=="نعجة حامل" && a.birthConfirmedDate.isBlank()){
+      Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,HerdLine)){
+       Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+        Text("تأكيد الولادة الفعلية",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=14.sp)
+        Text("موعد الولادة المتوقع: ${a.expectedBirthDate.ifBlank{"غير مسجل"}}. لا تظهر إضافة المولود قبل تسجيل حدوث الولادة فعلياً.",fontSize=12.sp,color=HerdMuted)
+        Button(onClick={actualBirthDate=LocalDate.now().toString();birthConfirmationFor=a},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=HerdGreen)){Text("تأكيد حدوث الولادة")}
+       }
+      }
+     }
+     if(a.kind=="نعجة" && a.birthConfirmedDate.isNotBlank()){
+      Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,HerdLine)){
+       Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+        Text("الولادة مؤكدة",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=14.sp)
+        Text("تاريخ الولادة الفعلي: ${a.birthConfirmedDate} • المواليد المرتبطون: ${offspring.size}",fontSize=12.sp,color=HerdInk)
+        Button(onClick={val tag=generateHerdTags(animals.map{it.tag},1).first();newbornDraft=HerdAnimal(id=UUID.randomUUID().toString(),tag=tag,kind="حمل/رخلة",ageMonths=0,health="غير محددة",notes="",birthDate=a.birthConfirmedDate,motherTag=a.tag,productionState="حمل يرضع",sex="");editor=true},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=HerdGreen)){Icon(Icons.Outlined.Add,null);Text("إضافة مولود إلى القطيع")}
+        if(a.productionState=="نعجة مرضعة" && a.weaningConfirmedDate.isBlank() && offspring.isNotEmpty() && offspring.all{child->runCatching{ChronoUnit.DAYS.between(LocalDate.parse(child.birthDate),LocalDate.now())>=60}.getOrDefault(false)}){
+         OutlinedButton(onClick={actualWeaningDate=LocalDate.now().toString();weaningConfirmationFor=a},modifier=Modifier.fillMaxWidth()){Text("تأكيد الفطام")}
+        }
+        if(a.weaningConfirmedDate.isNotBlank())Text("تاريخ الفطام المسجل: ${a.weaningConfirmedDate}",fontSize=12.sp,color=HerdMuted)
+       }
+      }
+     }
      Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,HerdLine)){
       Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
        Text("التطعيمات السابقة",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=13.sp)
@@ -435,6 +457,9 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
    }
   }
  }
+
+ birthConfirmationFor?.let{mother->AlertDialog(onDismissRequest={birthConfirmationFor=null},title={Text("تأكيد حدوث الولادة")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Text("لن يتم إنشاء مولود تلقائياً. بعد تأكيد الولادة ستظهر لك وظيفة إضافة المواليد في بطاقة الأم.");MawashiDatePickerField(actualBirthDate,{actualBirthDate=it},"تاريخ الولادة الفعلي",Modifier.fillMaxWidth())}},confirmButton={TextButton(onClick={if(confirmEweBirth(context,mother.tag,actualBirthDate)){val latest=loadHerd(context);animals.clear();animals.addAll(latest);selected=latest.firstOrNull{it.id==mother.id};birthConfirmationFor=null}else Toast.makeText(context,"تعذر تأكيد الولادة. تحقق من حالة الحمل والتاريخ.",Toast.LENGTH_LONG).show()}){Text("تأكيد",color=HerdGreen)}},dismissButton={TextButton(onClick={birthConfirmationFor=null}){Text("إلغاء")}})}
+ weaningConfirmationFor?.let{mother->AlertDialog(onDismissRequest={weaningConfirmationFor=null},title={Text("تأكيد الفطام")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Text("سيتم تحويل الأم إلى نعجة جافة وتحديث حالة المواليد إلى مفطومة، مع الاحتفاظ بروابط الأمومة.");MawashiDatePickerField(actualWeaningDate,{actualWeaningDate=it},"تاريخ الفطام الفعلي",Modifier.fillMaxWidth())}},confirmButton={TextButton(onClick={if(confirmEweWeaning(context,mother.tag,actualWeaningDate)){val latest=loadHerd(context);animals.clear();animals.addAll(latest);selected=latest.firstOrNull{it.id==mother.id};weaningConfirmationFor=null}else Toast.makeText(context,"لا يمكن تأكيد الفطام قبل مرور 60 يوماً على الأقل من ميلاد جميع المواليد المرتبطين.",Toast.LENGTH_LONG).show()}){Text("تأكيد الفطام",color=HerdGreen)}},dismissButton={TextButton(onClick={weaningConfirmationFor=null}){Text("إلغاء")}})}
  deleting?.let{a->AlertDialog(onDismissRequest={deleting=null},title={Text("إخراج الحيوان من القطيع")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Text("سيُنقل ${a.tag} إلى الأرشيف مع الاحتفاظ بجميع بياناته وسجلاته.");Text("سبب الخروج");Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){listOf("بيع","نفوق","استبعاد").forEach{FilterChip(exitReason==it,{exitReason=it},label={Text(it,fontSize=11.sp)},colors=FilterChipDefaults.filterChipColors(containerColor=Color.White,selectedContainerColor=Color.White,labelColor=HerdInk,selectedLabelColor=HerdGreen))}};MawashiDatePickerField(exitDate,{exitDate=it;exitError=null},"تاريخ الخروج",Modifier.fillMaxWidth());exitError?.let{Text(it,color=MaterialTheme.colorScheme.error,fontSize=11.sp)};Text("لن يُحذف سجل الحيوان نهائياً.",color=HerdMuted,fontSize=11.sp)}},confirmButton={TextButton(onClick={if(!isValidHerdExitDate(exitDate)){exitError="أدخل تاريخاً صحيحاً بصيغة YYYY-MM-DD، ولا يمكن أن يكون في المستقبل."}else{val i=animals.indexOfFirst{it.id==a.id};if(i>=0){animals[i]=archiveHerdAnimal(a,exitDate,exitReason);saveHerd(context,animals.toList())};deleting=null}}){Text("تأكيد الأرشفة",color=HerdGreen)}},dismissButton={TextButton(onClick={deleting=null}){Text("إلغاء")}})}
 }
 
@@ -555,8 +580,8 @@ private const val EWE_PHOTO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAJAAAACQCAMAAADQmB
     val animalAge=if(birthDate.isNotBlank())ageMonthsFromBirthDate(birthDate,m?:0) else m!!
     save(HerdAnimal(
      id=initial?.id?:UUID.randomUUID().toString(),tag=t,kind=kind,ageMonths=animalAge,health=health,notes=notes.trim(),
-     weightKg=w,birthDate=birthDate.trim(),birthWeightKg=if(kind=="حمل/رخلة")bw else null,
-     motherTag=if(kind=="حمل/رخلة")mother else "",sex=if(kind=="حمل/رخلة")sex else "",productionState=productionState,
+     weightKg=w,birthDate=birthDate.trim(),birthWeightKg=if(kind=="حمل/رخلة")bw else initial?.birthWeightKg,
+     motherTag=if(kind=="حمل/رخلة")mother else initial?.motherTag.orEmpty(),sex=if(kind=="حمل/رخلة")sex else initial?.sex.orEmpty(),productionState=productionState,
      pregnancyStage=if(productionState=="نعجة حامل")pregnancyStage else "غير حامل",
      fetusCount=if(productionState=="نعجة حامل")fetusCount.toIntOrNull()?:1 else 1,
      nursingLambs=if(productionState=="نعجة مرضعة")nursingLambs.toIntOrNull()?:1 else 1,
@@ -566,7 +591,7 @@ private const val EWE_PHOTO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAJAAAACQCAMAAADQmB
      expectedBirthDate=if(productionState=="نعجة حامل")expectedBirthDate else "",
      pregnancyScanDate=initial?.pregnancyScanDate?:"",
      pregnancyScanOutcome=initial?.pregnancyScanOutcome?:"",
-     pregnancyOffspringSex=if(productionState=="نعجة حامل")initial?.pregnancyOffspringSex.orEmpty() else ""
+     pregnancyOffspringSex=if(productionState=="نعجة حامل")initial?.pregnancyOffspringSex.orEmpty() else "",repeatScanDate=initial?.repeatScanDate.orEmpty(),birthConfirmedDate=initial?.birthConfirmedDate.orEmpty(),weaningConfirmedDate=initial?.weaningConfirmedDate.orEmpty()
     ))
    }
   }){Text("حفظ",color=HerdGreen)}},
