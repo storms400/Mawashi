@@ -120,6 +120,18 @@ class SmartVaccinationProgramTest {
         assertFalse(tasks.any { it.vaccineId == "clostridial" })
     }
 
+    @Test fun breedingSeasonCreatesCategorySpecificReviewDates() {
+        val today = LocalDate.parse("2026-11-19")
+        val start = LocalDate.parse("2027-02-01")
+        val ewe = smartBreedingSeasonReviewTasks("dry", "E-1", start, "R-1", setOf("E-1"), today)
+        assertEquals(LocalDate.parse("2026-12-03"), ewe.single().due)
+        assertTrue(ewe.single().reason.contains("ليست أمراً") || ewe.single().reason.contains("لا تعطَ"))
+        val ram = smartBreedingSeasonReviewTasks("ram", "R-1", start, "R-1", setOf("E-1"), today)
+        assertEquals(LocalDate.parse("2026-12-18"), ram.single().due)
+        assertTrue(smartBreedingSeasonReviewTasks("dry", "E-2", start, "R-1", setOf("E-1"), today).isEmpty())
+        assertTrue(smartBreedingSeasonReviewTasks("pregnant", "E-1", start, "R-1", setOf("E-1"), today).isEmpty())
+    }
+
     @Test fun conditionalVaccinesReceiveDatedEligibilityReviewsWithoutInjectionOrders() {
         val today = LocalDate.parse("2026-11-19")
         listOf("lamb", "dry", "pregnant", "lactating", "ram").forEach { category ->
