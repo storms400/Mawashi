@@ -71,7 +71,7 @@ private val HerdMuted = Color(0xFF778078)
 private val HerdLine = Color(0xFFE8E4DA)
 private const val HERD_PREFS = "mawashi_herd_local"
 private const val HERD_KEY = "animals"
-internal data class HerdAnimal(val id:String,val tag:String,val kind:String,val ageMonths:Int,val health:String,val notes:String,val weightKg:Double?=null,val birthDate:String="",val birthWeightKg:Double?=null,val motherTag:String="",val productionState:String="نعجة جافة",val pregnancyStage:String="غير حامل",val fetusCount:Int=1,val nursingLambs:Int=1,val lifecycleStatus:String="نشط",val exitDate:String="",val exitReason:String="",val acquisitionCost:Double?=null,val breed:String="غير محددة",val pregnancyStartDate:String="",val expectedBirthDate:String="",val pregnancyScanDate:String="",val pregnancyScanOutcome:String="",val pregnancyOffspringSex:String="",val sex:String="")
+internal data class HerdAnimal(val id:String,val tag:String,val kind:String,val ageMonths:Int,val health:String,val notes:String,val weightKg:Double?=null,val birthDate:String="",val birthWeightKg:Double?=null,val motherTag:String="",val productionState:String="نعجة جافة",val pregnancyStage:String="غير حامل",val fetusCount:Int=1,val nursingLambs:Int=1,val lifecycleStatus:String="نشط",val exitDate:String="",val exitReason:String="",val acquisitionCost:Double?=null,val breed:String="غير محددة",val pregnancyStartDate:String="",val expectedBirthDate:String="",val pregnancyScanDate:String="",val pregnancyScanOutcome:String="",val pregnancyOffspringSex:String="",val sex:String="",val repeatScanDate:String="",val birthConfirmedDate:String="",val weaningConfirmedDate:String="")
 
 internal fun loadHerd(c:Context):List<HerdAnimal> {
  val raw=c.getSharedPreferences(HERD_PREFS,0).getString(HERD_KEY,"[]") ?: "[]"
@@ -85,7 +85,7 @@ internal fun loadHerd(c:Context):List<HerdAnimal> {
     if(tag.isNotBlank() && result.none{it.tag.equals(tag,true)}) result.add(
      HerdAnimal(id,tag,x.optString("kind","غير محدد"),x.optInt("ageMonths"),x.optString("health","غير محددة"),x.optString("notes"),
       if(x.has("weightKg")&&!x.isNull("weightKg"))x.optDouble("weightKg") else null,
-      x.optString("birthDate"),if(x.has("birthWeightKg")&&!x.isNull("birthWeightKg"))x.optDouble("birthWeightKg") else null,x.optString("motherTag"),x.optString("productionState","نعجة جافة"),x.optString("pregnancyStage","غير حامل"),x.optInt("fetusCount",1),x.optInt("nursingLambs",1),x.optString("lifecycleStatus","نشط"),x.optString("exitDate"),x.optString("exitReason"),if(x.has("acquisitionCost")&&!x.isNull("acquisitionCost"))x.optDouble("acquisitionCost").takeIf{it.isFinite()&&it>=0.0} else null,x.optString("breed","غير محددة"),x.optString("pregnancyStartDate"),x.optString("expectedBirthDate"),x.optString("pregnancyScanDate"),x.optString("pregnancyScanOutcome"),x.optString("pregnancyOffspringSex"),x.optString("sex"))
+      x.optString("birthDate"),if(x.has("birthWeightKg")&&!x.isNull("birthWeightKg"))x.optDouble("birthWeightKg") else null,x.optString("motherTag"),x.optString("productionState","نعجة جافة"),x.optString("pregnancyStage","غير حامل"),x.optInt("fetusCount",1),x.optInt("nursingLambs",1),x.optString("lifecycleStatus","نشط"),x.optString("exitDate"),x.optString("exitReason"),if(x.has("acquisitionCost")&&!x.isNull("acquisitionCost"))x.optDouble("acquisitionCost").takeIf{it.isFinite()&&it>=0.0} else null,x.optString("breed","غير محددة"),x.optString("pregnancyStartDate"),x.optString("expectedBirthDate"),x.optString("pregnancyScanDate"),x.optString("pregnancyScanOutcome"),x.optString("pregnancyOffspringSex"),x.optString("sex"),x.optString("repeatScanDate"),x.optString("birthConfirmedDate"),x.optString("weaningConfirmedDate"))
     )
    } catch(_:Exception) { /* تجاهل السجل التالف مع الحفاظ على بقية القطيع */ }
   }
@@ -99,7 +99,7 @@ internal fun saveHerd(c:Context,list:List<HerdAnimal>) {
   if(x.weightKg==null)put("weightKg",JSONObject.NULL) else put("weightKg",x.weightKg)
   put("birthDate",x.birthDate)
   if(x.birthWeightKg==null)put("birthWeightKg",JSONObject.NULL) else put("birthWeightKg",x.birthWeightKg)
-  put("motherTag",x.motherTag);put("productionState",x.productionState);put("pregnancyStage",x.pregnancyStage);put("fetusCount",x.fetusCount);put("nursingLambs",x.nursingLambs);put("lifecycleStatus",x.lifecycleStatus);put("exitDate",x.exitDate);put("exitReason",x.exitReason);if(x.acquisitionCost==null)put("acquisitionCost",JSONObject.NULL) else put("acquisitionCost",x.acquisitionCost);put("breed",x.breed);put("pregnancyStartDate",x.pregnancyStartDate);put("expectedBirthDate",x.expectedBirthDate);put("pregnancyScanDate",x.pregnancyScanDate);put("pregnancyScanOutcome",x.pregnancyScanOutcome);put("pregnancyOffspringSex",x.pregnancyOffspringSex);put("sex",x.sex)
+  put("motherTag",x.motherTag);put("productionState",x.productionState);put("pregnancyStage",x.pregnancyStage);put("fetusCount",x.fetusCount);put("nursingLambs",x.nursingLambs);put("lifecycleStatus",x.lifecycleStatus);put("exitDate",x.exitDate);put("exitReason",x.exitReason);if(x.acquisitionCost==null)put("acquisitionCost",JSONObject.NULL) else put("acquisitionCost",x.acquisitionCost);put("breed",x.breed);put("pregnancyStartDate",x.pregnancyStartDate);put("expectedBirthDate",x.expectedBirthDate);put("pregnancyScanDate",x.pregnancyScanDate);put("pregnancyScanOutcome",x.pregnancyScanOutcome);put("pregnancyOffspringSex",x.pregnancyOffspringSex);put("sex",x.sex);put("repeatScanDate",x.repeatScanDate);put("birthConfirmedDate",x.birthConfirmedDate);put("weaningConfirmedDate",x.weaningConfirmedDate)
  })}
  check(c.getSharedPreferences(HERD_PREFS,0).edit().putString(HERD_KEY,a.toString()).commit()) { "تعذر حفظ بيانات القطيع" }
 }
@@ -120,14 +120,14 @@ internal fun savePregnancyScanToHerd(
    val stage=when{gestationDays<50->"بداية الحمل";gestationDays<105->"منتصف الحمل";else->"الأربعة أسابيع الأخيرة"}
    old.copy(productionState="نعجة حامل",pregnancyStage=stage,fetusCount=fetusCount,
     pregnancyStartDate=start.toString(),expectedBirthDate=due.toString(),
-    pregnancyScanDate=scan.toString(),pregnancyScanOutcome="حامل",pregnancyOffspringSex=offspringSex)
+    pregnancyScanDate=scan.toString(),pregnancyScanOutcome="حامل",pregnancyOffspringSex=offspringSex,repeatScanDate="",birthConfirmedDate="",weaningConfirmedDate="")
   }
   "غير حامل"->old.copy(productionState="نعجة جافة",pregnancyStage="غير حامل",fetusCount=1,
-    pregnancyStartDate="",expectedBirthDate="",pregnancyScanDate=scan.toString(),pregnancyScanOutcome="غير حامل",pregnancyOffspringSex="")
+    pregnancyStartDate="",expectedBirthDate="",pregnancyScanDate=scan.toString(),pregnancyScanOutcome="غير حامل",pregnancyOffspringSex="",repeatScanDate="")
   "غير حاسم"->{
    val repeat=runCatching{LocalDate.parse(repeatScanDate)}.getOrNull()?:return false
    if(!repeat.isAfter(scan))return false
-   old.copy(pregnancyScanDate=scan.toString(),pregnancyScanOutcome="غير حاسم")
+   old.copy(pregnancyScanDate=scan.toString(),pregnancyScanOutcome="غير حاسم",repeatScanDate=repeat.toString())
   }
   else->return false
  }
@@ -136,7 +136,7 @@ internal fun savePregnancyScanToHerd(
   saveHerd(c,animals)
   loadHerd(c).firstOrNull{it.id==updated.id && it.tag.equals(updated.tag,true)}
  }.getOrNull() ?: return false
- if(persisted.productionState!=updated.productionState || persisted.pregnancyStartDate!=updated.pregnancyStartDate || persisted.expectedBirthDate!=updated.expectedBirthDate || persisted.pregnancyScanDate!=updated.pregnancyScanDate || persisted.pregnancyScanOutcome!=updated.pregnancyScanOutcome || persisted.fetusCount!=updated.fetusCount || persisted.pregnancyOffspringSex!=updated.pregnancyOffspringSex) return false
+ if(persisted.productionState!=updated.productionState || persisted.pregnancyStartDate!=updated.pregnancyStartDate || persisted.expectedBirthDate!=updated.expectedBirthDate || persisted.pregnancyScanDate!=updated.pregnancyScanDate || persisted.pregnancyScanOutcome!=updated.pregnancyScanOutcome || persisted.fetusCount!=updated.fetusCount || persisted.pregnancyOffspringSex!=updated.pregnancyOffspringSex || persisted.repeatScanDate!=updated.repeatScanDate) return false
  val reminderTitle = if(outcome=="غير حاسم") "إعادة فحص السونار" else "موعد ولادة متوقع"
  val retained = readHerdCare(c).filterNot { it.tag.equals(tag.trim(),true) && !it.completed && it.title in setOf("إعادة فحص السونار","موعد ولادة متوقع") }
  val reminderDate = when(outcome) {
@@ -152,6 +152,62 @@ internal fun savePregnancyScanToHerd(
  }
  if(!reminderSaved) android.widget.Toast.makeText(c, "تم حفظ بيانات النعجة لكن تعذرت جدولة التنبيه.", android.widget.Toast.LENGTH_LONG).show()
  return true
+}
+
+
+internal fun confirmEweBirth(context:Context, tag:String, actualBirthDate:String, today:LocalDate=LocalDate.now()):Boolean {
+ val date=runCatching{LocalDate.parse(actualBirthDate)}.getOrNull()?:return false
+ if(date.isAfter(today))return false
+ val animals=loadHerd(context).toMutableList()
+ val index=animals.indexOfFirst{it.tag.equals(tag.trim(),true)&&it.kind=="نعجة"}
+ if(index<0)return false
+ val mother=animals[index]
+ if(mother.productionState!="نعجة حامل" || mother.pregnancyScanOutcome!="حامل" || mother.expectedBirthDate.isBlank())return false
+ animals[index]=mother.copy(productionState="نعجة مرضعة",birthConfirmedDate=date.toString(),weaningConfirmedDate="",nursingLambs=mother.fetusCount.coerceIn(1,3))
+ saveHerd(context,animals)
+ val saved=loadHerd(context).firstOrNull{it.id==mother.id} ?: return false
+ return saved.productionState=="نعجة مرضعة" && saved.birthConfirmedDate==date.toString()
+}
+
+internal fun confirmEweWeaning(context:Context, tag:String, weaningDate:String, today:LocalDate=LocalDate.now()):Boolean {
+ val date=runCatching{LocalDate.parse(weaningDate)}.getOrNull()?:return false
+ if(date.isAfter(today))return false
+ val animals=loadHerd(context).toMutableList()
+ val index=animals.indexOfFirst{it.tag.equals(tag.trim(),true)&&it.kind=="نعجة"}
+ if(index<0)return false
+ val mother=animals[index]
+ if(mother.productionState!="نعجة مرضعة" || mother.birthConfirmedDate.isBlank())return false
+ val linked=animals.filter{it.motherTag.equals(mother.tag,true)&&it.kind=="حمل/رخلة"&&it.lifecycleStatus=="نشط"}
+ if(linked.isEmpty() || linked.any { child -> runCatching { ChronoUnit.DAYS.between(LocalDate.parse(child.birthDate),date) < 60 }.getOrDefault(true) })return false
+ animals[index]=mother.copy(productionState="نعجة جافة",weaningConfirmedDate=date.toString(),nursingLambs=0)
+ linked.forEach { child -> val i=animals.indexOfFirst{it.id==child.id}; if(i>=0) animals[i]=animals[i].copy(productionState="خروف") }
+ saveHerd(context,animals)
+ return loadHerd(context).firstOrNull{it.id==mother.id}?.productionState=="نعجة جافة"
+}
+
+/** Reclassifies the existing animal record; identity, tag, and mother link never change. */
+internal fun reconcileHerdLifecycle(context:Context, today:LocalDate=LocalDate.now()):List<HerdAnimal> {
+ val animals=loadHerd(context).toMutableList()
+ var changed=false
+ animals.indices.forEach { i ->
+  val a=animals[i]
+  if(a.lifecycleStatus=="مؤرشف") return@forEach
+  var next=a
+  if(a.kind=="نعجة" && a.birthConfirmedDate.isNotBlank() && a.weaningConfirmedDate.isBlank() && a.productionState!="نعجة مرضعة") {
+   next=next.copy(productionState="نعجة مرضعة")
+  }
+  if(a.kind=="نعجة" && a.weaningConfirmedDate.isNotBlank() && a.productionState!="نعجة جافة") {
+   next=next.copy(productionState="نعجة جافة")
+  }
+  if(a.kind=="حمل/رخلة" && a.sex in setOf("ذكر","أنثى") && a.birthDate.isNotBlank()) {
+   val birth=runCatching{LocalDate.parse(a.birthDate)}.getOrNull()
+   val months=birth?.let{ChronoUnit.MONTHS.between(it,today)} ?: -1
+   if(months>=8) next=if(a.sex=="ذكر") next.copy(kind="كبش",productionState="كبش") else next.copy(kind="نعجة",productionState="نعجة جافة")
+  }
+  if(next!=a){animals[i]=next;changed=true}
+ }
+ if(changed) saveHerd(context,animals)
+ return if(changed) loadHerd(context) else animals
 }
 
 
