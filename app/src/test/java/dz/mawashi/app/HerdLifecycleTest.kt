@@ -104,6 +104,65 @@ class HerdLifecycleTest {
     }
 
     @Test
+    fun confirmedBirthAndWeaningDriveTheSameEweRecord() {
+        val born = animal.copy(
+            productionState = "نعجة حامل",
+            birthConfirmedDate = "2026-10-01",
+            weaningConfirmedDate = ""
+        )
+        val lactating = reclassifyHerdAnimal(born, LocalDate.parse("2026-11-10"))
+        assertEquals("animal-1", lactating.id)
+        assertEquals("Q-0001", lactating.tag)
+        assertEquals("نعجة مرضعة", lactating.productionState)
+        val weaned = reclassifyHerdAnimal(lactating.copy(weaningConfirmedDate = "2026-11-10"), LocalDate.parse("2026-11-10"))
+        assertEquals("نعجة جافة", weaned.productionState)
+        assertEquals(lactating.id, weaned.id)
+    }
+
+    @Test
+    fun newbornEntryRequiresAConfirmedActualBirthDate() {
+        val today = LocalDate.parse("2026-11-10")
+        assertTrue(isValidActualBirthDate("2026-11-10", today))
+        assertTrue(isValidActualBirthDate("2026-11-09", today))
+        assertFalse(isValidActualBirthDate("2026-11-11", today))
+        assertFalse(isValidActualBirthDate("bad-date", today))
+    }
+
+    @Test
+    fun weaningRequiresEveryLinkedLambToBeAtLeastSixtyDaysOld() {
+        val lambA = animal.copy(id = "l1", tag = "L-1", kind = "حمل/رخلة", birthDate = "2026-08-01", motherTag = "Q-0001")
+        val lambB = animal.copy(id = "l2", tag = "L-2", kind = "حمل/رخلة", birthDate = "2026-09-20", motherTag = "Q-0001")
+        assertTrue(isEligibleForWeaning(listOf(lambA), "2026-10-01"))
+        assertFalse(isEligibleForWeaning(listOf(lambA, lambB), "2026-11-10"))
+        assertFalse(isEligibleForWeaning(emptyList(), "2026-11-10"))
+    }
+
+    @Test
+    fun matureLambChangesCategoryWithoutLosingIdentityOrMotherLink() {
+        val lamb = animal.copy(
+            id = "lamb-id", tag = "Q-0010", kind = "حمل/رخلة",
+            birthDate = "2026-03-10", sex = "ذكر", motherTag = "Q-0001",
+            productionState = "خروف"
+        )
+        val ram = reclassifyHerdAnimal(lamb, LocalDate.parse("2026-11-10"))
+        assertEquals("كبش", ram.kind)
+        assertEquals("كبش", ram.productionState)
+        assertEquals("lamb-id", ram.id)
+        assertEquals("Q-0010", ram.tag)
+        assertEquals("Q-0001", ram.motherTag)
+    }
+
+    @Test
+    fun femaleLambMaturesIntoEweAndArchivedAnimalsDoNotChange() {
+        val lamb = animal.copy(kind = "حمل/رخلة", birthDate = "2026-03-10", sex = "أنثى", motherTag = "Q-0001")
+        val ewe = reclassifyHerdAnimal(lamb, LocalDate.parse("2026-11-10"))
+        assertEquals("نعجة", ewe.kind)
+        assertEquals("نعجة جافة", ewe.productionState)
+        val archived = reclassifyHerdAnimal(lamb.copy(lifecycleStatus = "مؤرشف"), LocalDate.parse("2026-11-10"))
+        assertEquals("حمل/رخلة", archived.kind)
+    }
+
+    @Test
     fun validatesProductionStateAgainstAnimalKind() {
         assertTrue(isValidProductionState("نعجة", "نعجة حامل"))
         assertTrue(isValidProductionState("كبش", "كبش"))
