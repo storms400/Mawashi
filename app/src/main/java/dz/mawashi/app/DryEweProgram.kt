@@ -92,6 +92,30 @@ private val DRY_VACCINES = listOf(
     DryVaccine("rabies", "داء الكلب", "Rabies", "حسب الخطر المحلي", "يُدرج فقط في المناطق أو الحالات التي توصي فيها السلطات أو الطبيب بذلك.")
 )
 
+
+private fun syncDryEweReminders(context: Context, animals: List<HerdAnimal>, plans: List<DryVaccinePlan>, doses: List<DryDose>) {
+    val retained = readHerdCare(context).filterNot { it.kind == "برنامج النعاج الجافة" && !it.completed }
+    val generated = mutableListOf<HerdCareReminder>()
+    animals.forEach { animal ->
+        DRY_VACCINES.forEach vaccineLoop@ { vaccine ->
+            val plan = plans.firstOrNull { it.tag.equals(animal.tag, true) && it.vaccineId == vaccine.id } ?: return@vaccineLoop
+            val history = doses.filter { it.tag.equals(animal.tag, true) && it.vaccineId == vaccine.id }.sortedBy { it.date }
+            val due = if (history.isEmpty()) runCatching { LocalDate.parse(plan.firstDue) }.getOrNull()
+                else plan.intervalDays?.let { days -> runCatching { LocalDate.parse(history.last().date).plusDays(days.toLong()) }.getOrNull() }
+            if (due != null) generated += HerdCareReminder(
+                id = "dry-ewe-vaccine-${animal.tag}-${vaccine.id}",
+                tag = animal.tag,
+                kind = "برنامج النعاج الجافة",
+                title = (if (history.isEmpty()) "موعد اللقاح" else "موعد الجرعة المنشطة") + " • " + vaccine.title,
+                date = due.toString(),
+                notes = "موعد للمراجعة البيطرية وفق الخطة المحفوظة؛ لا يعني إعطاء اللقاح تلقائياً.",
+                completed = false
+            )
+        }
+    }
+    saveHerdCare(context, retained + generated)
+}
+
 private object DryEweStore {
     private const val PREFS = "mawashi_dry_ewe_program_v1"
     private fun read(c: Context, key: String): JSONArray {
@@ -147,6 +171,7 @@ internal fun DryEweProgramScreen(modifier: Modifier = Modifier, onBack: (() -> U
     LaunchedEffect(Unit) {
         animals = loadHerd(context).filter { it.kind.trim() == "نعجة" && it.lifecycleStatus != "مؤرشف" && it.productionState == "نعجة جافة" && it.pregnancyStage != "حامل" }
         if (animals.none { it.tag.equals(selectedTag, true) }) selectedTag = animals.firstOrNull()?.tag.orEmpty()
+        syncDryEweReminders(context, animals, DryEweStore.plans(context), DryEweStore.doses(context))
     }
     val animal = animals.firstOrNull { it.tag.equals(selectedTag, true) }
     val animalCare = care.filter { it.tag.equals(selectedTag, true) }
@@ -225,7 +250,7 @@ internal fun DryEweProgramScreen(modifier: Modifier = Modifier, onBack: (() -> U
     planDialog?.let { vaccine ->
         DryPlanDialog(selectedTag, vaccine, animalPlans.firstOrNull { it.vaccineId == vaccine.id }, { planDialog = null }) { plan ->
             val updated = plans.filterNot { it.tag.equals(selectedTag,true) && it.vaccineId == vaccine.id } + plan
-            runCatching { DryEweStore.savePlans(context, updated) }.onSuccess { plans = updated; planDialog = null; Toast.makeText(context, "تم حفظ الخطة", Toast.LENGTH_SHORT).show() }
+            runCatching { DryEweStore.savePlans(context, updated); syncDryEweReminders(context, animals, updated, doses) }.onSuccess { plans = updated; planDialog = null; Toast.makeText(context, "تم حفظ الخطة", Toast.LENGTH_SHORT).show() }
                 .onFailure { Toast.makeText(context, "تعذر حفظ الخطة", Toast.LENGTH_LONG).show() }
         }
     }
@@ -233,7 +258,7 @@ internal fun DryEweProgramScreen(modifier: Modifier = Modifier, onBack: (() -> U
         val number = (animalDoses.filter { it.vaccineId == vaccine.id }.maxOfOrNull { it.number } ?: 0) + 1
         DryDoseDialog(selectedTag, vaccine, number, { doseDialog = null }) { dose ->
             val updated = doses + dose
-            runCatching { DryEweStore.saveDoses(context, updated) }.onSuccess { doses = updated; doseDialog = null; Toast.makeText(context, "تم توثيق الجرعة", Toast.LENGTH_SHORT).show() }
+            runCatching { DryEweStore.saveDoses(context, updated); syncDryEweReminders(context, animals, plans, updated) }.onSuccess { doses = updated; doseDialog = null; Toast.makeText(context, "تم توثيق الجرعة", Toast.LENGTH_SHORT).show() }
                 .onFailure { Toast.makeText(context, "تعذر حفظ الجرعة", Toast.LENGTH_LONG).show() }
         }
     }
