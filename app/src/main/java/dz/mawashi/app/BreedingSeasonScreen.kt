@@ -182,6 +182,11 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                     Text(active.name, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                     Text("الكبش " + active.ram + " • " + active.start + " حتى " + active.removal, color = Color(0xFFE5EBDD), fontSize = 10.sp)
                     Text("موعد السونار: " + active.scan, color = Color(0xFFF5E8C8), fontSize = 12.sp)
+                    val scanCountdown = runCatching { ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.parse(active.scan)) }.getOrNull()
+                    if (scanCountdown != null) Text(
+                        if (scanCountdown > 0) "العدّ التنازلي لأقرب سونار: " + scanCountdown + " يوم" else if (scanCountdown == 0L) "موعد السونار اليوم" else "موعد السونار متأخر " + (-scanCountdown) + " يوم",
+                        color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         SeasonMiniMetric("مشاركة", active.tags.size.toString(), Modifier.weight(1f))
                         SeasonMiniMetric("حامل", confirmed.toString(), Modifier.weight(1f))
@@ -222,6 +227,9 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                     val days = active.gestation[ewe.tag]
                     val eweScanDate = active.scanDates[ewe.tag] ?: active.scan
                     val due = if (result == "حامل" && days != null) runCatching { LocalDate.parse(eweScanDate).plusDays(147L - days).toString() }.getOrNull() else null
+                    val repeatDate = active.repeatScan[ewe.tag]
+                    val repeatDays = repeatDate?.let { runCatching { ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.parse(it)) }.getOrNull() }
+                    val pregnancyStage = days?.let { when { it < 50 -> "بداية الحمل"; it < 105 -> "وسط الحمل"; else -> "نهاية الحمل" } }
                     Surface(color = Color.White, shape = RoundedCornerShape(15.dp)) {
                         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             EwePhoto(42)
@@ -235,8 +243,9 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                                     else -> "بانتظار السونار"
                                 } else if (ewe.lifecycleStatus == "مؤرشف") "حيوان مؤرشف خارج القطيع النشط" else "غير مشاركة في الموسم", color = when (result) { "حامل" -> Color(0xFF438052); "غير حامل" -> Color(0xFFC75B52); else -> SeasonMuted }, fontSize = 10.sp)
                                 if (result == "حامل") Text((active.fetuses[ewe.tag]?.let { "عدد الأجنة: " + it } ?: "عدد الأجنة غير محدد") + (days?.let { " • عمر الحمل: " + it + " يوم" } ?: ""), color = SeasonMuted, fontSize = 9.sp)
+                                if (pregnancyStage != null) Text("مرحلة الحمل: " + pregnancyStage, color = SeasonMuted, fontSize = 9.sp)
                                 if (due != null) Text("الولادة المتوقعة: " + due, color = SeasonForest, fontSize = 9.sp)
-                                if (active.repeatScan[ewe.tag] != null) Text("إعادة الفحص: " + active.repeatScan[ewe.tag], color = SeasonMuted, fontSize = 9.sp)
+                                if (repeatDate != null) Text("إعادة السونار: " + repeatDate + " • " + when { repeatDays == null -> "تحقق من التاريخ"; repeatDays > 0 -> "متبقٍ " + repeatDays + " يوم"; repeatDays == 0L -> "موعد الإعادة اليوم"; else -> "متأخر " + (-repeatDays) + " يوم" }, color = SeasonMuted, fontSize = 9.sp)
                             }
                             if (ewe.tag in participantTags) {
                                 TextButton(onClick = { selectedTag = ewe.tag }) { Text("تسجيل الفحص", color = SeasonForest, fontSize = 10.sp) }
