@@ -75,28 +75,48 @@ class SmartVaccinationProgramTest {
 
     @Test fun lactatingEweWithoutHistoryGetsReviewTasksNotInjectionOrders() {
         val today = LocalDate.parse("2026-11-19")
-        val tasks = smartLactatingAnnualReviewTasks(emptyList(), today)
+        val tasks = smartAdultAnnualCoreTasks("lactating", emptyList(), today)
         assertEquals(2, tasks.size)
         assertTrue(tasks.all { it.due == today })
-        assertTrue(tasks.all { it.title.startsWith("مراجعة سجل التحصين") })
+        assertTrue(tasks.all { it.title.startsWith("مراجعة تأسيس التحصين") })
         assertTrue(tasks.all { it.reason.contains("ليس أمراً بإعطاء جرعة") })
     }
 
     @Test fun lactatingEweGetsAnnualReviewOneYearAfterRecordedDose() {
         val today = LocalDate.parse("2026-11-19")
-        val tasks = smartLactatingAnnualReviewTasks(
-            listOf(annualRecord("clostridial", "2026-11-19")), today
-        )
-        assertEquals(1, tasks.size)
-        assertEquals(LocalDate.parse("2027-11-19"), tasks.single().due)
-        assertTrue(tasks.single().title.contains("مراجعة الاستحقاق السنوي"))
+        val tasks = smartAdultAnnualCoreTasks("lactating", listOf(annualRecord("clostridial", "2026-11-19")), today)
+        val clostridial = tasks.single { it.vaccineId == "clostridial" }
+        assertEquals(LocalDate.parse("2027-11-19"), clostridial.due)
+        assertTrue(clostridial.title.contains("مراجعة الاستحقاق السنوي"))
     }
 
     @Test fun productSpecificNextDatePreventsGenericAnnualReview() {
         val today = LocalDate.parse("2026-11-19")
-        val tasks = smartLactatingAnnualReviewTasks(
-            listOf(annualRecord("clostridial", "2026-01-01", "2026-08-01")), today
-        )
-        assertTrue(tasks.isEmpty())
+        val tasks = smartAdultAnnualCoreTasks("lactating", listOf(annualRecord("clostridial", "2026-01-01", "2026-08-01")), today)
+        assertFalse(tasks.any { it.vaccineId == "clostridial" })
+        assertTrue(tasks.any { it.vaccineId == "pasteurella" && it.due == today })
+    }
+
+    @Test fun allAdultProgramsReceiveDatedCoreReviewTasks() {
+        val today = LocalDate.parse("2026-11-19")
+        listOf("dry", "pregnant", "lactating", "ram").forEach { category ->
+            val tasks = smartAdultAnnualCoreTasks(category, emptyList(), today)
+            assertEquals(category, 2, tasks.size)
+            assertTrue(category, tasks.all { it.due == today })
+        }
+    }
+
+    @Test fun pregnantEweClostridialReviewIsScheduledBeforeExpectedLambing() {
+        val today = LocalDate.parse("2026-11-19")
+        val tasks = smartAdultAnnualCoreTasks("pregnant", emptyList(), today, "2026-12-10")
+        val clostridial = tasks.single { it.vaccineId == "clostridial" }
+        assertEquals(LocalDate.parse("2026-11-19"), clostridial.due)
+        assertTrue(clostridial.title.contains("ما قبل الولادة"))
+    }
+
+    @Test fun recordedProductNextDateIsRespectedWithoutDuplicateCoreReview() {
+        val today = LocalDate.parse("2026-11-19")
+        val tasks = smartAdultAnnualCoreTasks("ram", listOf(annualRecord("clostridial", "2026-01-01", "2027-01-01")), today)
+        assertFalse(tasks.any { it.vaccineId == "clostridial" })
     }
 }
