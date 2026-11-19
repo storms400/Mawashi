@@ -79,11 +79,7 @@ private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -
    item { CareTile("برنامج النعاج الحوامل", "المراحل الخمس والسجل الوقائي وربط المواليد بالأم", Icons.Outlined.Favorite, pregnantEwes) }
    item { CareTile("برنامج النعاج المرضعة", "الرعاية بعد الولادة ومتابعة الضرع والرضاعة والفطام", Icons.Outlined.FavoriteBorder, lactatingEwes) }
    item { CareTile("برنامج الفحول", "الرعاية والتحصينات والخصوبة ومتابعة جودة النسل", Icons.Outlined.Favorite, rams) }
-   item { CareTile("برنامج التطعيمات", "تسجيل المواعيد والجرعات وربطها بالحيوان", Icons.Outlined.Vaccines, vaccines) }
-   item { CareTile("الفحوص والمتابعة الصحية", "الملف الصحي والوزن وتقييم حالة الجسم", Icons.Outlined.MonitorHeart, health) }
-   item { CareTile("متابعة النمو والوزن", "قياسات الوزن وسجل التقييمات", Icons.Outlined.MonitorWeight, health) }
    item { CareTile("جدول الرعاية والمهام", "مواعيد اليوم والقادمة والمتأخرة والمنجزة", Icons.Outlined.EventNote, tasks) }
-   item { CareTile("السجل الصحي للقطيع", "الرجوع إلى التاريخ الصحي لكل حيوان", Icons.Outlined.Assignment, health) }
   }
   LaunchedEffect(Unit) {
    animals = loadHerd(c).filter { it.lifecycleStatus != "مؤرشف" }
