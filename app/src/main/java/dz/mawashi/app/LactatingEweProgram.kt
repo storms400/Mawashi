@@ -78,6 +78,15 @@ private val LACT_STAGES = listOf(
 private val LACT_VACCINES = listOf("التسمم المعوي والكزاز", "الباستوريلا", "جدري الأغنام", "طاعون المجترات الصغيرة PPR", "الحمى القلاعية FMD", "الكلاميديا", "الكامبيلوباكتر", "تعفن القدم", "الخراجات الجبنية", "الأورف", "الجمرة الخبيثة", "الحمى الزرقاء", "داء الكلب", "لقاح آخر موصى به")
 private val LACT_SUPPLEMENTS = listOf("فيتامينات A وD3 وE", "السيلينيوم", "الأملاح والمعادن المخصصة للأغنام", "مجموعة فيتامين B عند الحاجة", "مكمل آخر موصى به بيطرياً")
 
+private fun lactatingLinkedLambs(context: Context, motherTag: String): List<HerdAnimal> {
+    return loadHerd(context).filter { lamb ->
+        lamb.kind == "حمل/رخلة" && lamb.lifecycleStatus != "مؤرشف" &&
+            runCatching {
+                lamb.javaClass.getDeclaredField("motherTag").apply { isAccessible = true }.get(lamb)?.toString()
+            }.getOrNull()?.equals(motherTag, true) == true
+    }
+}
+
 private object LactatingEweStore {
     private fun read(c: Context, key: String): JSONArray {
         val raw = c.getSharedPreferences(LACT_PREFS, Context.MODE_PRIVATE).getString(key, "[]") ?: "[]"
@@ -117,7 +126,11 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
     var recordType by rememberSaveable { mutableStateOf("لقاح") }
 
     LaunchedEffect(Unit) {
-        animals = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" && (it.kind.trim() == "نعجة" || it.sex == "أنثى") && it.productionState.contains("مرضعة") }
+        val herd = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" }
+        val linkedMotherTags = herd.filter { it.kind == "حمل/رخلة" }.mapNotNull { lamb ->
+            runCatching { lamb.javaClass.getDeclaredField("motherTag").apply { isAccessible = true }.get(lamb)?.toString() }.getOrNull()
+        }.toSet()
+        animals = herd.filter { (it.kind.trim() == "نعجة" || it.sex == "أنثى") && (it.productionState.contains("مرضعة") || it.tag in linkedMotherTags) }
         if (animals.none { it.tag.equals(selectedTag, true) }) selectedTag = animals.firstOrNull()?.tag.orEmpty()
         care = LactatingEweStore.care(context)
         preventive = LactatingEweStore.preventive(context)
@@ -151,7 +164,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("اختيار النعجة", color = LactInk, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             animals.forEach { a -> FilterChip(selectedTag.equals(a.tag,true), { selectedTag = a.tag }, label = { Text("🐑 " + a.tag, fontSize = 12.sp) }) }
-                            Text("عدد الأمهات المرضعات: " + animals.size + " • مواعيد مراجعة مسجلة: " + reviewCount, color = LactMuted, fontSize = 11.sp)
+                            Text("عدد الأمهات: " + animals.size + " • حملان مرتبطة: " + lactatingLinkedLambs(context, selectedTag).size + " • مواعيد مراجعة: " + reviewCount, color = LactMuted, fontSize = 11.sp)
                         }
                     }
                 }
