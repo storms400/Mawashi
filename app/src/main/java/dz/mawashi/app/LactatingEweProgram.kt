@@ -81,9 +81,7 @@ private val LACT_SUPPLEMENTS = listOf("فيتامينات A وD3 وE", "السي
 private fun lactatingLinkedLambs(context: Context, motherTag: String): List<HerdAnimal> {
     return loadHerd(context).filter { lamb ->
         lamb.kind == "حمل/رخلة" && lamb.lifecycleStatus != "مؤرشف" &&
-            runCatching {
-                lamb.javaClass.getDeclaredField("motherTag").apply { isAccessible = true }.get(lamb)?.toString()
-            }.getOrNull()?.equals(motherTag, true) == true
+            lamb.motherTag.equals(motherTag, true)
     }
 }
 
