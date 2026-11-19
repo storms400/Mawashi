@@ -64,6 +64,7 @@ private val sections = listOf(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        runCatching { reconcileHerdLifecycle(this) }
         HerdCareNotifications.rescheduleFromStorage(this)
         setContent { MawashiApp() } // Local-first entry
     }
