@@ -119,4 +119,14 @@ class SmartVaccinationProgramTest {
         val tasks = smartAdultAnnualCoreTasks("ram", listOf(annualRecord("clostridial", "2026-01-01", "2027-01-01")), today)
         assertFalse(tasks.any { it.vaccineId == "clostridial" })
     }
+
+    @Test fun conditionalVaccinesReceiveDatedEligibilityReviewsWithoutInjectionOrders() {
+        val today = LocalDate.parse("2026-11-19")
+        listOf("lamb", "dry", "pregnant", "lactating", "ram").forEach { category ->
+            val tasks = smartConditionalAnnualReviewTasks(category, today)
+            assertTrue(category, tasks.isNotEmpty())
+            assertTrue(category, tasks.all { it.due == today })
+            assertTrue(category, tasks.all { it.reason.contains("ليس موعد إعطاء لقاح") })
+        }
+    }
 }
