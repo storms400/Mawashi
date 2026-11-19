@@ -178,9 +178,14 @@ internal fun LambPreventionScreen(modifier: Modifier = Modifier, onBack: (() -> 
     LaunchedEffect(Unit) {
         val currentAnimals = loadHerd(context).filter { it.kind == "حمل/رخلة" && it.lifecycleStatus != "مؤرشف" }
         val currentPlans = LambPreventionStore.plans(context)
+        val linkedPlans = currentPlans.map { plan ->
+            val lamb = currentAnimals.firstOrNull { it.tag.equals(plan.tag, true) }
+            plan.copy(motherStatus = maternalVaccinationStatus(context, lamb?.motherTag.orEmpty(), plan.vaccineId))
+        }
+        if (linkedPlans != currentPlans) runCatching { LambPreventionStore.savePlans(context, linkedPlans) }
         val currentDoses = LambPreventionStore.doses(context)
         animals = currentAnimals
-        care = LambPreventionStore.care(context); plans = currentPlans; doses = currentDoses
+        care = LambPreventionStore.care(context); plans = linkedPlans; doses = currentDoses
         if (currentAnimals.none { it.tag == tag }) tag = currentAnimals.firstOrNull()?.tag.orEmpty()
         syncLambVaccineReminders(context, currentAnimals, currentPlans, currentDoses)
     }
@@ -445,7 +450,7 @@ private fun LambCareDialog(action: LambAction, onDismiss: () -> Unit, onSave: (S
 
 @Composable
 private fun LambPlanDialog(tag: String, vaccine: LambVaccine, initial: LambVaccinePlan?, inheritedMotherStatus: String, onDismiss: () -> Unit, onSave: (LambVaccinePlan) -> Unit) {
-    var mother by rememberSaveable { mutableStateOf(initial?.motherStatus ?: inheritedMotherStatus) }
+    var mother by rememberSaveable { mutableStateOf(inheritedMotherStatus) }
     var age by rememberSaveable { mutableStateOf(initial?.firstAgeDays?.toString().orEmpty()) }
     var booster by rememberSaveable { mutableStateOf(initial?.boosterDays?.toString().orEmpty()) }
     var product by rememberSaveable { mutableStateOf(initial?.product.orEmpty()) }
@@ -455,7 +460,9 @@ private fun LambPlanDialog(tag: String, vaccine: LambVaccine, initial: LambVacci
                 Text("أدخل الأعمار والفواصل من نشرة المنتج أو توجيه الطبيب البيطري، وليس كتوصية ثابتة من التطبيق.", color = LambMuted, fontSize = 12.sp)
                 Text("حالة تحصين الأم (من ملف الأم المرتبط)", color = LambInk, fontWeight = FontWeight.SemiBold)
                 Text("تُملأ تلقائياً من سجل النعجة. لا تعتبر الجرعة حماية مؤكدة إلا إذا سُجل تقييم بيطري مناسب لتوقيتها.", color = LambMuted, fontSize = 11.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { listOf("محصنة", "غير محصنة", "مجهولة").forEach { FilterChip(mother == it, { mother = it }, label = { Text(it, fontSize = 11.sp) }) } }
+                Surface(color = Color(0xFFE8F0E5), shape = RoundedCornerShape(10.dp)) {
+                    Text("الحالة الموروثة من سجل الأم: " + mother, color = LambInk, fontSize = 12.sp, modifier = Modifier.padding(10.dp))
+                }
                 OutlinedTextField(age, { age = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(), label = { Text("عمر الجرعة الأولى بالأيام") })
                 OutlinedTextField(booster, { booster = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(), label = { Text("الفاصل للجرعة المنشطة بالأيام (إن لزمت)") })
                 OutlinedTextField(product, { product = it }, modifier = Modifier.fillMaxWidth(), label = { Text("اسم المنتج التجاري") })

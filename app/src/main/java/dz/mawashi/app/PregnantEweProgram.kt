@@ -119,7 +119,9 @@ internal fun maternalVaccinationSummary(context: Context, motherTag: String): St
         null -> "التسمم المعوي والكزاز: لا يوجد سجل"
         else -> "التسمم المعوي والكزاز: جرعة مسجلة دون تأكيد ملاءمة التوقيت"
     }
-    return statusText + " • إجمالي سجلات التحصين: " + records.size
+    val vitaminRecords = PregnantEweStore.records(context).filter { it.tag.equals(motherTag, true) && it.type == "فيتامين" }.sortedByDescending { it.date }
+    val vitaminSummary = if (vitaminRecords.isEmpty()) "لا توجد فيتامينات موثقة" else vitaminRecords.take(3).joinToString("، ") { it.itemName + " (" + it.date + ")" }
+    return statusText + " • سجلات التحصين: " + records.size + " • فيتامينات الأم: " + vitaminSummary
 }
 
 @Composable
