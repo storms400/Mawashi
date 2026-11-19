@@ -373,6 +373,7 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
   val a=animals.firstOrNull{it.id==selectedAnimal.id}?:selectedAnimal
   val qr=remember(a.id,a.tag){herdQrBitmap(a.id+"|"+a.tag)}
   val offspring=animals.filter{it.motherTag.equals(a.tag,true)}.sortedBy{it.birthDate}
+  val currentLitter=offspring.filter{it.birthDate==a.birthConfirmedDate}
   val careRecords=readHerdCare(context).filter{it.tag==a.tag}
   val today=LocalDate.now()
   val pastVaccines=careRecords.filter{it.kind=="تطعيم"&&it.completed}.sortedByDescending{it.date}
@@ -431,9 +432,11 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
       Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,HerdLine)){
        Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
         Text("الولادة مؤكدة",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=14.sp)
-        Text("تاريخ الولادة الفعلي: ${a.birthConfirmedDate} • المواليد المرتبطون: ${offspring.size}",fontSize=12.sp,color=HerdInk)
-        Button(onClick={val tag=generateHerdTags(animals.map{it.tag},1).first();newbornDraft=HerdAnimal(id=UUID.randomUUID().toString(),tag=tag,kind="حمل/رخلة",ageMonths=0,health="غير محددة",notes="",birthDate=a.birthConfirmedDate,motherTag=a.tag,productionState="حمل يرضع",sex="");editor=true},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=HerdGreen)){Icon(Icons.Outlined.Add,null);Text("إضافة مولود إلى القطيع")}
-        if(a.productionState=="نعجة مرضعة" && a.weaningConfirmedDate.isBlank() && offspring.isNotEmpty() && offspring.all{child->runCatching{ChronoUnit.DAYS.between(LocalDate.parse(child.birthDate),LocalDate.now())>=60}.getOrDefault(false)}){
+        Text("تاريخ الولادة الفعلي: ${a.birthConfirmedDate} • مواليد هذه الولادة: ${currentLitter.size} / ${a.fetusCount.coerceAtLeast(1)}",fontSize=12.sp,color=HerdInk)
+        if(currentLitter.size < a.fetusCount.coerceAtLeast(1)) {
+         Button(onClick={val tag=generateHerdTags(animals.map{it.tag},1).first();newbornDraft=HerdAnimal(id=UUID.randomUUID().toString(),tag=tag,kind="حمل/رخلة",ageMonths=0,health="غير محددة",notes="",birthDate=a.birthConfirmedDate,motherTag=a.tag,productionState="حمل يرضع",sex="");editor=true},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=HerdGreen)){Icon(Icons.Outlined.Add,null);Text("إضافة مولود إلى القطيع")}
+        } else Text("تم تسجيل العدد المتوقع من مواليد هذه الولادة.",fontSize=12.sp,color=HerdGreen)
+        if(a.productionState=="نعجة مرضعة" && a.weaningConfirmedDate.isBlank() && currentLitter.isNotEmpty() && currentLitter.all{child->runCatching{ChronoUnit.DAYS.between(LocalDate.parse(child.birthDate),LocalDate.now())>=60}.getOrDefault(false)}){
          OutlinedButton(onClick={actualWeaningDate=LocalDate.now().toString();weaningConfirmationFor=a},modifier=Modifier.fillMaxWidth()){Text("تأكيد الفطام")}
         }
         if(a.weaningConfirmedDate.isNotBlank())Text("تاريخ الفطام المسجل: ${a.weaningConfirmedDate}",fontSize=12.sp,color=HerdMuted)
@@ -511,7 +514,7 @@ private const val EWE_PHOTO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAJAAAACQCAMAAADQmB
  val motherOptions=existingAnimals.filter{it.kind=="نعجة"&&it.id!=initial?.id&&(it.lifecycleStatus=="نشط"||it.tag.equals(initial?.motherTag,true))}
  AlertDialog(
   onDismissRequest=dismiss,
-  title={Text(if(initial==null)"إضافة حيوان للقطيع" else "تعديل بيانات الحيوان")},
+  title={Text(if(initial==null || existingAnimals.none{it.id==initial.id})"إضافة مولود إلى القطيع" else "تعديل بيانات الحيوان")},
   text={
    Column(Modifier.heightIn(max=560.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){
     OutlinedTextField(tag,{tag=it;error=null},label={Text("رقم التعريف / الوسم")},singleLine=true,modifier=Modifier.fillMaxWidth())
@@ -568,7 +571,7 @@ private const val EWE_PHOTO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAJAAAACQCAMAAADQmB
    }
   },
   confirmButton={TextButton(onClick={
-   val t=tag.trim();val m=age.toIntOrNull();val w=weight.replace(",",".").toDoubleOrNull();val bw=birthWeight.replace(",",".").toDoubleOrNull();val mother=motherTag.trim()
+   val t=tag.trim();val m=age.toIntOrNull();val w=weight.replace(",",".").toDoubleOrNull();val bw=birthWeight.replace(",",".").toDoubleOrNull();val mother=motherTag.trim();val linkedMother=existingAnimals.firstOrNull{it.tag.equals(mother,true)}
    error=when{
     t.isBlank()->"أدخل رقم التعريف."
     existingAnimals.any{it.id!=initial?.id&&it.tag.equals(t,true)}->"رقم التعريف مستخدم."
@@ -579,6 +582,7 @@ private const val EWE_PHOTO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAJAAAACQCAMAAADQmB
     kind=="حمل/رخلة"&&birthDate.isBlank()->"اختر تاريخ ميلاد المولود."
     kind=="حمل/رخلة"&&(bw==null||bw<=0.0||bw>20.0)->"أدخل وزن الميلاد بالكيلوغرام."
     kind=="حمل/رخلة"&&mother.isBlank()->"اختر أم المولود من إناث القطيع."
+    kind=="حمل/رخلة"&&initial!=null&&existingAnimals.none{it.id==initial.id}&&linkedMother?.birthConfirmedDate?.isNotBlank()==true&&birthDate!=linkedMother.birthConfirmedDate->"تاريخ ميلاد المولود يجب أن يطابق تاريخ الولادة الفعلية المسجل للأم."
     kind=="حمل/رخلة"&&!isValidMotherTag(mother,existingAnimals,initial?.id)&&mother!=initial?.motherTag->"الأم المختارة غير موجودة ضمن إناث القطيع النشطة."
     productionState=="نعجة حامل"&&!isValidPregnancyDates(pregnancyStartDate,expectedBirthDate)->"أدخل تاريخ بداية الحمل وموعد ولادة متوقعاً صحيحين."
     !isValidProductionState(kind,productionState)->"الحالة الإنتاجية لا تتوافق مع نوع الحيوان."
