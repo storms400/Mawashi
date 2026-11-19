@@ -10,6 +10,24 @@ class SmartVaccinationProgramTest {
         title = stepId, date = "2026-01-01", notes = "SMART_VAX_DONE:$stepId", completed = true
     )
 
+    @Test fun legacyVaccineReminderWithSameAnimalVaccineAndDateIsSuppressed() {
+        val legacy = HerdCareReminder("old-1", "Q-0001", "تحصين", "التسمم المعوي والكزاز",
+            "2026-11-19", "جرعة مسجلة", true)
+        assertTrue(isDuplicateLegacyVaccineReminder(legacy, "Q-0001", LocalDate.parse("2026-11-19"),
+            "clostridial", "التسمم المعوي والكزاز"))
+        assertFalse(isDuplicateLegacyVaccineReminder(legacy, "Q-0002", LocalDate.parse("2026-11-19"),
+            "clostridial", "التسمم المعوي والكزاز"))
+        assertFalse(isDuplicateLegacyVaccineReminder(legacy, "Q-0001", LocalDate.parse("2026-11-20"),
+            "clostridial", "التسمم المعوي والكزاز"))
+    }
+
+    @Test fun separateVaccineOnSameDateIsNotMistakenForDuplicate() {
+        val legacy = HerdCareReminder("old-2", "Q-0001", "تحصين", "جدري الأغنام",
+            "2026-11-19", "", false)
+        assertFalse(isDuplicateLegacyVaccineReminder(legacy, "Q-0001", LocalDate.parse("2026-11-19"),
+            "pasteurella", "الباستوريلا"))
+    }
+
     @Test fun dueDatesAreCalculatedFromBirthDate() {
         val birth = LocalDate.parse("2026-11-18")
         assertEquals(LocalDate.parse("2027-01-18"), smartVaccinationDueDate(birth, SMART_VACCINATION_STEPS[0]))
