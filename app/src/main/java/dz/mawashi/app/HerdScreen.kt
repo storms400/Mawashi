@@ -274,7 +274,7 @@ internal fun herdAnimalAgeLabel(animal:HerdAnimal,today:LocalDate=LocalDate.now(
  val remainingMonths=months%12L
  val days=totalDays%30L
  val age=if(years>0) "$years سنة و $remainingMonths شهر و $days يوم" else "$months شهر و $days يوم"
- return "$age • $totalDays يوم (تقديري لغياب تاريخ الميلاد)"
+ return "$age • نحو $totalDays يوم (تقديري)"
 }
 
 internal fun isValidPregnancyDates(start:String,due:String,today:LocalDate=LocalDate.now()):Boolean {
