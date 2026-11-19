@@ -184,6 +184,34 @@ class HerdLifecycleTest {
     }
 
     @Test
+    fun pregnancyTransitionKeepsSameAnimalIdentityAndLineageForProgramReclassification() {
+        val dry = animal.copy(tag = "E-0099", motherTag = "", productionState = "نعجة جافة")
+        val pregnant = dry.copy(
+            productionState = "نعجة حامل",
+            pregnancyStage = "حامل",
+            pregnancyScanDate = "2026-11-19",
+            pregnancyScanOutcome = "حامل",
+            expectedBirthDate = "2027-04-15"
+        )
+        val reclassified = reclassifyHerdAnimal(pregnant, LocalDate.parse("2026-11-19"))
+        assertEquals(dry.id, reclassified.id)
+        assertEquals(dry.tag, reclassified.tag)
+        assertEquals("نعجة حامل", reclassified.productionState)
+        assertEquals("حامل", reclassified.pregnancyStage)
+        assertEquals("2027-04-15", reclassified.expectedBirthDate)
+    }
+
+    @Test
+    fun annualHistoryRemainsAttachedToAnimalTagAcrossProductionStateChanges() {
+        val dry = animal.copy(tag = "E-0100", productionState = "نعجة جافة")
+        val pregnant = dry.copy(productionState = "نعجة حامل", pregnancyStage = "حامل")
+        val lactating = pregnant.copy(productionState = "نعجة مرضعة", birthConfirmedDate = "2027-04-15")
+        assertEquals(dry.tag, pregnant.tag)
+        assertEquals(dry.tag, lactating.tag)
+        assertEquals(dry.id, lactating.id)
+    }
+
+    @Test
     fun validatesProductionStateAgainstAnimalKind() {
         assertTrue(isValidProductionState("نعجة", "نعجة حامل"))
         assertTrue(isValidProductionState("كبش", "كبش"))
