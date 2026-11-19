@@ -177,7 +177,7 @@ internal fun confirmEweWeaning(context:Context, tag:String, weaningDate:String, 
  if(index<0)return false
  val mother=animals[index]
  if(mother.productionState!="نعجة مرضعة" || mother.birthConfirmedDate.isBlank())return false
- val linked=animals.filter{it.motherTag.equals(mother.tag,true)&&it.kind=="حمل/رخلة"&&it.lifecycleStatus=="نشط"}
+ val linked=animals.filter{it.motherTag.equals(mother.tag,true)&&it.birthDate==mother.birthConfirmedDate&&it.kind=="حمل/رخلة"&&it.lifecycleStatus=="نشط"}
  if(!isEligibleForWeaning(linked,date.toString()))return false
  animals[index]=mother.copy(productionState="نعجة جافة",weaningConfirmedDate=date.toString(),nursingLambs=0)
  linked.forEach { child -> val i=animals.indexOfFirst{it.id==child.id}; if(i>=0) animals[i]=animals[i].copy(productionState="خروف") }
@@ -367,7 +367,7 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
   Text("مثال: Q-0001، Q-0002، Q-0003",color=HerdGreen,fontSize=11.sp)
   Text("تُنشأ البطاقات بنوع غير محدد لتعبئة العمر والوزن والحالة الصحية لاحقاً.",fontSize=11.sp,color=HerdMuted)
  }},confirmButton={TextButton(onClick={val n=batchCount.toIntOrNull();if(n!=null&&n in 1..500){generateHerdTags(animals.map{it.tag},n).forEach{tag->animals.add(HerdAnimal(UUID.randomUUID().toString(),tag,"غير محدد",0,"غير محددة",""))};saveHerd(context,animals.toList());batchDialog=false}}){Text("إنشاء الأرقام",color=HerdGreen)}},dismissButton={TextButton(onClick={batchDialog=false}){Text("إلغاء")}})
- if(editor)HerdEditor(newbornDraft?:selected,animals.toList(),{editor=false;newbornDraft=null;selected=null}){a->if(newbornDraft!=null){if(animals.none{it.tag.equals(a.tag,true)})animals.add(a);val mi=animals.indexOfFirst{it.tag.equals(a.motherTag,true)};if(mi>=0){val mother=animals[mi];animals[mi]=mother.copy(productionState="نعجة مرضعة",nursingLambs=animals.count{it.motherTag.equals(mother.tag,true)&&it.kind=="حمل/رخلة"}.coerceAtLeast(1))};newbornDraft=null}else{val i=animals.indexOfFirst{it.id==a.id};if(i>=0){animals[i]=a;selected=a}else{animals.add(a);selected=null}};saveHerd(context,animals.toList());editor=false}
+ if(editor)HerdEditor(newbornDraft?:selected,animals.toList(),{editor=false;newbornDraft=null;selected=null}){a->if(newbornDraft!=null){if(animals.none{it.tag.equals(a.tag,true)})animals.add(a);val mi=animals.indexOfFirst{it.tag.equals(a.motherTag,true)};if(mi>=0){val mother=animals[mi];animals[mi]=mother.copy(productionState="نعجة مرضعة",nursingLambs=animals.count{it.motherTag.equals(mother.tag,true)&&it.birthDate==mother.birthConfirmedDate&&it.kind=="حمل/رخلة"}.coerceAtLeast(1))};newbornDraft=null}else{val i=animals.indexOfFirst{it.id==a.id};if(i>=0){animals[i]=a;selected=a}else{animals.add(a);selected=null}};saveHerd(context,animals.toList());editor=false}
  if(!editor)selected?.let{selectedAnimal->
   val a=animals.firstOrNull{it.id==selectedAnimal.id}?:selectedAnimal
   val qr=remember(a.id,a.tag){herdQrBitmap(a.id+"|"+a.tag)}
