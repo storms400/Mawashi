@@ -162,7 +162,7 @@ private fun syncLambVaccineReminders(context: Context, animals: List<HerdAnimal>
 }
 
 @Composable
-internal fun LambPreventionScreen(modifier: Modifier = Modifier) {
+internal fun LambPreventionScreen(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     val context = LocalContext.current
     var page by rememberSaveable { mutableStateOf("home") }
     var animals by remember { mutableStateOf(loadHerd(context).filter { it.kind == "حمل/رخلة" && it.lifecycleStatus != "مؤرشف" }) }
@@ -197,6 +197,7 @@ internal fun LambPreventionScreen(modifier: Modifier = Modifier) {
     Column(modifier.fillMaxSize().background(LambCream).padding(horizontal = 14.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (page != "home") IconButton(onClick = { page = "home" }) { Icon(Icons.Outlined.ArrowBack, null, tint = LambGreen) }
+            else if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.Outlined.ArrowBack, null, tint = LambGreen) }
             Column(Modifier.weight(1f)) {
                 Text(if (page == "home") "برنامج وقاية الحملان" else when (page) { "care" -> "الرعاية والفحوصات"; "vaccines" -> "اللقاحات والتحصينات"; else -> "المواعيد والتنبيهات" }, color = LambInk, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
                 Text("متابعة من الولادة حتى استكمال الوقاية", color = LambMuted, fontSize = 12.sp)
