@@ -276,6 +276,15 @@ internal fun reconcileAnnualVaccinationCalendar(
             val recurringReview = task.title.startsWith("مراجعة") &&
                 !task.title.contains("قبل الولادة") &&
                 !task.id.startsWith("breeding-review-")
+            val vaccineTitle = ANNUAL_VACCINE_CATALOG.firstOrNull { it.id == task.vaccineId }?.title.orEmpty()
+            val legacyReminderExists = existing.any { reminder ->
+                reminder.tag.equals(animal.tag, true) &&
+                    reminder.kind != "التطعيمات السنوية" &&
+                    reminder.date == baseDate.toString() &&
+                    (vaccineTitle.isNotBlank() && (reminder.title.contains(vaccineTitle, true) || reminder.notes.contains(vaccineTitle, true)) ||
+                        reminder.title.contains(task.vaccineId, true))
+            }
+            if (legacyReminderExists) return@taskLoop
             val prefix = "annual-calendar:${animal.tag}:${task.id}:"
             val cycleId = prefix + baseDate.year
             val cycleRecord = existing.firstOrNull { it.id == cycleId }
