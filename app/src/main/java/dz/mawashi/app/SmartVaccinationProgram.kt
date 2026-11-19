@@ -207,6 +207,28 @@ internal fun smartConditionalAnnualReviewTasks(category: String, today: LocalDat
         )
     }
 
+internal fun smartBreedingSeasonReviewTasks(
+    category: String, animalTag: String, seasonStart: LocalDate?, seasonRamTag: String,
+    participantTags: Set<String>, today: LocalDate
+): List<AnnualVaccineTask> {
+    if (seasonStart == null) return emptyList()
+    val daysBefore = when {
+        category == "dry" && animalTag in participantTags -> 60L
+        category == "ram" && animalTag.equals(seasonRamTag, true) -> 45L
+        else -> return emptyList()
+    }
+    val reviewDate = seasonStart.minusDays(daysBefore)
+    if (!smartAnnualWindowContains(reviewDate, today)) return emptyList()
+    return listOf(AnnualVaccineTask(
+        "breeding-review-$category-$animalTag-$seasonStart", "breeding_review",
+        if (category == "ram") "فحص وتجهيز الفحل قبل موسم التلقيح" else "مراجعة وقاية النعجة قبل موسم التلقيح",
+        reviewDate,
+        if (category == "ram") "مراجعة قبل التلقيح بـ45 يوماً: افحص الحالة العامة والخصوبة والأظلاف، وراجع التحصينات والطفيليات مع الطبيب؛ ليست أمراً تلقائياً بإعطاء لقاح."
+        else "مراجعة قبل التلقيح بـ60 يوماً: قيّم مخاطر الإجهاض مثل الكلاميديا والكامبيلوباكتر، وسجل التحصين وموانع الحمل مع الطبيب؛ لا تعطَ لقاحاً دون اعتماد بيطري.",
+        "مرتبط بموسم التلقيح"
+    ))
+}
+
 private fun annualJsonArray(c:Context,pref:String,key:String):JSONArray =
  runCatching { JSONArray(c.getSharedPreferences(pref,Context.MODE_PRIVATE).getString(key,"[]") ?: "[]") }.getOrElse { JSONArray() }
 
@@ -237,6 +259,16 @@ private fun annualTasks(c:Context,category:String,a:HerdAnimal,history:List<Annu
   }
  }
  if(category in setOf("dry","pregnant","lactating","ram")) out += smartAdultAnnualCoreTasks(category,history,today,a.expectedBirthDate).filterNot { task -> out.any { it.vaccineId == task.vaccineId && it.due != null } }
+ if (category == "dry" || category == "ram") {
+  val seasons = annualJsonArray(c, "mawashi_breeding_seasons", "records")
+  val active = runCatching { seasons.optJSONObject(seasons.length() - 1) }.getOrNull()
+  if (active != null) {
+   val tagsArray = active.optJSONArray("tags") ?: JSONArray()
+   val tags = (0 until tagsArray.length()).map { tagsArray.optString(it) }.toSet()
+   val start = runCatching { LocalDate.parse(active.optString("start")) }.getOrNull()
+   out += smartBreedingSeasonReviewTasks(category, a.tag, start, active.optString("ram"), tags, today)
+  }
+ }
  val dated=out.map{it.vaccineId}.toSet()
  out += smartConditionalAnnualReviewTasks(category,today).filterNot { task -> out.any { it.vaccineId == task.vaccineId && it.due != null } }
  return out.sortedWith(compareBy<AnnualVaccineTask>({it.due==null},{it.due?:LocalDate.MAX},{it.title}))
