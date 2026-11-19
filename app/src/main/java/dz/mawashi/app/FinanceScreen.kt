@@ -408,7 +408,7 @@ internal fun saveHerdCare(c:Context,list:List<HerdCareReminder>){
  HerdCareNotifications.scheduleAll(c, list.map { HerdCareNotificationData(it.id,it.tag,it.title,it.date,it.completed) })
 }
 private fun herdAgeLabel(a:HerdAnimal):String = herdAnimalAgeLabel(a)
-@Composable fun HealthPreventionScreen(modifier:Modifier=Modifier){ CareCenterScreen(modifier) }
+@Composable fun HealthPreventionScreen(modifier:Modifier=Modifier){ LambPreventionScreen(modifier) }
 
 @Composable internal fun HerdHealthMonitor(modifier:Modifier=Modifier,onBack:()->Unit){
  val context=LocalContext.current
