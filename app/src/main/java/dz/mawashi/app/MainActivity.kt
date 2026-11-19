@@ -68,6 +68,11 @@ class MainActivity : ComponentActivity() {
         HerdCareNotifications.rescheduleFromStorage(this)
         setContent { MawashiApp() } // Local-first entry
     }
+
+    override fun onResume() {
+        super.onResume()
+        runCatching { reconcileHerdLifecycle(this) }
+    }
 }
 
 @Composable
