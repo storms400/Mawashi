@@ -156,8 +156,8 @@ internal fun savePregnancyScanToHerd(
 
 
 internal fun confirmEweBirth(context:Context, tag:String, actualBirthDate:String, today:LocalDate=LocalDate.now()):Boolean {
- val date=runCatching{LocalDate.parse(actualBirthDate)}.getOrNull()?:return false
- if(date.isAfter(today))return false
+ if(!isValidActualBirthDate(actualBirthDate,today))return false
+ val date=LocalDate.parse(actualBirthDate)
  val animals=loadHerd(context).toMutableList()
  val index=animals.indexOfFirst{it.tag.equals(tag.trim(),true)&&it.kind=="نعجة"}
  if(index<0)return false
@@ -178,7 +178,7 @@ internal fun confirmEweWeaning(context:Context, tag:String, weaningDate:String, 
  val mother=animals[index]
  if(mother.productionState!="نعجة مرضعة" || mother.birthConfirmedDate.isBlank())return false
  val linked=animals.filter{it.motherTag.equals(mother.tag,true)&&it.kind=="حمل/رخلة"&&it.lifecycleStatus=="نشط"}
- if(linked.isEmpty() || linked.any { child -> runCatching { ChronoUnit.DAYS.between(LocalDate.parse(child.birthDate),date) < 60 }.getOrDefault(true) })return false
+ if(!isEligibleForWeaning(linked,date.toString()))return false
  animals[index]=mother.copy(productionState="نعجة جافة",weaningConfirmedDate=date.toString(),nursingLambs=0)
  linked.forEach { child -> val i=animals.indexOfFirst{it.id==child.id}; if(i>=0) animals[i]=animals[i].copy(productionState="خروف") }
  saveHerd(context,animals)
@@ -186,28 +186,34 @@ internal fun confirmEweWeaning(context:Context, tag:String, weaningDate:String, 
 }
 
 /** Reclassifies the existing animal record; identity, tag, and mother link never change. */
-internal fun reconcileHerdLifecycle(context:Context, today:LocalDate=LocalDate.now()):List<HerdAnimal> {
- val animals=loadHerd(context).toMutableList()
- var changed=false
- animals.indices.forEach { i ->
-  val a=animals[i]
-  if(a.lifecycleStatus=="مؤرشف") return@forEach
-  var next=a
-  if(a.kind=="نعجة" && a.birthConfirmedDate.isNotBlank() && a.weaningConfirmedDate.isBlank() && a.productionState!="نعجة مرضعة") {
-   next=next.copy(productionState="نعجة مرضعة")
-  }
-  if(a.kind=="نعجة" && a.weaningConfirmedDate.isNotBlank() && a.productionState!="نعجة جافة") {
-   next=next.copy(productionState="نعجة جافة")
-  }
-  if(a.kind=="حمل/رخلة" && a.sex in setOf("ذكر","أنثى") && a.birthDate.isNotBlank()) {
-   val birth=runCatching{LocalDate.parse(a.birthDate)}.getOrNull()
-   val months=birth?.let{ChronoUnit.MONTHS.between(it,today)} ?: -1
-   if(months>=8) next=if(a.sex=="ذكر") next.copy(kind="كبش",productionState="كبش") else next.copy(kind="نعجة",productionState="نعجة جافة")
-  }
-  if(next!=a){animals[i]=next;changed=true}
+internal fun isValidActualBirthDate(value:String,today:LocalDate=LocalDate.now()):Boolean =
+ runCatching { val d=LocalDate.parse(value); !d.isAfter(today) }.getOrDefault(false)
+
+internal fun isEligibleForWeaning(children:List<HerdAnimal>,date:String):Boolean {
+ val weaning=runCatching{LocalDate.parse(date)}.getOrNull()?:return false
+ return children.isNotEmpty() && children.all { child ->
+  runCatching { ChronoUnit.DAYS.between(LocalDate.parse(child.birthDate),weaning)>=60 }.getOrDefault(false)
  }
- if(changed) saveHerd(context,animals)
- return if(changed) loadHerd(context) else animals
+}
+
+internal fun reclassifyHerdAnimal(animal:HerdAnimal,today:LocalDate=LocalDate.now()):HerdAnimal {
+ if(animal.lifecycleStatus=="مؤرشف")return animal
+ var next=animal
+ if(animal.kind=="نعجة" && animal.birthConfirmedDate.isNotBlank() && animal.weaningConfirmedDate.isBlank() && animal.productionState!="نعجة مرضعة") next=next.copy(productionState="نعجة مرضعة")
+ if(animal.kind=="نعجة" && animal.weaningConfirmedDate.isNotBlank() && animal.productionState!="نعجة جافة") next=next.copy(productionState="نعجة جافة")
+ if(animal.kind=="حمل/رخلة" && animal.sex in setOf("ذكر","أنثى") && animal.birthDate.isNotBlank()) {
+  val birth=runCatching{LocalDate.parse(animal.birthDate)}.getOrNull()
+  val months=birth?.let{ChronoUnit.MONTHS.between(it,today)} ?: -1
+  if(months>=8) next=if(animal.sex=="ذكر") next.copy(kind="كبش",productionState="كبش") else next.copy(kind="نعجة",productionState="نعجة جافة")
+ }
+ return next
+}
+
+internal fun reconcileHerdLifecycle(context:Context, today:LocalDate=LocalDate.now()):List<HerdAnimal> {
+ val previous=loadHerd(context)
+ val animals=previous.map{reclassifyHerdAnimal(it,today)}
+ if(animals!=previous) saveHerd(context,animals)
+ return animals
 }
 
 
