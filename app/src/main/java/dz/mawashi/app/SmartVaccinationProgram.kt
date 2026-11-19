@@ -218,7 +218,7 @@ private fun annualTasks(c:Context,category:String,a:HerdAnimal,history:List<Annu
    }
   }
  }
- if(category in setOf("dry","pregnant","lactating","ram")) out += smartAdultAnnualCoreTasks(category,history,today,a.expectedBirthDate)
+ if(category in setOf("dry","pregnant","lactating","ram")) out += smartAdultAnnualCoreTasks(category,history,today,a.expectedBirthDate).filterNot { task -> out.any { it.vaccineId == task.vaccineId && it.due != null } }
  val dated=out.map{it.vaccineId}.toSet()
  ANNUAL_VACCINE_CATALOG.filter{category in it.applicable&&it.id !in dated}.forEach{v->out+=AnnualVaccineTask("conditional-${v.id}",v.id,v.title,null,v.guidance,when(v.id){"ppr","fmd","pox","anthrax"->"حملة رسمية";"pasteurella","footrot","caseous","orf","chlamydia","campylobacter","bluetongue","rabies"->"حسب الخطر";else->"مراجعة السجل"})}
  return out.sortedWith(compareBy<AnnualVaccineTask>({it.due==null},{it.due?:LocalDate.MAX},{it.title}))
