@@ -72,7 +72,7 @@ private fun CareHomeScreen(modifier: Modifier, vaccines: () -> Unit, tasks: () -
   Spacer(Modifier.height(8.dp))
   LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
    item { CareTile("برنامج وقاية الحملان", "الرعاية والفحوصات واللقاحات من الولادة حتى الفطام", Icons.Outlined.Vaccines, lambs) }
-   item { CareTile("برنامج النعاج الجافة", "الرعاية والتحصينات من الفطام حتى الاستعداد للتلقيح", Icons.Outlined.Pets, dryEwes) }
+   item { CareTile("برنامج النعاج الجافة", "الرعاية والتحصينات من الفطام حتى الاستعداد للتلقيح", Icons.Outlined.Vaccines, dryEwes) }
    item { CareTile("برنامج التطعيمات", "تسجيل المواعيد والجرعات وربطها بالحيوان", Icons.Outlined.Vaccines, vaccines) }
    item { CareTile("الفحوص والمتابعة الصحية", "الملف الصحي والوزن وتقييم حالة الجسم", Icons.Outlined.MonitorHeart, health) }
    item { CareTile("متابعة النمو والوزن", "قياسات الوزن وسجل التقييمات", Icons.Outlined.MonitorWeight, health) }
