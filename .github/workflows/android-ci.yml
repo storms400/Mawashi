@@ -59,10 +59,10 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Verify Firebase client mapping for independent v51 package
+      - name: Verify Firebase client mapping for independent v52 package
         run: |
-          grep -q 'dz.mawashi.app.independent.v51' app/google-services.json
-          grep -q 'dz.mawashi.app.independent.v51' app/src/standalone/google-services.json
+          grep -q 'dz.mawashi.app.independent.v52' app/google-services.json
+          grep -q 'dz.mawashi.app.independent.v52' app/src/standalone/google-services.json
 
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
@@ -74,8 +74,8 @@ jobs:
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v51'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='51' versionName='1.0.51-debug'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v52'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='52' versionName='1.0.52-debug'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Build independently installable APK
@@ -85,7 +85,7 @@ jobs:
         run: |
           APK="app/build/outputs/apk/standalone/app-standalone.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v51'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v52'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Verify standalone APK uses the standard debug signature
@@ -95,13 +95,13 @@ jobs:
           APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
           test -s "$APK"
           "$APKSIGNER" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v51'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='51' versionName='1.0.51-test3'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v52'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='52' versionName='1.0.52-test3'"
 
       - name: Upload independently installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Standalone-Independent-v51
+          name: Mawashi-Standalone-Independent-v52
           path: app/build/outputs/apk/standalone/app-standalone.apk
           if-no-files-found: error
           retention-days: 14
@@ -109,7 +109,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Debug-APK-v51
+          name: Mawashi-Debug-APK-v52
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
