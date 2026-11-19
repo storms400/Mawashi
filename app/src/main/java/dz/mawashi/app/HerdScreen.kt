@@ -425,7 +425,7 @@ private fun printHerdQr(context:Context,animals:List<HerdAnimal>){
        }
       }
      }
-     if(a.kind=="نعجة" && a.birthConfirmedDate.isNotBlank()){
+     if(a.kind=="نعجة" && a.productionState=="نعجة مرضعة" && a.birthConfirmedDate.isNotBlank() && a.weaningConfirmedDate.isBlank()){
       Surface(color=Color.White,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,HerdLine)){
        Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
         Text("الولادة مؤكدة",fontWeight=FontWeight.Bold,color=HerdGreen,fontSize=14.sp)
