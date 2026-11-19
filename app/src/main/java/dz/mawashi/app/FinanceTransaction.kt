@@ -60,4 +60,4 @@ internal fun isValidFinanceAmount(value: Double): Boolean =
     value.isFinite() && value > 0.0
 
 internal fun financeTransactionStoreNames(): List<String> =
-    listOf("mawashi_finance_v24", "mawashi_feed_stock", "mawashi_herd_local")
+    listOf("mawashi_finance_v24", "mawashi_feed_stock", "mawashi_herd_local", "mawashi_herd_care_v27")
