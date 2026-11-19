@@ -31,6 +31,8 @@ private val CareLine = Color(0xFFE8E4DA)
 
 @Composable
 internal fun CareCenterScreen(modifier: Modifier = Modifier) {
+ val context = LocalContext.current
+ remember(context) { reconcileHerdLifecycle(context) }
  var page by rememberSaveable { mutableStateOf("home") }
  when (page) {
   "vaccines" -> CareVaccineScreen(modifier) { page = "home" }
