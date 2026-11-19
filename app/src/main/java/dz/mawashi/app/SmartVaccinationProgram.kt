@@ -77,6 +77,33 @@ internal fun reconcileSmartVaccinationReminders(
     return preserved + pending
 }
 
+internal fun isDuplicateLegacyVaccineReminder(
+    reminder: HerdCareReminder,
+    animalTag: String,
+    dueDate: LocalDate,
+    vaccineId: String,
+    vaccineTitle: String
+): Boolean {
+    if (!reminder.tag.equals(animalTag, true) || reminder.date != dueDate.toString()) return false
+    if (reminder.kind == "التطعيمات السنوية" || reminder.notes.startsWith("ANNUAL_VAX_TASK:")) return false
+    val text = (reminder.kind + " " + reminder.title + " " + reminder.notes).lowercase()
+    val aliases = when (vaccineId) {
+        "clostridial" -> listOf("clostr", "cdt", "تسمم", "كزاز", "معوي")
+        "pasteurella" -> listOf("pasteur", "باستور", "باستوريلا")
+        "pox" -> listOf("sheep pox", "جدري")
+        "ppr" -> listOf("ppr", "طاعون المجترات")
+        "fmd" -> listOf("fmd", "قلاعية")
+        "brucella" -> listOf("rev.1", "bruc", "بروسيلا")
+        "chlamydia" -> listOf("chlam", "كلاميديا")
+        "campylobacter" -> listOf("campyl", "كامبيلوباكتر")
+        else -> listOf(vaccineId.lowercase(), vaccineTitle.lowercase())
+    }
+    val isVaccineRecord = text.contains("تطعيم") || text.contains("تحصين") ||
+        text.contains("لقاح") || aliases.any { it.isNotBlank() && text.contains(it) }
+    return isVaccineRecord && aliases.any { it.isNotBlank() && text.contains(it) ||
+        vaccineTitle.isNotBlank() && text.contains(vaccineTitle.lowercase()) }
+}
+
 internal data class AnnualVaccineRecord(val id:String,val tag:String,val vaccineId:String,val date:String,val number:Int,val dose:String,val product:String,val batch:String,val expiry:String,val vet:String,val nextDate:String,val notes:String,val source:String)
 internal data class AnnualVaccineTask(val id:String,val vaccineId:String,val title:String,val due:LocalDate?,val reason:String,val group:String)
 internal data class AnnualVaccineDefinition(val id:String,val title:String,val group:String,val applicable:Set<String>,val guidance:String)
@@ -278,11 +305,7 @@ internal fun reconcileAnnualVaccinationCalendar(
                 !task.id.startsWith("breeding-review-")
             val vaccineTitle = ANNUAL_VACCINE_CATALOG.firstOrNull { it.id == task.vaccineId }?.title.orEmpty()
             val legacyReminderExists = existing.any { reminder ->
-                reminder.tag.equals(animal.tag, true) &&
-                    reminder.kind != "التطعيمات السنوية" &&
-                    reminder.date == baseDate.toString() &&
-                    (vaccineTitle.isNotBlank() && (reminder.title.contains(vaccineTitle, true) || reminder.notes.contains(vaccineTitle, true)) ||
-                        reminder.title.contains(task.vaccineId, true))
+                isDuplicateLegacyVaccineReminder(reminder, animal.tag, baseDate, task.vaccineId, vaccineTitle)
             }
             if (legacyReminderExists) return@taskLoop
             val prefix = "annual-calendar:${animal.tag}:${task.id}:"
