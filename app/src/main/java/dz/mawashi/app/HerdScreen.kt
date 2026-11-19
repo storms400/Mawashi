@@ -1,6 +1,7 @@
 package dz.mawashi.app
 
 import android.content.Context
+import android.widget.Toast
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
