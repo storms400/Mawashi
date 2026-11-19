@@ -131,15 +131,18 @@ internal fun smartLambClostridialFirstDoseDate(birth:LocalDate,damVaccinated:Boo
 internal fun smartLambClostridialBoosterDate(first:LocalDate,days:Int=28)=first.plusDays(days.coerceIn(21,28).toLong())
 internal fun smartAnnualWindowContains(date:LocalDate,today:LocalDate)=!date.isBefore(today.minusDays(30))&&!date.isAfter(today.plusYears(1))
 
+private fun annualJsonArray(c:Context,pref:String,key:String):JSONArray =
+ runCatching { JSONArray(c.getSharedPreferences(pref,Context.MODE_PRIVATE).getString(key,"[]") ?: "[]") }.getOrElse { JSONArray() }
+
 private fun annualTasks(c:Context,category:String,a:HerdAnimal,history:List<AnnualVaccineRecord>,today:LocalDate):List<AnnualVaccineTask>{
  val out=mutableListOf<AnnualVaccineTask>()
  history.filter{it.nextDate.isNotBlank()}.forEach{r->val d=runCatching{LocalDate.parse(r.nextDate)}.getOrNull()?:return@forEach;if(smartAnnualWindowContains(d,today)){val v=ANNUAL_VACCINE_CATALOG.firstOrNull{it.id==r.vaccineId};out+=AnnualVaccineTask("record-${r.id}",r.vaccineId,"موعد المراجعة/الجرعة التالية • ${v?.title?:r.vaccineId}",d,"موعد محفوظ في السجل السابق؛ تحقق من نشرة المنتج قبل التنفيذ.","سجل الحيوان")}}
  if(category=="lamb"){val birth=runCatching{LocalDate.parse(a.birthDate)}.getOrNull();if(birth!=null){val ds=history.filter{it.vaccineId=="clostridial"}.sortedBy{it.date};if(ds.isEmpty()){
   val dam=maternalVaccinationStatus(c,a.motherTag.orEmpty(),"clostridial")
-  val plan=runCatching{val rows=arr(c,"mawashi_lamb_prevention_v1","plans");(0 until rows.length()).map{rows.getJSONObject(it)}.firstOrNull{it.optString("tag").equals(a.tag,true)&&it.optString("vaccine")=="clostridial"}}.getOrNull()
+  val plan=runCatching{val rows=annualJsonArray(c,"mawashi_lamb_prevention_v1","plans");(0 until rows.length()).map{rows.getJSONObject(it)}.firstOrNull{it.optString("tag").equals(a.tag,true)&&it.optString("vaccine")=="clostridial"}}.getOrNull()
   val age=plan?.optInt("age",-1)?.takeIf{it>=0};val date=when{age!=null->birth.plusDays(age.toLong());dam=="محصنة"->smartLambClostridialFirstDoseDate(birth,true);dam=="غير محصنة"->smartLambClostridialFirstDoseDate(birth,false);else->null}
   out+=AnnualVaccineTask("lamb-first","clostridial","الجرعة الأولى • التسمم المعوي والكزاز",date,when{age!=null->"حُسب من الخطة المحفوظة.";dam=="محصنة"->"موعد إرشادي عند 6 أسابيع مع أم مسجلة محصنة؛ راجع نشرة المنتج والطبيب.";dam=="غير محصنة"->"موعد إرشادي عند أسبوعين مع أم مسجلة غير محصنة؛ راجع نشرة المنتج والطبيب.";else->"حالة تحصين الأم مجهولة؛ تحقق منها قبل تحديد الموعد."},"تحصين أساسي مشروط")
- }else if(ds.size==1){val first=LocalDate.parse(ds.first().date);val days=runCatching{val rows=arr(c,"mawashi_lamb_prevention_v1","plans");(0 until rows.length()).map{rows.getJSONObject(it)}.firstOrNull{it.optString("tag").equals(a.tag,true)&&it.optString("vaccine")=="clostridial"}?.optInt("booster",-1)?.takeIf{it>0}}.getOrNull()?:28;out+=AnnualVaccineTask("lamb-booster","clostridial","الجرعة المنشطة • التسمم المعوي والكزاز",smartLambClostridialBoosterDate(first,days),"فاصل إرشادي 3–4 أسابيع أو الفاصل المحفوظ في خطة المنتج؛ راجع النشرة.","تاريخ الجرعة الأولى")}}}
+ }else if(ds.size==1){val first=LocalDate.parse(ds.first().date);val days=runCatching{val rows=annualJsonArray(c,"mawashi_lamb_prevention_v1","plans");(0 until rows.length()).map{rows.getJSONObject(it)}.firstOrNull{it.optString("tag").equals(a.tag,true)&&it.optString("vaccine")=="clostridial"}?.optInt("booster",-1)?.takeIf{it>0}}.getOrNull()?:28;out+=AnnualVaccineTask("lamb-booster","clostridial","الجرعة المنشطة • التسمم المعوي والكزاز",smartLambClostridialBoosterDate(first,days),"فاصل إرشادي 3–4 أسابيع أو الفاصل المحفوظ في خطة المنتج؛ راجع النشرة.","تاريخ الجرعة الأولى")}}}
  if(category=="dry"){
   val rows=runCatching{JSONArray(c.getSharedPreferences("mawashi_dry_ewe_program_v1",Context.MODE_PRIVATE).getString("plans","[]")?:"[]")}.getOrElse{JSONArray()}
   for(i in 0 until rows.length()){
