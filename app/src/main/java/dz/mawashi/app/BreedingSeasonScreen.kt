@@ -134,6 +134,7 @@ fun BreedingSeasonScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
     fun save(updated: List<SeasonRecord>) {
         writeSeasons(context, updated)
         seasons = updated
+        runCatching { refreshAnnualVaccinationCalendar(context) }
     }
 
     Column(modifier.fillMaxSize().background(SeasonCream).padding(horizontal = 16.dp)) {
