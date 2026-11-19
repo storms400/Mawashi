@@ -129,7 +129,7 @@ private object AnnualVaxStore {
 
 internal fun smartLambClostridialFirstDoseDate(birth:LocalDate,damVaccinated:Boolean)=birth.plusDays(if(damVaccinated)42 else 14)
 internal fun smartLambClostridialBoosterDate(first:LocalDate,days:Int=28)=first.plusDays(days.coerceIn(21,28).toLong())
-internal fun smartAnnualWindowContains(date:LocalDate,today:LocalDate)=!date.isBefore(today.minusDays(30))&&!date.isAfter(today.plusYears(1))
+internal fun smartAnnualWindowContains(date:LocalDate,today:LocalDate)=!date.isAfter(today.plusYears(1))
 
 /**
  * Lactating ewes need an explicit review path even when no dose date is justified.
@@ -244,6 +244,62 @@ internal fun smartBreedingSeasonReviewTasks(
         else "مراجعة قبل التلقيح بـ60 يوماً: قيّم مخاطر الإجهاض مثل الكلاميديا والكامبيلوباكتر، وسجل التحصين وموانع الحمل مع الطبيب؛ لا تعطَ لقاحاً دون اعتماد بيطري.",
         "مرتبط بموسم التلقيح"
     ))
+}
+
+
+internal fun reconcileAnnualVaccinationCalendar(
+    context: Context,
+    animals: List<HerdAnimal>,
+    existing: List<HerdCareReminder>,
+    today: LocalDate = LocalDate.now()
+): List<HerdCareReminder> {
+    val active = animals.filter { it.lifecycleStatus != "مؤرشف" }
+    val annualPrefix = "ANNUAL_VAX_TASK:"
+    val retained = existing.filterNot { it.kind == "التطعيمات السنوية" && it.notes.startsWith(annualPrefix) && !it.completed }
+    val generated = mutableListOf<HerdCareReminder>()
+    active.forEach { animal ->
+        val category = when {
+            animal.productionState == "نعجة حامل" || animal.pregnancyStage == "حامل" -> "pregnant"
+            animal.productionState == "نعجة مرضعة" -> "lactating"
+            animal.productionState == "نعجة جافة" && animal.kind.trim() == "نعجة" -> "dry"
+            animal.kind.trim() == "كبش" || animal.kind.contains("فحل") ||
+                (animal.sex == "ذكر" && herdAnimalAgeMonths(animal) >= 8) -> "ram"
+            animal.kind.contains("حمل") || animal.kind.contains("رخلة") ||
+                (animal.sex.isNotBlank() && herdAnimalAgeMonths(animal) < 8) -> "lamb"
+            else -> return@forEach
+        }
+        val history = AnnualVaxStore.load(context, animal.tag)
+        val tasks = annualTasks(context, category, animal, history, today)
+        tasks.forEach taskLoop@ { task ->
+            val baseDate = task.due ?: return@taskLoop
+            if (baseDate.isAfter(today.plusYears(1))) return@taskLoop
+            val recurringReview = task.title.startsWith("مراجعة") &&
+                !task.title.contains("قبل الولادة") &&
+                !task.id.startsWith("breeding-review-")
+            val prefix = "annual-calendar:${animal.tag}:${task.id}:"
+            val cycleId = prefix + baseDate.year
+            val cycleRecord = existing.firstOrNull { it.id == cycleId }
+            var due = baseDate
+            var id = cycleId
+            if (recurringReview && cycleRecord?.completed == true) {
+                due = runCatching { LocalDate.parse(cycleRecord.date).plusYears(1) }.getOrDefault(baseDate.plusYears(1))
+                id = prefix + due.year
+            }
+            if (due.isAfter(today.plusYears(1))) return@taskLoop
+            val saved = existing.firstOrNull { it.id == id }
+            if (saved?.completed == true) return@taskLoop
+            generated += HerdCareReminder(
+                id = id,
+                tag = animal.tag,
+                kind = "التطعيمات السنوية",
+                title = task.title,
+                date = saved?.date ?: due.toString(),
+                notes = annualPrefix + task.id + "\\n" + task.reason,
+                completed = false
+            )
+        }
+    }
+    return (retained + generated).distinctBy { it.id }
 }
 
 private fun annualJsonArray(c:Context,pref:String,key:String):JSONArray =
