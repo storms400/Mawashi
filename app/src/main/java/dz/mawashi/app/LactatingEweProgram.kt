@@ -154,6 +154,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
+                if (section != "overview") {
                 item {
                     Surface(color = Color.White, shape = RoundedCornerShape(15.dp), border = BorderStroke(1.dp, LactLine)) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -162,6 +163,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
                             Text("عدد الأمهات: " + animals.size + " • حملان مرتبطة: " + lactatingLinkedLambs(context, selectedTag).size + " • مواعيد مراجعة: " + reviewCount, color = LactMuted, fontSize = 11.sp)
                         }
                     }
+                }
                 }
                 item {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
