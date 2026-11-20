@@ -10,6 +10,22 @@ class SmartVaccinationProgramTest {
         title = stepId, date = "2026-01-01", notes = "SMART_VAX_DONE:$stepId", completed = true
     )
 
+    @Test fun liveHerdCategoryMappingMatchesEveryCareProgram() {
+        val today = LocalDate.parse("2026-11-20")
+        val dry = HerdAnimal(id="dry", tag="E-1", kind="نعجة", ageMonths=24, health="جيدة", notes="", productionState="نعجة جافة")
+        val pregnant = dry.copy(id="preg", tag="E-2", productionState="نعجة حامل")
+        val lactating = dry.copy(id="lact", tag="E-3", productionState="نعجة مرضعة")
+        val ram = dry.copy(id="ram", tag="R-1", kind="كبش", productionState="كبش", sex="ذكر")
+        val lamb = dry.copy(id="lamb", tag="L-1", kind="حمل/رخلة", productionState="حمل يرضع", sex="أنثى", ageMonths=2, birthDate="2026-09-20")
+        val archived = dry.copy(id="archived", tag="E-4", lifecycleStatus="مؤرشف")
+        assertEquals("dry", smartVaccinationCategoryForAnimal(dry, today))
+        assertEquals("pregnant", smartVaccinationCategoryForAnimal(pregnant, today))
+        assertEquals("lactating", smartVaccinationCategoryForAnimal(lactating, today))
+        assertEquals("ram", smartVaccinationCategoryForAnimal(ram, today))
+        assertEquals("lamb", smartVaccinationCategoryForAnimal(lamb, today))
+        assertNull(smartVaccinationCategoryForAnimal(archived, today))
+    }
+
     @Test fun legacyVaccineReminderWithSameAnimalVaccineAndDateIsSuppressed() {
         val legacy = HerdCareReminder("old-1", "Q-0001", "تحصين", "التسمم المعوي والكزاز",
             "2026-11-19", "جرعة مسجلة", true)
