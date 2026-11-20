@@ -104,6 +104,13 @@ internal fun isDuplicateLegacyVaccineReminder(
         vaccineTitle.isNotBlank() && text.contains(vaccineTitle.lowercase()) }
 }
 
+internal fun isDuplicateAnnualVaccineRecord(records: List<AnnualVaccineRecord>, candidate: AnnualVaccineRecord): Boolean =
+    records.any { existing ->
+        existing.tag.equals(candidate.tag, ignoreCase = true) &&
+            existing.vaccineId.equals(candidate.vaccineId, ignoreCase = true) &&
+            existing.date == candidate.date
+    }
+
 internal data class AnnualVaccineRecord(val id:String,val tag:String,val vaccineId:String,val date:String,val number:Int,val dose:String,val product:String,val batch:String,val expiry:String,val vet:String,val nextDate:String,val notes:String,val source:String)
 internal data class AnnualVaccineTask(val id:String,val vaccineId:String,val title:String,val due:LocalDate?,val reason:String,val group:String)
 internal data class AnnualVaccineDefinition(val id:String,val title:String,val group:String,val applicable:Set<String>,val guidance:String)
@@ -151,7 +158,12 @@ private object AnnualVaxStore {
   val old=listOf(legacy(c,"mawashi_lamb_prevention_v1","doses",tag,"الحملان"),legacy(c,"mawashi_dry_ewe_program_v1","doses",tag,"الجافة"),legacy(c,"mawashi_pregnant_ewe_program_v1","records",tag,"الحوامل"),legacy(c,"mawashi_lactating_ewe_program_v1","preventive",tag,"المرضعات"),legacy(c,"mawashi_ram_program_v1","records",tag,"الفحول")).flatten()
   return (own+old).distinctBy{"${it.tag.lowercase()}|${it.vaccineId}|${it.date}|${it.product}|${it.number}"}.sortedBy{it.date}
  }
- fun save(c:Context,r:AnnualVaccineRecord){val a=arr(c,PREF,"records");a.put(JSONObject().put("id",r.id).put("tag",r.tag).put("vaccine",r.vaccineId).put("date",r.date).put("number",r.number).put("dose",r.dose).put("product",r.product).put("batch",r.batch).put("expiry",r.expiry).put("vet",r.vet).put("nextDate",r.nextDate).put("notes",r.notes));check(c.getSharedPreferences(PREF,0).edit().putString("records",a.toString()).commit())}
+ fun save(c:Context,r:AnnualVaccineRecord){
+  require(runCatching { LocalDate.parse(r.date) }.isSuccess) { "تاريخ الجرعة غير صالح" }
+  require(r.tag.isNotBlank() && r.vaccineId.isNotBlank()) { "بيانات الحيوان أو اللقاح ناقصة" }
+  check(!isDuplicateAnnualVaccineRecord(load(c,r.tag),r)) { "هذه الجرعة مسجلة للحيوان نفسه واللقاح نفسه في التاريخ نفسه" }
+  val a=arr(c,PREF,"records");a.put(JSONObject().put("id",r.id).put("tag",r.tag).put("vaccine",r.vaccineId).put("date",r.date).put("number",r.number).put("dose",r.dose).put("product",r.product).put("batch",r.batch).put("expiry",r.expiry).put("vet",r.vet).put("nextDate",r.nextDate).put("notes",r.notes));check(c.getSharedPreferences(PREF,0).edit().putString("records",a.toString()).commit())
+ }
 }
 
 internal fun smartLambClostridialFirstDoseDate(birth:LocalDate,damVaccinated:Boolean)=birth.plusDays(if(damVaccinated)42 else 14)
