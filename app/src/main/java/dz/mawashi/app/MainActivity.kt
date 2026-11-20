@@ -58,7 +58,8 @@ private val sections = listOf(
     Section("الصحة والوقاية", "الرعاية الصحية الفردية للقطيع", Icons.Outlined.HealthAndSafety, Color(0xFF526B55), "—", "متابعة صحة القطيع"),
     Section("مخزون العلف", "الكميات والاستهلاك", Icons.Outlined.Inventory2, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة"),
     Section("المالية", "الإيرادات والمصاريف", Icons.Outlined.AccountBalanceWallet, Color(0xFF526B55), "—", "لا توجد بيانات مسجلة"),
-    Section("الموسوعة العلمية", "دليل تربية الأغنام والمعرفة العملية", Icons.Outlined.MenuBook, Color(0xFF526B55), "10", "أبواب علمية")
+    Section("الموسوعة العلمية", "دليل تربية الأغنام والمعرفة العملية", Icons.Outlined.MenuBook, Color(0xFF526B55), "10", "أبواب علمية"),
+    Section("بيطري القطيع", "دليل الأدوية واللقاحات والعلاجات", Icons.Outlined.Vaccines, Color(0xFF526B55), "35", "صنف بيطري")
 )
 
 class MainActivity : ComponentActivity() {
@@ -135,6 +136,7 @@ private fun MawashiApp() {
                     3 -> FeedManagementSuiteScreen(Modifier.padding(padding))
                     5 -> BreedingSeasonScreen(Modifier.padding(padding), onBack = { selected = 0; dashboardRefresh++ })
                     6 -> EncyclopediaScreen(Modifier.padding(padding), onBack = { selected = 0; dashboardRefresh++ })
+                    7 -> VeterinaryHerdScreen(Modifier.padding(padding), onBack = { selected = 0; dashboardRefresh++ })
                     else -> FinanceScreen(Modifier.padding(padding))
                 }
             }
@@ -276,7 +278,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("أقسام المزرعة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
-                Text("5 أقسام", color = Muted, fontSize = 11.sp)
+                Text("6 أقسام", color = Muted, fontSize = 11.sp)
             }
         }
         itemsIndexed(sections.chunked(2)) { rowIndex, pair ->
@@ -284,7 +286,7 @@ private fun Dashboard(modifier: Modifier = Modifier, refreshKey: Int, onSection:
                 pair.forEachIndexed { colIndex, section ->
                     val index = rowIndex * 2 + colIndex
                     SectionTile(if (index == 0) section.copy(metric = totalAnimals.toString(), metricLabel = "حيوان مسجل") else section, Modifier.weight(1f)) {
-                        onSection(if (index == 4) 6 else index + 1)
+                        onSection(when (index) { 4 -> 6; 5 -> 7; else -> index + 1 })
                     }
                 }
                 if (pair.size == 1) Spacer(Modifier.weight(1f))
