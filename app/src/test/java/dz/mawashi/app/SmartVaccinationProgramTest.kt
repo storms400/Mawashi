@@ -197,4 +197,27 @@ class SmartVaccinationProgramTest {
         assertFalse(isDuplicateLambDoseRecord(listOf(existing), duplicate.copy(doseNumber = 2)))
     }
 
+
+    @Test fun unknownMaternalVaccinationCreatesUndatedDataReviewNotDoseAppointment() {
+        val task = AnnualVaccineTask(
+            id = "lamb-first", vaccineId = "clostridial",
+            title = "الجرعة الأولى • التسمم المعوي والكزاز", due = null,
+            reason = "حالة تحصين الأم مجهولة؛ تحقق منها قبل تحديد الموعد.",
+            group = "تحصين أساسي مشروط"
+        )
+        val reminder = maternalHistoryReviewReminder("L-009", task)!!
+        assertEquals("annual-calendar:L-009:lamb-first:missing-maternal-status", reminder.id)
+        assertEquals("", reminder.date)
+        assertFalse(reminder.completed)
+        assertTrue(reminder.title.contains("استكمال حالة تحصين الأم"))
+        assertTrue(reminder.notes.contains("REQUIRES_MATERNAL_HISTORY"))
+    }
+
+    @Test fun maternalHistoryReviewIsNotCreatedWhenStatusIsKnownOrTaskHasDueDate() {
+        val unknown = AnnualVaccineTask("lamb-first", "clostridial", "الجرعة الأولى", null,
+            "حالة تحصين الأم مجهولة؛ تحقق منها قبل تحديد الموعد.", "تحصين أساسي")
+        assertEquals(null, maternalHistoryReviewReminder("L-009", unknown.copy(reason = "الأم محصنة")))
+        assertEquals(null, maternalHistoryReviewReminder("L-009", unknown.copy(due = LocalDate.parse("2026-12-01"))))
+        assertEquals(null, maternalHistoryReviewReminder("L-009", unknown.copy(id = "lamb-booster")))
+    }
 }
