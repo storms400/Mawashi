@@ -441,6 +441,18 @@ internal fun SmartAnnualVaccinationScreen(category:String,animal:HerdAnimal?,mod
    Text("برنامج الاثني عشر شهراً",color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=15.sp)
    if(dated.isEmpty())Text("لا توجد جرعات أو مراجعات مؤرخة ضمن هذه الفترة. اللقاحات المرتبطة بالحملات أو المخاطر تظهر للمراجعة دون تحديد موعد أو إعطاء تلقائي.",color=Color(0xFF778078),fontSize=12.sp)
    dated.forEach{t->val d=t.due!!;val state=when{d.isBefore(today)->"متأخر";d==today->"مستحق اليوم";else->"قادم"};Surface(color=Color.White,shape=RoundedCornerShape(12.dp),border=BorderStroke(1.dp,Color(0xFFE8E4DA))){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text(t.title,Modifier.weight(1f),color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=13.sp);Text(state,color=if(state=="متأخر")Color(0xFFB35C43)else Color(0xFF526B55),fontSize=11.sp,fontWeight=FontWeight.Bold)};Text("$d • ${t.group}",color=Color(0xFF526B55),fontSize=11.sp);Text(t.reason,color=Color(0xFF778078),fontSize=11.sp)}}}
+   tasks.filter { it.due == null }.forEach { t ->
+    Surface(color=Color(0xFFFFF8E8),shape=RoundedCornerShape(12.dp),border=BorderStroke(1.dp,Color(0xFFE8D9B8))) {
+     Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+      Row(verticalAlignment=Alignment.CenterVertically) {
+       Text(t.title,Modifier.weight(1f),color=Color(0xFF27332A),fontWeight=FontWeight.Bold,fontSize=13.sp)
+       Text("يلزم استكمال البيانات",color=Color(0xFF9A6B24),fontSize=10.sp,fontWeight=FontWeight.Bold)
+      }
+      Text("لا يوجد تاريخ محدد بعد • ${t.group}",color=Color(0xFF9A6B24),fontSize=11.sp)
+      Text(t.reason,color=Color(0xFF778078),fontSize=11.sp)
+     }
+    }
+   }
 
    Button(onClick={dialog=true},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF526B55))){Text("تسجيل جرعة منفذة فعلياً")}
    Text("المواعيد تُحسب من الميلاد والسجل وخطة المنتج والحالة الإنتاجية. الحملات تتبع تعليمات المصالح البيطرية الجزائرية. لا تُسجّل جرعة تلقائياً، ولا تُحدد جرعة الدواء أو المكمل من الوزن وحده.",color=Color(0xFF778078),fontSize=11.sp)
