@@ -93,8 +93,20 @@ jobs:
           print("v53 package identity is unique and registered in both Firebase configuration files")
           PY
 
-      - name: Run unit tests
-        run: gradle --no-daemon :app:testDebugUnitTest
+      - name: Run unit tests (retry transient dependency resolution failures)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Unit test attempt $attempt/3"
+            if [ "$attempt" -eq 1 ]; then
+              gradle --no-daemon :app:testDebugUnitTest && exit 0
+            else
+              gradle --no-daemon --refresh-dependencies :app:testDebugUnitTest && exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 20; fi
+          done
+          exit 1
 
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
