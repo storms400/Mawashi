@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "develop/**"
+      - "feature/**"
       - "main"
   pull_request:
     branches:
