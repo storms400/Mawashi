@@ -160,6 +160,15 @@ internal fun savePregnancyScanToHerd(
 }
 
 
+internal fun removeOpenHerdCareRemindersForAnimal(
+    existing: List<HerdCareReminder>,
+    tag: String,
+    titles: Set<String>
+): List<HerdCareReminder> = existing.filterNot { reminder ->
+    reminder.tag.equals(tag.trim(), ignoreCase = true) &&
+        !reminder.completed && reminder.title in titles
+}
+
 internal fun confirmEweBirth(context:Context, tag:String, actualBirthDate:String, today:LocalDate=LocalDate.now()):Boolean {
  if(!isValidActualBirthDate(actualBirthDate,today))return false
  val date=LocalDate.parse(actualBirthDate)
@@ -172,7 +181,16 @@ internal fun confirmEweBirth(context:Context, tag:String, actualBirthDate:String
  saveHerd(context,animals)
  val saved=loadHerd(context).firstOrNull{it.id==mother.id} ?: return false
  val success = saved.productionState=="نعجة مرضعة" && saved.birthConfirmedDate==date.toString()
- if (success) runCatching { refreshAnnualVaccinationCalendar(context) }
+ if (success) {
+  // Actual birth supersedes the predicted lambing reminder; saving the reduced list
+  // also cancels its pending alarm through the normal notification synchronizer.
+  val currentCare = readHerdCare(context)
+  val retainedCare = removeOpenHerdCareRemindersForAnimal(
+   currentCare, saved.tag, setOf("موعد ولادة متوقع")
+  )
+  if (retainedCare != currentCare) runCatching { saveHerdCare(context, retainedCare) }
+  runCatching { refreshAnnualVaccinationCalendar(context) }
+ }
  return success
 }
 
