@@ -103,6 +103,9 @@ internal fun saveHerd(c:Context,list:List<HerdAnimal>) {
   put("motherTag",x.motherTag);put("productionState",x.productionState);put("pregnancyStage",x.pregnancyStage);put("fetusCount",x.fetusCount);put("nursingLambs",x.nursingLambs);put("lifecycleStatus",x.lifecycleStatus);put("exitDate",x.exitDate);put("exitReason",x.exitReason);if(x.acquisitionCost==null)put("acquisitionCost",JSONObject.NULL) else put("acquisitionCost",x.acquisitionCost);put("breed",x.breed);put("pregnancyStartDate",x.pregnancyStartDate);put("expectedBirthDate",x.expectedBirthDate);put("pregnancyScanDate",x.pregnancyScanDate);put("pregnancyScanOutcome",x.pregnancyScanOutcome);put("pregnancyOffspringSex",x.pregnancyOffspringSex);put("sex",x.sex);put("repeatScanDate",x.repeatScanDate);put("birthConfirmedDate",x.birthConfirmedDate);put("weaningConfirmedDate",x.weaningConfirmedDate);put("ageRecordedDate",x.ageRecordedDate)
  })}
  check(c.getSharedPreferences(HERD_PREFS,0).edit().putString(HERD_KEY,a.toString()).commit()) { "تعذر حفظ بيانات القطيع" }
+ // Herd is the single source of truth: every persisted status/identity change refreshes
+ // the annual care calendar so dry/pregnant/lactating/lamb transitions stay in sync.
+ runCatching { refreshAnnualVaccinationCalendar(c) }
 }
 
 internal fun savePregnancyScanToHerd(
