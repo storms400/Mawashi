@@ -20,6 +20,9 @@ internal data class HerdCareNotificationData(val id:String,val tag:String,val ti
 internal fun isActiveHerdCareReminder(reminders: List<HerdCareNotificationData>, id: String): Boolean =
     reminders.any { it.id == id && !it.completed }
 
+internal fun isSchedulableHerdCareDate(value: String): Boolean =
+    value.isNotBlank() && runCatching { LocalDate.parse(value) }.isSuccess
+
 internal object HerdCareNotifications {
     private const val PREFS = "mawashi_herd_care_v27"
     private const val KEY = "scheduled_care"
@@ -69,7 +72,7 @@ internal object HerdCareNotifications {
                 manager.cancel(pending)
                 NotificationManagerCompat.from(context).cancel(id)
             } else {
-                val date = runCatching { LocalDate.parse(item.date) }.getOrNull()
+                val date = item.date.takeIf(::isSchedulableHerdCareDate)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                 if (date == null || delivered(prefs, item.id, item.date)) {
                     manager.cancel(pending)
                 } else {
