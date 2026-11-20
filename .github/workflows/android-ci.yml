@@ -1,4 +1,4 @@
-name: Android CI # v53 unique package verification
+name: Android CI # v53 unique package verification and smart-care regression validation
 
 on:
   push:
