@@ -20,10 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-internal fun EweProgramOverview(title: String, subtitle: String, animalCount: Int, dueCount: Int, completedCount: Int, stages: List<Pair<String, String>>, animalLines: List<String>, onStageClick: (Int) -> Unit, onVaccinesClick: () -> Unit, onRemindersClick: () -> Unit) {
+internal fun EweProgramOverview(animalCount: Int, dueCount: Int, completedCount: Int, stages: List<Pair<String, String>>, animalLines: List<String>, onStageClick: (Int) -> Unit, onVaccinesClick: () -> Unit, onRemindersClick: () -> Unit) {
     val cream = Color(0xFFF7F3EA); val green = Color(0xFF526B55); val ink = Color(0xFF27332A); val muted = Color(0xFF778078); val line = Color(0xFFE8E4DA)
     Column(modifier = Modifier.fillMaxWidth().heightIn(max = 760.dp).background(cream).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Column(Modifier.fillMaxWidth().padding(top = 3.dp)) { Text(title, color = ink, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold); Text(subtitle, color = muted, fontSize = 12.sp) }
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { OverviewStat("عدد النعاج", animalCount.toString(), Modifier.weight(1f), green, muted, line); OverviewStat("مهام مستحقة", dueCount.toString(), Modifier.weight(1f), Color(0xFFAA7040), muted, line); OverviewStat("إجراءات موثقة", completedCount.toString(), Modifier.weight(1f), green, muted, line) }
         Text("مراحل الرعاية", color = ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         stages.forEachIndexed { index, stage -> Surface(Modifier.fillMaxWidth().clickable { onStageClick(index) }, color = Color.White, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, line)) { Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) { Surface(color = Color(0xFFE8F0E5), shape = RoundedCornerShape(10.dp)) { Text((index + 1).toString(), Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = green, fontWeight = FontWeight.Bold) }; Spacer(Modifier.width(10.dp)); Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text(stage.first, color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold); Text(stage.second, color = muted, fontSize = 11.sp) }; Icon(Icons.Outlined.ChevronLeft, null, tint = muted) } } }
