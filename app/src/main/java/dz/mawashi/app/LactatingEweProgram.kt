@@ -124,8 +124,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
     var recordType by rememberSaveable { mutableStateOf("لقاح") }
 
     LaunchedEffect(Unit) {
-        val herd = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" }
-        animals = herd.filter { (it.kind.trim() == "نعجة" || it.sex == "أنثى") && it.productionState == "نعجة مرضعة" && it.lifecycleStatus == "نشط" }
+        animals = herdAnimalsForCareCategory(context, "lactating")
         if (animals.none { it.tag.equals(selectedTag, true) }) selectedTag = animals.firstOrNull()?.tag.orEmpty()
         care = LactatingEweStore.care(context)
         preventive = LactatingEweStore.preventive(context)
