@@ -40,7 +40,7 @@ private data class LambStage(val id: String, val title: String, val age: String,
 private data class LambCareRecord(val id: String, val tag: String, val stageId: String, val actionId: String, val date: String, val value: String, val notes: String)
 private data class LambVaccine(val id: String, val title: String, val disease: String, val caution: String)
 private data class LambVaccinePlan(val tag: String, val vaccineId: String, val motherStatus: String, val firstAgeDays: Int?, val boosterDays: Int?, val product: String)
-private data class LambDose(val id: String, val tag: String, val vaccineId: String, val doseNumber: Int, val date: String, val product: String, val batch: String, val expiry: String, val vet: String, val notes: String)
+internal data class LambDose(val id: String, val tag: String, val vaccineId: String, val doseNumber: Int, val date: String, val product: String, val batch: String, val expiry: String, val vet: String, val notes: String)
 
 private val LAMB_STAGES = listOf(
     LambStage("birth", "المرحلة الأولى – الولادة", "من الولادة إلى أول 6 ساعات", "التنفس والدفء واللبأ ومنع عدوى السرة.", listOf(
