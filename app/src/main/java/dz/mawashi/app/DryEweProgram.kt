@@ -203,11 +203,13 @@ internal fun DryEweProgramScreen(modifier: Modifier = Modifier, onBack: (() -> U
                 }
             }
         } else {
+            if (page != "home") {
             Text("النعجة المحددة", color = DryInk, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 animals.forEach { a -> FilterChip(selectedTag == a.tag, { selectedTag = a.tag }, label = { Text("🐑 " + a.tag, fontSize = 12.sp) }) }
             }
             Spacer(Modifier.height(8.dp))
+            }
             when (page) {
                 "care" -> DryCarePage(animal, stageId, { stageId = it }, animalCare) { careDialog = it }
                 "vaccines" -> SmartAnnualVaccinationScreen("dry", animal, Modifier.weight(1f))
