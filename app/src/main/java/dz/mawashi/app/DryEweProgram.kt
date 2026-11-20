@@ -212,30 +212,18 @@ internal fun DryEweProgramScreen(modifier: Modifier = Modifier, onBack: (() -> U
                 "care" -> DryCarePage(animal, stageId, { stageId = it }, animalCare) { careDialog = it }
                 "vaccines" -> SmartAnnualVaccinationScreen("dry", animal, Modifier.weight(1f))
                 "reminders" -> DryRemindersPage(animal, reminders)
-                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
-                    item {
-                        Surface(color = Color.White, shape = RoundedCornerShape(15.dp), border = BorderStroke(1.dp, DryLine)) {
-                            Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("ملخص النعجة", color = DryInk, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                    DryStat("العمر", animal?.let { herdAnimalAgeLabel(it) } ?: "—", Modifier.weight(1f))
-                                    DryStat("الوزن", animal?.weightKg?.let { "%.1f كغ".format(java.util.Locale.US,it) } ?: "غير مسجل", Modifier.weight(1f))
-                                }
-                                Text("الميلاد: " + (animal?.birthDate?.ifBlank { "غير مسجل" } ?: "—") + " • حالة الإنتاج: " + (animal?.productionState ?: "—"), color = DryMuted, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                    item { DryStat("إجراءات رعاية موثقة", animalCare.size.toString(), Modifier.fillMaxWidth()) }
-                    item { DryStat("مواعيد لقاحات مضبوطة", reminders.size.toString(), Modifier.fillMaxWidth()) }
-                    item { DryHomeTile("برنامج الرعاية والمتابعة", "خمس مراحل وإجراءات عملية قابلة للتسجيل", "🩺") { page = "care" } }
-                    item { DryHomeTile("برنامج التطعيمات والتحصينات", "لقاحات أساسية وإضافية وسجل الجرعات", "💉") { page = "vaccines" } }
-                    item { DryHomeTile("المواعيد والتنبيهات", "المواعيد المحسوبة من الخطة والسجل", "🔔") { page = "reminders" } }
-                    item {
-                        Surface(color = Color(0xFFEDE8DE), shape = RoundedCornerShape(13.dp)) {
-                            Text("مبدأ السلامة: لا يُعطى لقاح أو علاج تلقائياً. الموعد المحسوب تذكير للمراجعة، ولا يتحول إلى جرعة منفذة إلا بعد تأكيد إعطائها فعلياً. اللقاحات الموسمية والرسمية والإضافية تُضبط وفق الطبيب البيطري ونشرة المنتج.", color = DryInk, fontSize = 11.sp, modifier = Modifier.padding(12.dp))
-                        }
-                    }
-                }
+                else -> EweProgramOverview(
+                    title = "برنامج النعاج الجافة",
+                    subtitle = "الرعاية الوقائية والاستعداد لموسم التلقيح",
+                    animalCount = animals.size,
+                    dueCount = reminders.count { !it.first.isAfter(today) },
+                    completedCount = animalCare.size,
+                    stages = DRY_STAGES.map { it.title to it.period },
+                    animalLines = animals.map { it.tag + " • " + (it.weightKg?.let { w -> "%.1f كغ".format(java.util.Locale.US, w) } ?: "الوزن غير مسجل") },
+                    onStageClick = { index -> stageId = DRY_STAGES.getOrNull(index)?.id ?: "weaning"; page = "care" },
+                    onVaccinesClick = { page = "vaccines" },
+                    onRemindersClick = { page = "reminders" }
+                )
             }
         }
     }
