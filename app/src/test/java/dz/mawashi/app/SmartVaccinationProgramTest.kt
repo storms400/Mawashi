@@ -238,6 +238,17 @@ class SmartVaccinationProgramTest {
     }
 
 
+    @Test fun confirmedBirthRemovesOnlyTheOpenPredictedBirthReminder() {
+        val expected = HerdCareReminder("expected", "E-101", "متابعة", "موعد ولادة متوقع", "2026-12-20", "", false)
+        val completed = expected.copy(id = "old-completed", completed = true)
+        val scan = expected.copy(id = "scan", title = "إعادة فحص السونار")
+        val other = expected.copy(id = "other", tag = "E-102")
+        val original = listOf(expected, completed, scan, other)
+        val afterBirth = removeOpenHerdCareRemindersForAnimal(original, "e-101", setOf("موعد ولادة متوقع"))
+        assertEquals(listOf("old-completed", "scan", "other"), afterBirth.map { it.id })
+        assertEquals(afterBirth, removeOpenHerdCareRemindersForAnimal(afterBirth, "E-101", setOf("موعد ولادة متوقع")))
+    }
+
     @Test fun eweLifecycleTransitionsKeepOnePermanentHerdIdentity() {
         val today = LocalDate.parse("2026-11-20")
         val dry = HerdAnimal(
