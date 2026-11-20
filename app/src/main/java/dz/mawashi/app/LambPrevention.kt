@@ -127,6 +127,13 @@ private object LambPreventionStore {
         }.getOrNull() }
     }
     fun saveDoses(c: Context, values: List<LambDose>) {
+        val duplicate = values.groupBy { "${it.tag.lowercase()}|${it.vaccineId.lowercase()}|${it.date}|${it.doseNumber}" }
+            .values.any { it.size > 1 }
+        require(!duplicate) { "جرعة الحمل مسجلة مسبقاً للحيوان واللقاح والتاريخ ورقم الجرعة نفسه" }
+        values.forEach {
+            require(it.tag.isNotBlank() && it.vaccineId.isNotBlank()) { "بيانات الحيوان أو اللقاح ناقصة" }
+            require(runCatching { LocalDate.parse(it.date) }.isSuccess) { "تاريخ الجرعة غير صالح" }
+        }
         val a = JSONArray()
         values.forEach { a.put(JSONObject().put("id", it.id).put("tag", it.tag).put("vaccine", it.vaccineId).put("number", it.doseNumber).put("date", it.date).put("product", it.product).put("batch", it.batch).put("expiry", it.expiry).put("vet", it.vet).put("notes", it.notes)) }
         write(c, "doses", a)
