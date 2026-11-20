@@ -115,7 +115,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
     val context = LocalContext.current
     var animals by remember { mutableStateOf(emptyList<HerdAnimal>()) }
     var selectedTag by rememberSaveable { mutableStateOf("") }
-    var section by rememberSaveable { mutableStateOf("care") }
+    var section by rememberSaveable { mutableStateOf("overview") }
     var stageId by rememberSaveable { mutableStateOf("post_birth") }
     var care by remember { mutableStateOf(LactatingEweStore.care(context)) }
     var preventive by remember { mutableStateOf(LactatingEweStore.preventive(context)) }
@@ -170,7 +170,20 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
                         FilterChip(section == "reminders", { section = "reminders" }, label = { Text("المواعيد والتنبيهات", fontSize = 10.sp) }, modifier = Modifier.weight(1f))
                     }
                 }
-                if (section == "preventive") {
+                if (section == "overview") {
+                    EweProgramOverview(
+                        title = "برنامج النعاج المرضعة",
+                        subtitle = "رعاية الأم ومتابعة صحة المواليد حتى الفطام",
+                        animalCount = animals.size,
+                        dueCount = reviewCount,
+                        completedCount = eweCare.size + ewePreventive.size,
+                        stages = LACT_STAGES.map { it.title to it.period },
+                        animalLines = animals.map { a -> a.tag + " • مواليد مرتبطون: " + lactatingLinkedLambs(context, a.tag).size },
+                        onStageClick = { index -> stageId = LACT_STAGES.getOrNull(index)?.id ?: "post_birth"; section = "care" },
+                        onVaccinesClick = { section = "preventive" },
+                        onRemindersClick = { section = "reminders" }
+                    )
+                } else if (section == "preventive") {
                     item { SmartAnnualVaccinationScreen("lactating", animals.firstOrNull { it.tag.equals(selectedTag, true) }) }
                 } else if (section == "reminders") {
                     item { CareRemindersPanel(selectedTag) }
