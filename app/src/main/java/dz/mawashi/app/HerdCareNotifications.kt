@@ -75,6 +75,7 @@ internal object HerdCareNotifications {
                 val date = item.date.takeIf(::isSchedulableHerdCareDate)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                 if (date == null || delivered(prefs, item.id, item.date)) {
                     manager.cancel(pending)
+                    if (date == null) NotificationManagerCompat.from(context).cancel(id)
                 } else {
                     val today = LocalDate.now()
                     val due = triggerAt(date)
