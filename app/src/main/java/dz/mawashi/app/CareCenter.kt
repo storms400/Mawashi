@@ -74,10 +74,10 @@ internal fun CareRemindersPanel(animalTag: String) {
                 val state = runCatching {
                     val d = LocalDate.parse(task.date)
                     when { task.completed -> "مكتمل"; d.isBefore(today) -> "متأخر"; d == today -> "اليوم"; else -> "قادم" }
-                }.getOrDefault("تاريخ غير صالح")
+                }.getOrDefault(if (task.date.isBlank()) "يتطلب استكمال بيانات" else "تاريخ غير صالح")
                 Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, CareLine)) {
                     Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = task.completed, onCheckedChange = { done ->
+                        Checkbox(checked = task.completed, enabled = !task.notes.contains("REQUIRES_MATERNAL_HISTORY"), onCheckedChange = { done ->
                             val all = readHerdCare(context)
                             val changed = all.map { if (it.id == task.id) it.copy(completed = done) else it }
                             val herd = loadHerd(context).filter { it.lifecycleStatus != "مؤرشف" }
@@ -88,7 +88,7 @@ internal fun CareRemindersPanel(animalTag: String) {
                         })
                         Column(Modifier.weight(1f)) {
                             Text(task.title, color = CareInk, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            Text(task.date + " • " + task.kind, color = CareMuted, fontSize = 10.sp)
+                            Text(task.date.ifBlank { "لا يوجد موعد جرعة حتى التحقق" } + " • " + task.kind, color = CareMuted, fontSize = 10.sp)
                             Text(state, color = if (state == "متأخر") Color(0xFFB54D42) else CareGreen, fontSize = 10.sp)
                             if (task.notes.isNotBlank()) Text(task.notes, color = CareMuted, fontSize = 10.sp)
                         }
@@ -412,14 +412,14 @@ private fun CareAnnualCalendarScreen(modifier: Modifier, back: () -> Unit) {
     val due = runCatching { LocalDate.parse(task.date) }.getOrNull()
     val state = when {
      task.completed -> "مكتمل"
-     due == null -> "تاريخ غير صالح"
+     due == null -> if (task.date.isBlank()) "يتطلب استكمال بيانات" else "تاريخ غير صالح"
      due.isBefore(today) -> "متأخر"
      due == today -> "مستحق اليوم"
      else -> "قادم"
     }
     Surface(color = Color.White, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, CareLine)) {
      Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-      Checkbox(checked = task.completed, onCheckedChange = { done ->
+      Checkbox(checked = task.completed, enabled = !task.notes.contains("REQUIRES_MATERNAL_HISTORY"), onCheckedChange = { done ->
        val changed = readHerdCare(context).map { if (it.id == task.id) it.copy(completed = done) else it }
        val refreshed = reconcileAnnualVaccinationCalendar(context, animals, changed, LocalDate.now())
        runCatching { saveHerdCare(context, refreshed) }.onSuccess { records = refreshed }
@@ -436,7 +436,7 @@ private fun CareAnnualCalendarScreen(modifier: Modifier, back: () -> Unit) {
         else -> animal.kind
        }
        Text("🐑 ${task.tag} • $categoryLabel", color = CareGreen, fontSize = 11.sp)
-       Text("${task.date} • $state", color = if (state == "متأخر") Color(0xFFB54D42) else CareMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+       Text("${task.date.ifBlank { "لا يوجد موعد جرعة حتى التحقق" }} • $state", color = if (state == "متأخر") Color(0xFFB54D42) else CareMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
        val reason = task.notes.substringAfter("\\n", "")
        if (reason.isNotBlank()) Text(reason, color = CareMuted, fontSize = 10.sp)
       }
