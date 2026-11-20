@@ -86,6 +86,14 @@ private val LAMB_VACCINES = listOf(
     LambVaccine("orf", "الأورف", "الإكثيما المعدية", "ليس روتينياً لكل القطعان؛ يُبحث عند وجود خطر وبقرار بيطري.")
 )
 
+internal fun isDuplicateLambDoseRecord(existing: List<LambDose>, candidate: LambDose): Boolean =
+    existing.any { record ->
+        record.tag.equals(candidate.tag, ignoreCase = true) &&
+            record.vaccineId.equals(candidate.vaccineId, ignoreCase = true) &&
+            record.date == candidate.date &&
+            record.doseNumber == candidate.doseNumber
+    }
+
 private object LambPreventionStore {
     private const val PREFS = "mawashi_lamb_prevention_v1"
     private fun read(c: Context, key: String): JSONArray {
@@ -127,13 +135,26 @@ private object LambPreventionStore {
         }.getOrNull() }
     }
     fun saveDoses(c: Context, values: List<LambDose>) {
-        val duplicate = values.groupBy { "${it.tag.lowercase()}|${it.vaccineId.lowercase()}|${it.date}|${it.doseNumber}" }
-            .values.any { it.size > 1 }
-        require(!duplicate) { "جرعة الحمل مسجلة مسبقاً للحيوان واللقاح والتاريخ ورقم الجرعة نفسه" }
         values.forEach {
-            require(it.tag.isNotBlank() && it.vaccineId.isNotBlank()) { "بيانات الحيوان أو اللقاح ناقصة" }
+            require(it.id.isNotBlank() && it.tag.isNotBlank() && it.vaccineId.isNotBlank()) { "بيانات سجل الجرعة أو الحيوان أو اللقاح ناقصة" }
+            require(it.doseNumber > 0) { "رقم الجرعة غير صالح" }
             require(runCatching { LocalDate.parse(it.date) }.isSuccess) { "تاريخ الجرعة غير صالح" }
         }
+        val duplicateInSubmission = values.indices.any { index ->
+            values.drop(index + 1).any { candidate -> isDuplicateLambDoseRecord(listOf(values[index]), candidate) }
+        }
+        require(!duplicateInSubmission) { "جرعة الحمل مكررة في البيانات المراد حفظها" }
+
+        // The caller supplies the full list. Compare new/changed IDs with persisted records
+        // so a second save cannot silently overwrite or duplicate an already stored dose.
+        val persisted = doses(c)
+        val duplicateAgainstStorage = values.any { candidate ->
+            persisted.any { existing ->
+                existing.id != candidate.id && isDuplicateLambDoseRecord(listOf(existing), candidate)
+            }
+        }
+        require(!duplicateAgainstStorage) { "هذه الجرعة مسجلة مسبقاً في سجل الحمل لهذا الحيوان" }
+
         val a = JSONArray()
         values.forEach { a.put(JSONObject().put("id", it.id).put("tag", it.tag).put("vaccine", it.vaccineId).put("number", it.doseNumber).put("date", it.date).put("product", it.product).put("batch", it.batch).put("expiry", it.expiry).put("vet", it.vet).put("notes", it.notes)) }
         write(c, "doses", a)
