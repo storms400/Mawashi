@@ -128,7 +128,7 @@ internal fun maternalVaccinationSummary(context: Context, motherTag: String): St
 @Composable
 internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
     val context = LocalContext.current
-    var animals by remember { mutableStateOf(loadHerd(context).filter { it.productionState == "نعجة حامل" && it.lifecycleStatus == "نشط" && (it.kind.trim() == "نعجة" || it.sex == "أنثى") }) }
+    var animals by remember { mutableStateOf(herdAnimalsForCareCategory(context, "pregnant")) }
     var records by remember { mutableStateOf(PregnantEweStore.records(context)) }
     var selectedTag by rememberSaveable { mutableStateOf("") }
     var section by rememberSaveable { mutableStateOf("overview") }
