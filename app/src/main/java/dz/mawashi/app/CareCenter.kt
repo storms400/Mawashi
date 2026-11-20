@@ -469,11 +469,11 @@ private fun CareTasksScreen(modifier: Modifier, back: () -> Unit) {
     }.getOrDefault(if (task.date.isBlank()) "يتطلب استكمال بيانات" else "تاريخ غير صالح")
     Surface(color = Color.White, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, CareLine)) {
      Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-      Checkbox(task.completed, { done ->
+      Checkbox(checked = task.completed, onCheckedChange = { done ->
        val changed = records.map { if (it.id == task.id) it.copy(completed = done) else it }
        val refreshed = reconcileAnnualVaccinationCalendar(c, activeAnimals, changed, LocalDate.now())
        runCatching { saveHerdCare(c, refreshed) }.onSuccess { records = refreshed }
-      })
+      }, enabled = !task.notes.contains("REQUIRES_MATERNAL_HISTORY"))
       Column(Modifier.weight(1f)) {
        Text(task.tag + " • " + task.title, color = CareInk, fontWeight = FontWeight.Bold, fontSize = 11.sp)
        Text(task.kind + " • " + task.date.ifBlank { "بانتظار التحقق من سجل الأم" }, color = CareMuted, fontSize = 9.sp)
