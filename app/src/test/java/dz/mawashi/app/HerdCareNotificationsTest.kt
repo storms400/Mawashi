@@ -38,4 +38,10 @@ class HerdCareNotificationsTest {
         assertEquals(9, actual.hour)
         assertEquals(0, actual.minute)
     }
+
+    @Test fun undatedMaternalDataReviewIsNeverAnAlarmDate() {
+        assertEquals(false, isSchedulableHerdCareDate(""))
+        assertEquals(false, isSchedulableHerdCareDate("not-a-date"))
+        assertEquals(true, isSchedulableHerdCareDate("2026-11-20"))
+    }
 }
