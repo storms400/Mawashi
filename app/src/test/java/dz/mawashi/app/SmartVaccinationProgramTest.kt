@@ -169,4 +169,22 @@ class SmartVaccinationProgramTest {
             assertTrue(category, tasks.all { it.reason.contains("ليس موعد إعطاء لقاح") })
         }
     }
+    @Test fun annualDoseDuplicateIsSameAnimalSameVaccineSameDateOnly() {
+        val existing = annualRecord("clostridial", "2026-11-19")
+        val sameDose = existing.copy(id = "new-id", number = 2)
+        val otherAnimal = sameDose.copy(tag = "Q-0002")
+        val otherVaccine = sameDose.copy(vaccineId = "pasteurella")
+        val otherDate = sameDose.copy(date = "2026-11-20")
+        assertTrue(isDuplicateAnnualVaccineRecord(listOf(existing), sameDose))
+        assertFalse(isDuplicateAnnualVaccineRecord(listOf(existing), otherAnimal))
+        assertFalse(isDuplicateAnnualVaccineRecord(listOf(existing), otherVaccine))
+        assertFalse(isDuplicateAnnualVaccineRecord(listOf(existing), otherDate))
+    }
+
+    @Test fun annualDoseDuplicateCheckIsCaseInsensitiveForAnimalTag() {
+        val existing = annualRecord("clostridial", "2026-11-19").copy(tag = "Q-0001")
+        val candidate = existing.copy(id = "new-id", tag = "q-0001")
+        assertTrue(isDuplicateAnnualVaccineRecord(listOf(existing), candidate))
+    }
+
 }
