@@ -8,7 +8,7 @@ android {
     namespace = "dz.mawashi.app"
     compileSdk = 35
     defaultConfig {
-        // v53 package identity: independently installable alongside prior Mawashi APKs.
+        // v54 package identity: uniquely installable alongside all prior Mawashi APKs.
         applicationId = "dz.mawashi.app.independent.v54"
         minSdk = 26
         targetSdk = 35
