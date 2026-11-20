@@ -219,4 +219,32 @@ class HerdLifecycleTest {
         assertFalse(isValidProductionState("كبش", "نعجة حامل"))
         assertFalse(isValidProductionState("حمل/رخلة", "نعجة مرضعة"))
     }
+
+    @Test
+    fun careProgramCategoryFollowsTheCurrentHerdStateWithoutChangingIdentity() {
+        val today = LocalDate.parse("2026-11-20")
+        val dry = animal.copy(id = "same-id", tag = "E-77", kind = "نعجة", productionState = "نعجة جافة")
+        val pregnant = dry.copy(productionState = "نعجة حامل", pregnancyStage = "بداية الحمل")
+        val lactating = pregnant.copy(productionState = "نعجة مرضعة", birthConfirmedDate = "2026-11-19")
+        assertEquals("dry", smartVaccinationCategoryForAnimal(dry, today))
+        assertEquals("pregnant", smartVaccinationCategoryForAnimal(pregnant, today))
+        assertEquals("lactating", smartVaccinationCategoryForAnimal(lactating, today))
+        assertEquals(dry.id, lactating.id)
+        assertEquals(dry.tag, lactating.tag)
+    }
+
+    @Test
+    fun archivedAnimalsHaveNoActiveCareProgram() {
+        val archived = animal.copy(lifecycleStatus = "مؤرشف")
+        assertEquals(null, smartVaccinationCategoryForAnimal(archived, LocalDate.parse("2026-11-20")))
+    }
+
+    @Test
+    fun lambAndMatureRamAreAssignedToDifferentProgramsByAgeAndSex() {
+        val today = LocalDate.parse("2026-11-20")
+        val young = animal.copy(kind = "حمل/رخلة", sex = "ذكر", birthDate = "2026-08-20")
+        val mature = young.copy(birthDate = "2026-01-20")
+        assertEquals("lamb", smartVaccinationCategoryForAnimal(young, today))
+        assertEquals("ram", smartVaccinationCategoryForAnimal(mature, today))
+    }
 }
