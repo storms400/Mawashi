@@ -94,6 +94,23 @@ internal fun isDuplicateLambDoseRecord(existing: List<LambDose>, candidate: Lamb
             record.doseNumber == candidate.doseNumber
     }
 
+/** Append-only merge: preserve every persisted dose and make retries idempotent by record ID. */
+internal fun mergeLambDoseRecords(persisted: List<LambDose>, submitted: List<LambDose>): List<LambDose> {
+    val merged = persisted.toMutableList()
+    submitted.forEach { candidate ->
+        val sameId = merged.firstOrNull { it.id == candidate.id }
+        if (sameId != null) {
+            require(sameId == candidate) { "لا يمكن تعديل جرعة محفوظة بنفس رقم السجل" }
+        } else {
+            require(!isDuplicateLambDoseRecord(merged, candidate)) {
+                "هذه الجرعة مسجلة مسبقاً في سجل الحمل لهذا الحيوان"
+            }
+            merged += candidate
+        }
+    }
+    return merged
+}
+
 private object LambPreventionStore {
     private const val PREFS = "mawashi_lamb_prevention_v1"
     private fun read(c: Context, key: String): JSONArray {
@@ -145,18 +162,10 @@ private object LambPreventionStore {
         }
         require(!duplicateInSubmission) { "جرعة الحمل مكررة في البيانات المراد حفظها" }
 
-        // The caller supplies the full list. Compare new/changed IDs with persisted records
-        // so a second save cannot silently overwrite or duplicate an already stored dose.
-        val persisted = doses(c)
-        val duplicateAgainstStorage = values.any { candidate ->
-            persisted.any { existing ->
-                existing.id != candidate.id && isDuplicateLambDoseRecord(listOf(existing), candidate)
-            }
-        }
-        require(!duplicateAgainstStorage) { "هذه الجرعة مسجلة مسبقاً في سجل الحمل لهذا الحيوان" }
-
+        // Merge with storage rather than trusting a potentially stale UI list: no old dose is lost.
+        val merged = mergeLambDoseRecords(doses(c), values)
         val a = JSONArray()
-        values.forEach { a.put(JSONObject().put("id", it.id).put("tag", it.tag).put("vaccine", it.vaccineId).put("number", it.doseNumber).put("date", it.date).put("product", it.product).put("batch", it.batch).put("expiry", it.expiry).put("vet", it.vet).put("notes", it.notes)) }
+        merged.forEach { a.put(JSONObject().put("id", it.id).put("tag", it.tag).put("vaccine", it.vaccineId).put("number", it.doseNumber).put("date", it.date).put("product", it.product).put("batch", it.batch).put("expiry", it.expiry).put("vet", it.vet).put("notes", it.notes)) }
         write(c, "doses", a)
     }
 }
