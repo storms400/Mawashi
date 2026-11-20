@@ -466,7 +466,7 @@ private fun CareTasksScreen(modifier: Modifier, back: () -> Unit) {
     val state = runCatching {
      val d = LocalDate.parse(task.date)
      when { task.completed -> "مكتمل"; d.isBefore(today) -> "متأخر"; d == today -> "اليوم"; else -> "قادم" }
-    }.getOrDefault("تاريخ غير صالح")
+    }.getOrDefault(if (task.date.isBlank()) "يتطلب استكمال بيانات" else "تاريخ غير صالح")
     Surface(color = Color.White, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, CareLine)) {
      Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
       Checkbox(task.completed, { done ->
@@ -476,7 +476,7 @@ private fun CareTasksScreen(modifier: Modifier, back: () -> Unit) {
       })
       Column(Modifier.weight(1f)) {
        Text(task.tag + " • " + task.title, color = CareInk, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-       Text(task.kind + " • " + task.date, color = CareMuted, fontSize = 9.sp)
+       Text(task.kind + " • " + task.date.ifBlank { "بانتظار التحقق من سجل الأم" }, color = CareMuted, fontSize = 9.sp)
        Text(state, color = if (state == "متأخر") Color(0xFFB54D42) else CareGreen, fontSize = 9.sp)
       }
      }
