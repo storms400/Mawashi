@@ -286,6 +286,22 @@ internal fun smartBreedingSeasonReviewTasks(
 }
 
 
+/** One authoritative mapping from the live herd record to its care/vaccination program. */
+internal fun smartVaccinationCategoryForAnimal(animal: HerdAnimal, today: LocalDate = LocalDate.now()): String? {
+    if (animal.lifecycleStatus == "مؤرشف") return null
+    val ageMonths = herdAnimalAgeMonths(animal, today)
+    return when {
+        animal.kind.trim() == "نعجة" && animal.productionState == "نعجة حامل" -> "pregnant"
+        animal.kind.trim() == "نعجة" && animal.productionState == "نعجة مرضعة" -> "lactating"
+        animal.kind.trim() == "نعجة" && animal.productionState == "نعجة جافة" -> "dry"
+        animal.kind.trim() == "كبش" || animal.kind.contains("فحل") ||
+            (animal.sex == "ذكر" && ageMonths >= 8) -> "ram"
+        animal.kind.contains("حمل") || animal.kind.contains("رخلة") ||
+            (animal.sex.isNotBlank() && ageMonths < 8) -> "lamb"
+        else -> null
+    }
+}
+
 internal fun reconcileAnnualVaccinationCalendar(
     context: Context,
     animals: List<HerdAnimal>,
@@ -297,16 +313,7 @@ internal fun reconcileAnnualVaccinationCalendar(
     val retained = existing.filterNot { it.kind == "التطعيمات السنوية" && it.notes.startsWith(annualPrefix) && !it.completed }
     val generated = mutableListOf<HerdCareReminder>()
     active.forEach { animal ->
-        val category = when {
-            animal.productionState == "نعجة حامل" || animal.pregnancyStage == "حامل" -> "pregnant"
-            animal.productionState == "نعجة مرضعة" -> "lactating"
-            animal.productionState == "نعجة جافة" && animal.kind.trim() == "نعجة" -> "dry"
-            animal.kind.trim() == "كبش" || animal.kind.contains("فحل") ||
-                (animal.sex == "ذكر" && herdAnimalAgeMonths(animal) >= 8) -> "ram"
-            animal.kind.contains("حمل") || animal.kind.contains("رخلة") ||
-                (animal.sex.isNotBlank() && herdAnimalAgeMonths(animal) < 8) -> "lamb"
-            else -> return@forEach
-        }
+        val category = smartVaccinationCategoryForAnimal(animal, today) ?: return@forEach
         val history = AnnualVaxStore.load(context, animal.tag)
         val tasks = annualTasks(context, category, animal, history, today)
         tasks.forEach taskLoop@ { task ->
