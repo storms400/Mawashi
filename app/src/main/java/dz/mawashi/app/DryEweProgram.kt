@@ -215,8 +215,6 @@ internal fun DryEweProgramScreen(modifier: Modifier = Modifier, onBack: (() -> U
                 "vaccines" -> SmartAnnualVaccinationScreen("dry", animal, Modifier.weight(1f))
                 "reminders" -> DryRemindersPage(animal, reminders)
                 else -> EweProgramOverview(
-                    title = "برنامج النعاج الجافة",
-                    subtitle = "الرعاية الوقائية والاستعداد لموسم التلقيح",
                     animalCount = animals.size,
                     dueCount = reminders.count { !it.first.isAfter(today) },
                     completedCount = animalCare.size,
