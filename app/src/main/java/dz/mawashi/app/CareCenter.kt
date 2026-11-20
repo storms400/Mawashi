@@ -38,6 +38,7 @@ internal fun CareCenterScreen(modifier: Modifier = Modifier) {
   val current = readHerdCare(context)
   val annual = reconcileAnnualVaccinationCalendar(context, herd, current)
   if (annual != current) runCatching { saveHerdCare(context, annual) }
+  else runCatching { HerdCareNotifications.rescheduleFromStorage(context) }
  }
  var page by rememberSaveable { mutableStateOf("home") }
  when (page) {
@@ -373,6 +374,7 @@ private fun CareAnnualCalendarScreen(modifier: Modifier, back: () -> Unit) {
   val freshRecords = readHerdCare(context)
   val reconciled = reconcileAnnualVaccinationCalendar(context, freshHerd, freshRecords)
   if (reconciled != freshRecords) saveHerdCare(context, reconciled)
+  else HerdCareNotifications.rescheduleFromStorage(context)
   records = reconciled
  }
  val today = LocalDate.now()
