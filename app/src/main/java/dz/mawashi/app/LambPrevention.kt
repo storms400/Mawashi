@@ -203,7 +203,7 @@ private fun syncLambVaccineReminders(context: Context, animals: List<HerdAnimal>
 internal fun LambPreventionScreen(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     val context = LocalContext.current
     var page by rememberSaveable { mutableStateOf("home") }
-    var animals by remember { mutableStateOf(loadHerd(context).filter { it.kind == "حمل/رخلة" && it.lifecycleStatus != "مؤرشف" }) }
+    var animals by remember { mutableStateOf(herdAnimalsForCareCategory(context, "lamb")) }
     var tag by rememberSaveable { mutableStateOf("") }
     var care by remember { mutableStateOf(LambPreventionStore.care(context)) }
     var plans by remember { mutableStateOf(LambPreventionStore.plans(context)) }
@@ -214,7 +214,7 @@ internal fun LambPreventionScreen(modifier: Modifier = Modifier, onBack: (() -> 
     var doseDialog by remember { mutableStateOf<LambVaccine?>(null) }
 
     LaunchedEffect(Unit) {
-        val currentAnimals = loadHerd(context).filter { it.kind == "حمل/رخلة" && it.lifecycleStatus != "مؤرشف" }
+        val currentAnimals = herdAnimalsForCareCategory(context, "lamb")
         val currentPlans = LambPreventionStore.plans(context)
         val linkedPlans = currentPlans.map { plan ->
             val lamb = currentAnimals.firstOrNull { it.tag.equals(plan.tag, true) }
