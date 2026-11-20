@@ -113,6 +113,20 @@ internal fun isDuplicateAnnualVaccineRecord(records: List<AnnualVaccineRecord>, 
 
 internal data class AnnualVaccineRecord(val id:String,val tag:String,val vaccineId:String,val date:String,val number:Int,val dose:String,val product:String,val batch:String,val expiry:String,val vet:String,val nextDate:String,val notes:String,val source:String)
 internal data class AnnualVaccineTask(val id:String,val vaccineId:String,val title:String,val due:LocalDate?,val reason:String,val group:String)
+
+internal fun maternalHistoryReviewReminder(tag: String, task: AnnualVaccineTask, annualPrefix: String = "ANNUAL_VAX_TASK:"): HerdCareReminder? {
+    if (task.id != "lamb-first" || task.vaccineId != "clostridial" || task.due != null ||
+        !task.reason.contains("حالة تحصين الأم مجهولة")) return null
+    return HerdCareReminder(
+        id = "annual-calendar:${tag}:lamb-first:missing-maternal-status",
+        tag = tag,
+        kind = "التطعيمات السنوية",
+        title = "استكمال حالة تحصين الأم",
+        date = "",
+        notes = annualPrefix + task.id + "\\n" + task.reason + "\\nREQUIRES_MATERNAL_HISTORY",
+        completed = false
+    )
+}
 internal data class AnnualVaccineDefinition(val id:String,val title:String,val group:String,val applicable:Set<String>,val guidance:String)
 
 internal val ANNUAL_VACCINE_CATALOG=listOf(
@@ -320,18 +334,7 @@ internal fun reconcileAnnualVaccinationCalendar(
             val baseDate = task.due
             if (baseDate == null) {
                 // Unknown maternal vaccination history is a data-completion task, not a dose order.
-                if (category == "lamb" && task.id == "lamb-first" &&
-                    task.vaccineId == "clostridial" && task.reason.contains("حالة تحصين الأم مجهولة")) {
-                    generated += HerdCareReminder(
-                        id = "annual-calendar:${animal.tag}:lamb-first:missing-maternal-status",
-                        tag = animal.tag,
-                        kind = "التطعيمات السنوية",
-                        title = "استكمال حالة تحصين الأم",
-                        date = "",
-                        notes = annualPrefix + task.id + "\\n" + task.reason + "\\nREQUIRES_MATERNAL_HISTORY",
-                        completed = false
-                    )
-                }
+                if (category == "lamb") maternalHistoryReviewReminder(animal.tag, task, annualPrefix)?.let { generated += it }
                 return@taskLoop
             }
             if (baseDate.isAfter(today.plusYears(1))) return@taskLoop
