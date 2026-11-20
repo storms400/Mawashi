@@ -189,8 +189,6 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
             }
             if (section == "overview") {
                 EweProgramOverview(
-                    title = "برنامج النعاج الحوامل",
-                    subtitle = "متابعة الحمل من التأكيد حتى الولادة",
                     animalCount = animals.size,
                     dueCount = upcoming,
                     completedCount = eweRecords.size,
