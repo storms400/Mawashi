@@ -187,4 +187,14 @@ class SmartVaccinationProgramTest {
         assertTrue(isDuplicateAnnualVaccineRecord(listOf(existing), candidate))
     }
 
+    @Test fun lambDoseDuplicateRequiresSameAnimalVaccineDateAndDoseNumber() {
+        val existing = LambDose("old", "L-1", "clostridial", 1, "2026-11-20", "", "", "", "", "")
+        val duplicate = existing.copy(id = "new")
+        assertTrue(isDuplicateLambDoseRecord(listOf(existing), duplicate))
+        assertFalse(isDuplicateLambDoseRecord(listOf(existing), duplicate.copy(tag = "L-2")))
+        assertFalse(isDuplicateLambDoseRecord(listOf(existing), duplicate.copy(vaccineId = "pasteurella")))
+        assertFalse(isDuplicateLambDoseRecord(listOf(existing), duplicate.copy(date = "2026-11-21")))
+        assertFalse(isDuplicateLambDoseRecord(listOf(existing), duplicate.copy(doseNumber = 2)))
+    }
+
 }
