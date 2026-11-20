@@ -236,4 +236,63 @@ class SmartVaccinationProgramTest {
         assertEquals(null, maternalHistoryReviewReminder("L-009", unknown.copy(due = LocalDate.parse("2026-12-01"))))
         assertEquals(null, maternalHistoryReviewReminder("L-009", unknown.copy(id = "lamb-booster")))
     }
+
+
+    @Test fun eweLifecycleTransitionsKeepOnePermanentHerdIdentity() {
+        val today = LocalDate.parse("2026-11-20")
+        val dry = HerdAnimal(
+            id = "permanent-id", tag = "E-101", kind = "نعجة",
+            ageMonths = 30, health = "جيدة", notes = "",
+            productionState = "نعجة جافة"
+        )
+        val pregnant = dry.copy(
+            productionState = "نعجة حامل",
+            pregnancyScanOutcome = "حامل",
+            pregnancyStartDate = "2026-08-01",
+            expectedBirthDate = "2026-12-26"
+        )
+        val lactating = pregnant.copy(
+            birthConfirmedDate = "2026-12-20",
+            weaningConfirmedDate = ""
+        )
+        val weaned = lactating.copy(weaningConfirmedDate = "2027-03-01")
+
+        val states = listOf(dry, pregnant, lactating, weaned).map {
+            reclassifyHerdAnimal(it, today)
+        }
+
+        assertEquals(listOf("نعجة جافة", "نعجة حامل", "نعجة مرضعة", "نعجة جافة"),
+            states.map { it.productionState })
+        assertTrue(states.all { it.id == "permanent-id" && it.tag == "E-101" })
+        assertEquals(listOf("dry", "pregnant", "lactating", "dry"),
+            states.map { smartVaccinationCategoryForAnimal(it, today) })
+    }
+
+    @Test fun archivedEweDoesNotReenterLifecyclePrograms() {
+        val archived = HerdAnimal(
+            id = "archived-id", tag = "E-102", kind = "نعجة",
+            ageMonths = 24, health = "جيدة", notes = "",
+            productionState = "نعجة حامل", lifecycleStatus = "مؤرشف",
+            birthConfirmedDate = "2026-11-01"
+        )
+        val result = reclassifyHerdAnimal(archived, LocalDate.parse("2026-11-20"))
+        assertEquals(archived, result)
+        assertNull(smartVaccinationCategoryForAnimal(result, LocalDate.parse("2026-11-20")))
+    }
+
+    @Test fun lambBecomesAdultWithoutChangingItsIdentityOrMotherLink() {
+        val lamb = HerdAnimal(
+            id = "lamb-id", tag = "L-101", kind = "حمل/رخلة",
+            ageMonths = 8, health = "جيدة", notes = "",
+            birthDate = "2026-03-01", motherTag = "E-101", sex = "أنثى"
+        )
+        val adult = reclassifyHerdAnimal(lamb, LocalDate.parse("2026-11-01"))
+        assertEquals("نعجة", adult.kind)
+        assertEquals("نعجة جافة", adult.productionState)
+        assertEquals("lamb-id", adult.id)
+        assertEquals("L-101", adult.tag)
+        assertEquals("E-101", adult.motherTag)
+        assertEquals("dry", smartVaccinationCategoryForAnimal(adult, LocalDate.parse("2026-11-01")))
+    }
+
 }
