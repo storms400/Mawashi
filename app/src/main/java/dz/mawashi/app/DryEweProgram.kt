@@ -169,7 +169,7 @@ internal fun DryEweProgramScreen(modifier: Modifier = Modifier, onBack: (() -> U
     var doseDialog by remember { mutableStateOf<DryVaccine?>(null) }
 
     LaunchedEffect(Unit) {
-        animals = loadHerd(context).filter { it.kind.trim() == "نعجة" && it.lifecycleStatus != "مؤرشف" && it.productionState == "نعجة جافة" && it.pregnancyStage != "حامل" }
+        animals = herdAnimalsForCareCategory(context, "dry")
         if (animals.none { it.tag.equals(selectedTag, true) }) selectedTag = animals.firstOrNull()?.tag.orEmpty()
         syncDryEweReminders(context, animals, DryEweStore.plans(context), DryEweStore.doses(context))
     }
