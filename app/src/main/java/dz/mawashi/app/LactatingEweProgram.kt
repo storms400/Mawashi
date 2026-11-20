@@ -165,7 +165,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
                     }
                 }
                 }
-                item {
+                if (section != "overview") item {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         FilterChip(section == "care", { section = "care" }, label = { Text("الرعاية والفحوصات", fontSize = 10.sp) }, modifier = Modifier.weight(1f))
                         FilterChip(section == "preventive", { section = "preventive" }, label = { Text("اللقاحات والتحصينات", fontSize = 10.sp) }, modifier = Modifier.weight(1f))
@@ -173,7 +173,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
                     }
                 }
                 if (section == "overview") {
-                    EweProgramOverview(
+                    item { EweProgramOverview(
                         title = "برنامج النعاج المرضعة",
                         subtitle = "رعاية الأم ومتابعة صحة المواليد حتى الفطام",
                         animalCount = animals.size,
@@ -184,7 +184,7 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
                         onStageClick = { index -> stageId = LACT_STAGES.getOrNull(index)?.id ?: "post_birth"; section = "care" },
                         onVaccinesClick = { section = "preventive" },
                         onRemindersClick = { section = "reminders" }
-                    )
+                    ) }
                 } else if (section == "preventive") {
                     item { SmartAnnualVaccinationScreen("lactating", animals.firstOrNull { it.tag.equals(selectedTag, true) }) }
                 } else if (section == "reminders") {
