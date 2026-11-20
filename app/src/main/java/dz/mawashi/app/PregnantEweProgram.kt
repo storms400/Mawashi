@@ -131,7 +131,7 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
     var animals by remember { mutableStateOf(loadHerd(context).filter { it.productionState == "نعجة حامل" && it.lifecycleStatus == "نشط" && (it.kind.trim() == "نعجة" || it.sex == "أنثى") }) }
     var records by remember { mutableStateOf(PregnantEweStore.records(context)) }
     var selectedTag by rememberSaveable { mutableStateOf("") }
-    var section by rememberSaveable { mutableStateOf("care") }
+    var section by rememberSaveable { mutableStateOf("overview") }
     var expandedStage by rememberSaveable { mutableStateOf("confirm") }
     var recordType by rememberSaveable { mutableStateOf("لقاح") }
     var showRecordDialog by remember { mutableStateOf(false) }
@@ -185,7 +185,20 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
                 FilterChip(section == "prevention", { section = "prevention" }, label = { Text("اللقاحات والتحصينات", fontSize = 11.sp) }, modifier = Modifier.weight(1f))
                 FilterChip(section == "reminders", { section = "reminders" }, label = { Text("المواعيد والتنبيهات", fontSize = 11.sp) }, modifier = Modifier.weight(1f))
             }
-            if (section == "prevention") {
+            if (section == "overview") {
+                EweProgramOverview(
+                    title = "برنامج النعاج الحوامل",
+                    subtitle = "متابعة الحمل من التأكيد حتى الولادة",
+                    animalCount = animals.size,
+                    dueCount = upcoming,
+                    completedCount = eweRecords.size,
+                    stages = PREGNANT_STAGES.map { it.title to it.period },
+                    animalLines = animals.map { a -> a.tag + " • " + (a.pregnancyStage.ifBlank { a.productionState }) + " • ولادة متوقعة: " + a.expectedBirthDate.ifBlank { "غير محددة" } },
+                    onStageClick = { index -> expandedStage = PREGNANT_STAGES.getOrNull(index)?.id ?: "confirm"; section = "care" },
+                    onVaccinesClick = { section = "prevention" },
+                    onRemindersClick = { section = "reminders" }
+                )
+            } else if (section == "prevention") {
                 SmartAnnualVaccinationScreen("pregnant", ewe, Modifier.weight(1f))
             } else if (section == "reminders") {
                 CareRemindersPanel(selectedTag)
