@@ -316,6 +316,15 @@ internal fun smartVaccinationCategoryForAnimal(animal: HerdAnimal, today: LocalD
     }
 }
 
+/** Read the live herd through its lifecycle reconciler, then select animals using the
+ * exact same category mapping used by the annual intelligence engine. */
+internal fun herdAnimalsForCareCategory(
+    context: Context,
+    category: String,
+    today: LocalDate = LocalDate.now()
+): List<HerdAnimal> = reconcileHerdLifecycle(context, today)
+    .filter { smartVaccinationCategoryForAnimal(it, today) == category }
+
 internal fun reconcileAnnualVaccinationCalendar(
     context: Context,
     animals: List<HerdAnimal>,
