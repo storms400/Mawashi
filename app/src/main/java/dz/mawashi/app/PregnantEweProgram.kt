@@ -166,6 +166,7 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
                 }
             }
         } else {
+            if (section != "overview") {
             Spacer(Modifier.height(5.dp))
             Text("اختيار النعجة", color = PregInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -184,6 +185,7 @@ internal fun PregnantEweProgramScreen(modifier: Modifier = Modifier, onBack: () 
                 FilterChip(section == "care", { section = "care" }, label = { Text("الرعاية والفحوصات", fontSize = 11.sp) }, modifier = Modifier.weight(1f))
                 FilterChip(section == "prevention", { section = "prevention" }, label = { Text("اللقاحات والتحصينات", fontSize = 11.sp) }, modifier = Modifier.weight(1f))
                 FilterChip(section == "reminders", { section = "reminders" }, label = { Text("المواعيد والتنبيهات", fontSize = 11.sp) }, modifier = Modifier.weight(1f))
+            }
             }
             if (section == "overview") {
                 EweProgramOverview(
