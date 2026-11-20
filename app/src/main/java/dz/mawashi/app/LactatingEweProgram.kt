@@ -174,8 +174,6 @@ internal fun LactatingEweProgramScreen(modifier: Modifier = Modifier, onBack: ()
                 }
                 if (section == "overview") {
                     item { EweProgramOverview(
-                        title = "برنامج النعاج المرضعة",
-                        subtitle = "رعاية الأم ومتابعة صحة المواليد حتى الفطام",
                         animalCount = animals.size,
                         dueCount = reviewCount,
                         completedCount = eweCare.size + ewePreventive.size,
