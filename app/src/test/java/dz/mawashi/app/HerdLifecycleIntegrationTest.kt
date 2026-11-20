@@ -18,7 +18,7 @@ class HerdLifecycleIntegrationTest {
     private fun resetStore() {
         listOf(
             "mawashi_herd_local",
-            "mawashi_herd_care",
+            "mawashi_herd_care_v27",
             "mawashi_annual_vaccination_v1",
             "mawashi_herd_care_notifications"
         ).forEach { context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() }
@@ -42,8 +42,10 @@ class HerdLifecycleIntegrationTest {
         assertEquals(ewe.id, stored.single { it.tag == ewe.tag }.id)
         assertEquals(listOf(ewe.tag), herdAnimalsForCareCategory(context, "pregnant", today).map { it.tag })
 
+        assertTrue(readHerdCare(context).any { it.tag == ewe.tag && it.title == "موعد ولادة متوقع" && !it.completed })
         val birthDate = today.plusDays(70)
         assertTrue(confirmEweBirth(context, ewe.tag, birthDate.toString(), birthDate))
+        assertFalse(readHerdCare(context).any { it.tag == ewe.tag && it.title == "موعد ولادة متوقع" && !it.completed })
         val bornLamb = HerdAnimal(
             id = "permanent-lamb-id", tag = "L-900", kind = "حمل/رخلة",
             ageMonths = 0, health = "جيدة", notes = "",
