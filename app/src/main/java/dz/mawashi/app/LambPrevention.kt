@@ -151,7 +151,7 @@ private object LambPreventionStore {
             LambDose(x.optString("id"), x.optString("tag"), x.optString("vaccine"), x.optInt("number", 1), x.optString("date"), x.optString("product"), x.optString("batch"), x.optString("expiry"), x.optString("vet"), x.optString("notes"))
         }.getOrNull() }
     }
-    fun saveDoses(c: Context, values: List<LambDose>) {
+    fun saveDoses(c: Context, values: List<LambDose>): List<LambDose> {
         values.forEach {
             require(it.id.isNotBlank() && it.tag.isNotBlank() && it.vaccineId.isNotBlank()) { "بيانات سجل الجرعة أو الحيوان أو اللقاح ناقصة" }
             require(it.doseNumber > 0) { "رقم الجرعة غير صالح" }
@@ -167,6 +167,7 @@ private object LambPreventionStore {
         val a = JSONArray()
         merged.forEach { a.put(JSONObject().put("id", it.id).put("tag", it.tag).put("vaccine", it.vaccineId).put("number", it.doseNumber).put("date", it.date).put("product", it.product).put("batch", it.batch).put("expiry", it.expiry).put("vet", it.vet).put("notes", it.notes)) }
         write(c, "doses", a)
+        return merged
     }
 }
 
@@ -313,7 +314,7 @@ internal fun LambPreventionScreen(modifier: Modifier = Modifier, onBack: (() -> 
         val firstDone = doses.any { it.tag.equals(tag, true) && it.vaccineId == vaccine.id && it.doseNumber == 1 }
         LambDoseDialog(tag, vaccine, if (firstDone) 2 else 1, { doseDialog = null }) { dose ->
             val updated = doses + dose
-            runCatching { LambPreventionStore.saveDoses(context, updated); syncLambVaccineReminders(context, animals, plans, updated) }.onSuccess { doses = updated; doseDialog = null; Toast.makeText(context, "تم توثيق الجرعة وتحديث التنبيهات", Toast.LENGTH_SHORT).show() }
+            runCatching { LambPreventionStore.saveDoses(context, updated).also { syncLambVaccineReminders(context, animals, plans, it) } }.onSuccess { saved -> doses = saved; doseDialog = null; Toast.makeText(context, "تم توثيق الجرعة وتحديث التنبيهات", Toast.LENGTH_SHORT).show() }
                 .onFailure { Toast.makeText(context, "تعذر حفظ الجرعة", Toast.LENGTH_LONG).show() }
         }
     }
