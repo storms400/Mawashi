@@ -1,4 +1,4 @@
-name: Android CI # v53 unique package verification
+name: Android CI # v54 unique package verification
 
 on:
   push:
@@ -60,13 +60,13 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Verify unique package identity and Firebase registration for v53
+      - name: Verify unique package identity and Firebase registration for v54
         run: |
           python3 - <<'PY'
           import json
           from pathlib import Path
 
-          target = "dz.mawashi.app.independent.v53"
+          target = "dz.mawashi.app.independent.v54"
           previously_used = {
               "dz.mawashi.app",
               "dz.mawashi.app.test",
@@ -77,8 +77,9 @@ jobs:
               "dz.mawashi.app.independent.v50",
               "dz.mawashi.app.independent.v51",
               "dz.mawashi.app.independent.v52",
+              "dz.mawashi.app.independent.v53",
           }
-          assert target not in previously_used, "v53 package ID was already used"
+          assert target not in previously_used, "v54 package ID was already used"
           for filename in ("app/google-services.json", "app/src/standalone/google-services.json"):
               data = json.loads(Path(filename).read_text())
               packages = [
@@ -90,7 +91,7 @@ jobs:
                   f"found {packages.count(target)}"
               )
               assert len(packages) == len(set(packages)), f"{filename} contains duplicate Firebase package registrations"
-          print("v53 package identity is unique and registered in both Firebase configuration files")
+          print("v54 package identity is unique and registered in both Firebase configuration files")
           PY
 
       - name: Run unit tests (retry transient dependency resolution failures)
@@ -115,8 +116,8 @@ jobs:
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v53'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='53' versionName='1.0.53-debug'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v54'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='53' versionName='1.0.54-debug'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Build independently installable APK
@@ -126,7 +127,7 @@ jobs:
         run: |
           APK="app/build/outputs/apk/standalone/app-standalone.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v53'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v54'"
           unzip -l "$APK" | grep -F "mawashi_launcher_cartoon"
 
       - name: Verify standalone APK uses the standard debug signature
@@ -136,13 +137,13 @@ jobs:
           APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
           test -s "$APK"
           "$APKSIGNER" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v53'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='53' versionName='1.0.53-test3'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dz.mawashi.app.independent.v54'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "versionCode='53' versionName='1.0.54-test3'"
 
       - name: Upload independently installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Standalone-Independent-v53
+          name: Mawashi-Standalone-Independent-v54
           path: app/build/outputs/apk/standalone/app-standalone.apk
           if-no-files-found: error
           retention-days: 14
@@ -150,7 +151,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mawashi-Debug-APK-v53
+          name: Mawashi-Debug-APK-v54
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
