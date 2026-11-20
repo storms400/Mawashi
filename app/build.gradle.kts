@@ -9,11 +9,11 @@ android {
     compileSdk = 35
     defaultConfig {
         // v53 package identity: independently installable alongside prior Mawashi APKs.
-        applicationId = "dz.mawashi.app.independent.v53"
+        applicationId = "dz.mawashi.app.independent.v54"
         minSdk = 26
         targetSdk = 35
-        versionCode = 53
-        versionName = "1.0.53"
+        versionCode = 54
+        versionName = "1.0.54"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
