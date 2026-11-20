@@ -377,6 +377,7 @@ internal fun refreshAnnualVaccinationCalendar(context: Context) {
     val current = readHerdCare(context)
     val updated = reconcileAnnualVaccinationCalendar(context, herd, current)
     if (updated != current) saveHerdCare(context, updated)
+    else HerdCareNotifications.rescheduleFromStorage(context)
 }
 
 private fun annualJsonArray(c:Context,pref:String,key:String):JSONArray =
