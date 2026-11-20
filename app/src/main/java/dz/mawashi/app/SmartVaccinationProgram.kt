@@ -317,7 +317,23 @@ internal fun reconcileAnnualVaccinationCalendar(
         val history = AnnualVaxStore.load(context, animal.tag)
         val tasks = annualTasks(context, category, animal, history, today)
         tasks.forEach taskLoop@ { task ->
-            val baseDate = task.due ?: return@taskLoop
+            val baseDate = task.due
+            if (baseDate == null) {
+                // Unknown maternal vaccination history is a data-completion task, not a dose order.
+                if (category == "lamb" && task.id == "lamb-first" &&
+                    task.vaccineId == "clostridial" && task.reason.contains("حالة تحصين الأم مجهولة")) {
+                    generated += HerdCareReminder(
+                        id = "annual-calendar:${animal.tag}:lamb-first:missing-maternal-status",
+                        tag = animal.tag,
+                        kind = "التطعيمات السنوية",
+                        title = "استكمال حالة تحصين الأم",
+                        date = "",
+                        notes = annualPrefix + task.id + "\\n" + task.reason + "\\nREQUIRES_MATERNAL_HISTORY",
+                        completed = false
+                    )
+                }
+                return@taskLoop
+            }
             if (baseDate.isAfter(today.plusYears(1))) return@taskLoop
             val recurringReview = task.title.startsWith("مراجعة") &&
                 !task.title.contains("قبل الولادة") &&
